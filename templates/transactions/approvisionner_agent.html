@@ -1,0 +1,198 @@
+<!-- templates/transactions/approvisionner_agent.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approvisionner un agent - Agent Money</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .card-header h2 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-back {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>💰 Approvisionner un agent</h2>
+                <p>Donner du cash, UV ou Wave à un agent</p>
+            </div>
+            
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label>Agent</label>
+                        <select name="sous_agent_id" class="form-control" required>
+                            <option value="">-- Sélectionner un agent --</option>
+                            {% for agent in sous_agents %}
+                            <option value="{{ agent.id }}">
+                                {{ agent.nom }} - Cash: {{ agent.caisse.solde_cash|floatformat:0 }} | 
+                                UV: {{ agent.caisse.solde_uv|floatformat:0 }} | 
+                                Wave: {{ agent.caisse.solde_wave|floatformat:0 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Type d'approvisionnement</label>
+                        <select name="type_approvisionnement" class="form-control" required>
+                            <option value="">-- Choisir --</option>
+                            <option value="cash">💰 Cash → Agent</option>
+                            <option value="uv">📱 UV → Agent</option>
+                            <option value="wave">💳 Wave → Agent</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Montant (FCFA)</label>
+                        <input type="number" name="montant" class="form-control" min="1000" step="1000" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Notes (optionnel)</label>
+                        <textarea name="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="info-box">
+                        <p>📊 Mon solde ADMIN:</p>
+                        <p>💰 Cash: {{ caisse_admin.solde_cash|floatformat:0 }} FCFA</p>
+                        <p>📱 UV: {{ caisse_admin.solde_uv|floatformat:0 }} FCFA</p>
+                        <p>💳 Wave: {{ caisse_admin.solde_wave|floatformat:0 }} FCFA</p>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit">✅ Approvisionner</button>
+                </form>
+                
+                <div style="text-align: center;">
+                    <a href="{% url 'dashboard_admin' %}" class="btn-back">← Retour</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

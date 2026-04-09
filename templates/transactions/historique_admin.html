@@ -1,0 +1,794 @@
+<!-- templates/transactions/historique_admin.html -->
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>{{ title }} - Admin Money</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header h2 {
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+
+        .sidebar-menu .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+            width: 100%;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .sidebar-menu .menu-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .sidebar-menu .menu-item.active {
+            background: rgba(255,255,255,0.1);
+            border-left-color: #667eea;
+            color: white;
+        }
+
+        .sidebar-menu .menu-item svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Header mobile */
+        .header {
+            background: white;
+            padding: 20px 20px 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: none;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            color: #1a1a2e;
+        }
+
+        .back-btn svg {
+            width: 24px;
+            height: 24px;
+            stroke: #1a1a2e;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        /* Main content */
+        .main-content {
+            margin-left: 260px;
+            padding: 20px 30px;
+        }
+
+        .page-header {
+            margin-bottom: 25px;
+        }
+
+        .page-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        /* Filtres */
+        .filters-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .filters-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #8a8e9e;
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        .filters-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 12px;
+            color: #8a8e9e;
+            margin-bottom: 5px;
+        }
+
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            background: white;
+            font-family: inherit;
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-filter, .btn-reset {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-filter {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-reset {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stat-card .icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-card .icon.primary { background: #e8eaf6; color: #667eea; }
+        .stat-card .icon.success { background: #e8f5e9; color: #28a745; }
+        .stat-card .icon.danger { background: #ffebee; color: #dc3545; }
+        .stat-card .icon.warning { background: #fff3e0; color: #fd7e14; }
+
+        .stat-card .info .value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .stat-card .info .label {
+            font-size: 13px;
+            color: #8a8e9e;
+        }
+
+        /* Table */
+        .table-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .badge-depot { background: #d4edda; color: #155724; }
+        .badge-retrait { background: #f8d7da; color: #721c24; }
+        .badge-credit { background: #fff3cd; color: #856404; }
+
+        .btn-print {
+            background: #17a2b8;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            display: inline-block;
+        }
+
+        .btn-print:hover {
+            background: #138496;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 25px;
+            padding: 10px 0;
+        }
+
+        .page-btn {
+            padding: 8px 14px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            color: #1a1a2e;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-btn.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 40px;
+            z-index: 1200;
+            font-size: 14px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8a8e9e;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .header {
+                display: block;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+            }
+
+            .page-header h1 {
+                font-size: 24px;
+            }
+
+            .filters-grid {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+
+            .filter-actions {
+                flex-direction: column;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .data-table {
+                font-size: 12px;
+            }
+
+            .data-table th, .data-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar PC -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>🏦 Agent Money</h2>
+            <p style="font-size: 12px; opacity: 0.7; margin-top: 5px;">Administration</p>
+        </div>
+        <div class="sidebar-menu">
+            <a href="{% url 'dashboard_admin' %}" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/>
+                </svg>
+                <span>Tableau de bord</span>
+            </a>
+            <a href="{% url 'historique_admin' %}" class="menu-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="16" rx="1"/>
+                    <path d="M8 2v4M16 2v4M3 10h18"/>
+                </svg>
+                <span>Transactions</span>
+            </a>
+            <a href="#" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>Agents</span>
+            </a>
+            <a href="#" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-3"/>
+                    <path d="M12 2v12M8 10l4 4 4-4"/>
+                </svg>
+                <span>Rapports</span>
+            </a>
+            <form method="post" action="{% url 'logout' %}" style="margin-top: 50px;">
+                {% csrf_token %}
+                <button type="submit" class="menu-item" style="width: 100%; background: none; border: none; cursor: pointer;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l4-4-4-4M12 3h8v8"/>
+                    </svg>
+                    <span>Déconnexion</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Header mobile -->
+    <div class="header">
+        <div class="header-top">
+            <a href="{% url 'dashboard_admin' %}" class="back-btn">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </a>
+            <div class="page-title">Transactions</div>
+            <div style="width: 40px;"></div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+        <div class="page-header">
+            <h1>📜 Historique des transactions</h1>
+        </div>
+
+        <div id="messages-container"></div>
+
+        <!-- Filtres -->
+        <div class="filters-card">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label>Agent</label>
+                    <select name="agent" id="filter-agent">
+                        <option value="">Tous les agents</option>
+                        {% for a in agents %}
+                            <option value="{{ a.user.id }}">{{ a.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Type</label>
+                    <select name="type" id="filter-type">
+                        <option value="">Tous</option>
+                        <option value="depot">Dépôt</option>
+                        <option value="retrait">Retrait</option>
+                        <option value="credit">Crédit</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Opérateur</label>
+                    <select name="operateur" id="filter-operateur">
+                        <option value="">Tous</option>
+                        <option value="orange">Orange Money</option>
+                        <option value="wave">Wave</option>
+                        <option value="malitel">Malitel</option>
+                        <option value="telecel">Telecel</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Date début</label>
+                    <input type="date" name="date_debut" id="filter-date-debut">
+                </div>
+                <div class="filter-group">
+                    <label>Date fin</label>
+                    <input type="date" name="date_fin" id="filter-date-fin">
+                </div>
+                <div class="filter-actions">
+                    <button type="button" class="btn-filter" id="btn-apply">🔍 APPLIQUER</button>
+                    <button type="button" class="btn-reset" id="btn-reset">🗑️ RÉINITIALISER</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="stats-container">
+            <div class="stat-card">
+                <div class="icon primary">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value" id="stat-count">0</div>
+                    <div class="label">Transactions</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon success">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 8v8M8 12h8"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value" id="stat-entree">0</div>
+                    <div class="label">Total ENTRE</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon danger">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M8 12h8"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value" id="stat-sortie">0</div>
+                    <div class="label">Total SORTIE</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon warning">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value" id="stat-commission">0</div>
+                    <div class="label">Commission totale</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tableau des transactions -->
+        <div class="table-card">
+            <div id="table-container">
+                <!-- Les transactions seront chargées ici via AJAX -->
+                <div style="text-align: center; padding: 40px;">Chargement...</div>
+            </div>
+            <div id="pagination-container" class="pagination"></div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">⏳ Chargement...</div>
+
+    <script>
+        let currentPage = 1;
+
+        function getFilters() {
+            return {
+                agent: document.getElementById('filter-agent').value,
+                type: document.getElementById('filter-type').value,
+                operateur: document.getElementById('filter-operateur').value,
+                date_debut: document.getElementById('filter-date-debut').value,
+                date_fin: document.getElementById('filter-date-fin').value,
+                page: currentPage
+            };
+        }
+
+        function setFiltersFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            document.getElementById('filter-agent').value = urlParams.get('agent') || '';
+            document.getElementById('filter-type').value = urlParams.get('type') || '';
+            document.getElementById('filter-operateur').value = urlParams.get('operateur') || '';
+            document.getElementById('filter-date-debut').value = urlParams.get('date_debut') || '';
+            document.getElementById('filter-date-fin').value = urlParams.get('date_fin') || '';
+            currentPage = parseInt(urlParams.get('page')) || 1;
+        }
+
+        function updateURL() {
+            const filters = getFilters();
+            const params = new URLSearchParams();
+            if (filters.agent) params.set('agent', filters.agent);
+            if (filters.type) params.set('type', filters.type);
+            if (filters.operateur) params.set('operateur', filters.operateur);
+            if (filters.date_debut) params.set('date_debut', filters.date_debut);
+            if (filters.date_fin) params.set('date_fin', filters.date_fin);
+            if (currentPage > 1) params.set('page', currentPage);
+            const newURL = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+            window.history.pushState({}, '', newURL);
+        }
+
+        function loadTransactions() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+
+            const filters = getFilters();
+            const params = new URLSearchParams();
+            if (filters.agent) params.set('agent', filters.agent);
+            if (filters.type) params.set('type', filters.type);
+            if (filters.operateur) params.set('operateur', filters.operateur);
+            if (filters.date_debut) params.set('date_debut', filters.date_debut);
+            if (filters.date_fin) params.set('date_fin', filters.date_fin);
+            params.set('page', currentPage);
+            params.set('ajax', '1');
+
+            fetch(window.location.pathname + '?' + params.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderTable(data.transactions);
+                    renderPagination(data.pagination);
+                    updateStats(data.stats);
+                    updateURL();
+                } else {
+                    document.getElementById('table-container').innerHTML = '<div class="empty-state">📭 Erreur de chargement</div>';
+                }
+                loading.style.display = 'none';
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                document.getElementById('table-container').innerHTML = '<div class="empty-state">📭 Erreur de connexion</div>';
+                loading.style.display = 'none';
+            });
+        }
+
+        function renderTable(transactions) {
+            if (!transactions || transactions.length === 0) {
+                document.getElementById('table-container').innerHTML = '<div class="empty-state">📭 Aucune transaction trouvée</div>';
+                return;
+            }
+
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Utilisateur</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Opérateur</th>
+                            <th>Client</th>
+                            <th>Montant</th>
+                            <th>Commission</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            for (const t of transactions) {
+                const userLabel = t.user_type === 'admin' ? `🏦 ${t.user_name}` : `👤 ${t.user_name}`;
+                const badgeClass = `badge-${t.type}`;
+                const typeLabel = t.type === 'depot' ? 'Dépôt' : (t.type === 'retrait' ? 'Retrait' : 'Crédit');
+                
+                html += `
+                    <tr>
+                        <td><small>${t.reference}</small></td>
+                        <td>${userLabel}</td>
+                        <td><small>${t.date}</small></td>
+                        <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
+                        <td>${t.operateur_label}</td>
+                        <td>${t.numero_client}</td>
+                        <td><strong>${formatNumber(t.montant)} FCFA</strong></td>
+                        <td>${formatNumber(t.commission)} FCFA</td>
+                        <td><a href="/impression/${t.reference}/" target="_blank" class="btn-print">🖨️</a></td>
+                    </tr>
+                `;
+            }
+
+            html += `</tbody></table>`;
+            document.getElementById('table-container').innerHTML = html;
+        }
+
+        function renderPagination(pagination) {
+            if (!pagination || pagination.total_pages <= 1) {
+                document.getElementById('pagination-container').innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            
+            if (pagination.has_previous) {
+                html += `<button class="page-btn" data-page="${pagination.previous_page}">← Précédent</button>`;
+            } else {
+                html += `<span class="page-btn disabled">← Précédent</span>`;
+            }
+
+            for (let i = pagination.start_page; i <= pagination.end_page; i++) {
+                if (i === pagination.current_page) {
+                    html += `<span class="page-btn active">${i}</span>`;
+                } else {
+                    html += `<button class="page-btn" data-page="${i}">${i}</button>`;
+                }
+            }
+
+            if (pagination.has_next) {
+                html += `<button class="page-btn" data-page="${pagination.next_page}">Suivant →</button>`;
+            } else {
+                html += `<span class="page-btn disabled">Suivant →</span>`;
+            }
+
+            document.getElementById('pagination-container').innerHTML = html;
+
+            document.querySelectorAll('.page-btn[data-page]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentPage = parseInt(this.dataset.page);
+                    loadTransactions();
+                });
+            });
+        }
+
+        function updateStats(stats) {
+            document.getElementById('stat-count').textContent = stats.count || 0;
+            document.getElementById('stat-entree').textContent = formatNumber(stats.total_entree || 0);
+            document.getElementById('stat-sortie').textContent = formatNumber(stats.total_sortie || 0);
+            document.getElementById('stat-commission').textContent = formatNumber(stats.total_commission || 0);
+        }
+
+        function formatNumber(num) {
+            return new Intl.NumberFormat('fr-FR').format(num);
+        }
+
+        // Événements
+        document.getElementById('btn-apply').addEventListener('click', function() {
+            currentPage = 1;
+            loadTransactions();
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', function() {
+            document.getElementById('filter-agent').value = '';
+            document.getElementById('filter-type').value = '';
+            document.getElementById('filter-operateur').value = '';
+            document.getElementById('filter-date-debut').value = '';
+            document.getElementById('filter-date-fin').value = '';
+            currentPage = 1;
+            loadTransactions();
+        });
+
+        // Initialisation
+        setFiltersFromURL();
+        loadTransactions();
+    </script>
+</body>
+</html>

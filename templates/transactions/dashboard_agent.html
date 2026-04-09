@@ -1,0 +1,892 @@
+<!-- templates/transactions/dashboard_agent.html -->
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>{{ title }} - Agent Money</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f7fb;
+            color: #1a1a2e;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 20px 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 4px 12px 4px 4px;
+            border-radius: 50px;
+            transition: background 0.2s;
+        }
+
+        .profile:active {
+            background: #f0f0f0;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .profile-info {
+            line-height: 1.3;
+        }
+
+        .profile-name {
+            font-weight: 700;
+            font-size: 16px;
+            color: #1a1a2e;
+        }
+
+        .profile-role {
+            font-size: 12px;
+            color: #8a8e9e;
+        }
+
+        .profile-menu {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            width: 200px;
+            overflow: hidden;
+            z-index: 100;
+            display: none;
+        }
+
+        .profile-menu.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .profile-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            text-decoration: none;
+            color: #333;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+            width: 100%;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .profile-menu-item:active {
+            background: #f5f5f5;
+        }
+
+        .logout-menu {
+            color: #dc3545;
+            border-bottom: none;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: background 0.2s;
+        }
+
+        .menu-btn:active {
+            background: #f0f0f0;
+        }
+
+        .menu-btn span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: #1a1a2e;
+            border-radius: 2px;
+        }
+
+        .container {
+            padding: 0 16px 30px 16px;
+        }
+
+        .balance-cards {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+
+        .balance-card {
+            background: white;
+            border-radius: 24px;
+            padding: 18px;
+            min-width: 150px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+        }
+
+        .balance-card .icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 12px;
+        }
+
+        .balance-card .icon svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .balance-card .label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #8a8e9e;
+            margin-bottom: 4px;
+        }
+
+        .balance-card .amount {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 16px;
+            padding-left: 4px;
+        }
+
+        .operators-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .operator-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px 16px;
+            text-align: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .operator-card:active {
+            transform: scale(0.97);
+            background: #fafafa;
+        }
+
+        .operator-logo {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 12px auto;
+        }
+
+        .operator-logo svg {
+            width: 56px;
+            height: 56px;
+        }
+
+        .operator-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 4px;
+        }
+
+        .operator-sub {
+            font-size: 11px;
+            color: #8a8e9e;
+        }
+
+        .actions-bar {
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            border-radius: 30px;
+            padding: 12px 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+        }
+
+        .action-btn {
+            text-align: center;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 40px;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        .action-btn:active {
+            background: #f5f5f5;
+        }
+
+        .action-btn .icon {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 6px auto;
+        }
+
+        .action-btn .icon svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .action-btn .label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        .retrait-code {
+            background: white;
+            border-radius: 20px;
+            padding: 16px;
+            margin-top: 16px;
+            text-align: center;
+            border: 1px solid #f0f0f0;
+            cursor: pointer;
+        }
+
+        .retrait-code:active {
+            background: #fafafa;
+        }
+
+        .retrait-code .icon {
+            width: 28px;
+            height: 28px;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        .retrait-code .icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .retrait-code .text {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+            vertical-align: middle;
+        }
+
+        .recent-section {
+            margin-top: 24px;
+        }
+
+        .recent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 16px;
+        }
+
+        .recent-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .recent-header a {
+            font-size: 12px;
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .transaction-item {
+            background: white;
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #f0f0f0;
+        }
+
+        .transaction-info {
+            flex: 1;
+        }
+
+        .transaction-type {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .transaction-date {
+            font-size: 11px;
+            color: #8a8e9e;
+        }
+
+        .transaction-amount {
+            font-weight: 700;
+            font-size: 16px;
+            text-align: right;
+        }
+
+        .badge-depot { color: #28a745; }
+        .badge-retrait { color: #dc3545; }
+        .badge-credit { color: #fd7e14; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 28px;
+            width: 85%;
+            max-width: 350px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 16px;
+            font-size: 16px;
+            margin-bottom: 16px;
+            background: white;
+            font-family: inherit;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-depot, .btn-retrait, .btn-credit {
+            padding: 16px;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-depot { background: #28a745; color: white; }
+        .btn-retrait { background: #dc3545; color: white; }
+        .btn-credit { background: #fd7e14; color: white; }
+
+        .btn-close {
+            background: #f0f0f0;
+            color: #666;
+            border: none;
+            padding: 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 40px;
+            z-index: 1200;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-top">
+            <div class="profile" onclick="toggleProfileMenu()">
+                <div class="avatar">{{ agent.nom|slice:":1"|upper }}{{ agent.nom|slice:"1:2"|upper }}</div>
+                <div class="profile-info">
+                    <div class="profile-name">{{ agent.nom }}</div>
+                    <div class="profile-role">Agent</div>
+                </div>
+            </div>
+            <button class="menu-btn" onclick="window.location.href='{% url "historique_agent" %}'">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </div>
+
+    <div class="profile-menu" id="profileMenu">
+        <button class="profile-menu-item" onclick="closeProfileMenuAndRedirect('{% url "historique_demandes_agent" %}')">
+            <span>📋</span>
+            <span>Mes demandes</span>
+        </button>
+        <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+            {% csrf_token %}
+            <button type="submit" class="profile-menu-item logout-menu">
+                <span>🚪</span>
+                <span>Déconnexion</span>
+            </button>
+        </form>
+    </div>
+
+    <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="balance-cards">
+            <div class="balance-card">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor"/>
+                        <path d="M12 8v8M8 12h8" stroke="currentColor"/>
+                        <path d="M5 3L3 5M19 3L21 5M5 21L3 19M19 21L21 19" stroke="currentColor" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="label">ARGENT CASH</div>
+                <div class="amount">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} FCFA</div>
+            </div>
+            <div class="balance-card">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fd7e14" stroke-width="1.5">
+                        <path d="M12 2v20M17 7H7M17 12H7M17 17H7" stroke="currentColor" stroke-linecap="round"/>
+                        <circle cx="12" cy="12" r="9" stroke="currentColor"/>
+                        <path d="M12 9v6" stroke="currentColor"/>
+                    </svg>
+                </div>
+                <div class="label">UV TOUCHPIONT</div>
+                <div class="amount">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }}</div>
+            </div>
+            <div class="balance-card">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#17a2b8" stroke-width="1.5">
+                        <path d="M2 12h20M12 2v20" stroke="currentColor"/>
+                        <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" opacity="0.5"/>
+                    </svg>
+                </div>
+                <div class="label">UV WAVE</div>
+                <div class="amount">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }}</div>
+            </div>
+        </div>
+
+        <div class="section-title">⚡ SERVICES</div>
+
+        <div class="operators-grid">
+            <div class="operator-card orange" onclick="openModal('orange')">
+                <div class="operator-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ff6600" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+                        <path d="M8 7v10M16 7v10M12 7v10" stroke="currentColor"/>
+                    </svg>
+                </div>
+                <div class="operator-name">Orange Money</div>
+                <div class="operator-sub">Dépôt / Retrait / Crédit</div>
+            </div>
+            <div class="operator-card moov" onclick="openModal('malitel')">
+                <div class="operator-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#0066cc" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+                        <path d="M7 8h10M7 12h10M7 16h6" stroke="currentColor"/>
+                    </svg>
+                </div>
+                <div class="operator-name">Moov Africa</div>
+                <div class="operator-sub">Dépôt / Retrait / Crédit</div>
+            </div>
+            <div class="operator-card telecel" onclick="openModal('telecel')">
+                <div class="operator-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+                        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                        <path d="M12 7v3M12 14v3" stroke="currentColor"/>
+                    </svg>
+                </div>
+                <div class="operator-name">Telecel</div>
+                <div class="operator-sub">Crédit uniquement</div>
+            </div>
+            <div class="operator-card wave" onclick="openModal('wave')">
+                <div class="operator-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#17a2b8" stroke-width="1.5">
+                        <path d="M2 12h20M12 2v20" stroke="currentColor"/>
+                        <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" opacity="0.5"/>
+                    </svg>
+                </div>
+                <div class="operator-name">Wave</div>
+                <div class="operator-sub">Dépôt / Retrait</div>
+            </div>
+        </div>
+
+        <div class="actions-bar">
+            <div class="action-btn" onclick="openArgentCashModal()">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor"/>
+                        <path d="M12 8v8M8 12h8" stroke="currentColor"/>
+                        <path d="M5 3L3 5M19 3L21 5M5 21L3 19M19 21L21 19" stroke="currentColor" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="label">ARGENT CASH</div>
+            </div>
+            <div class="action-btn" onclick="openDemandeModal('cash_to_uv')">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fd7e14" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor"/>
+                        <path d="M12 8v8M8 12h8" stroke="currentColor"/>
+                    </svg>
+                </div>
+                <div class="label">UV TOUCHPIONT</div>
+            </div>
+            <div class="action-btn" onclick="openDemandeModal('cash_to_wave')">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#17a2b8" stroke-width="1.5">
+                        <path d="M2 12h20M12 2v20" stroke="currentColor"/>
+                        <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" opacity="0.5"/>
+                    </svg>
+                </div>
+                <div class="label">UV WAVE</div>
+            </div>
+        </div>
+
+        <div class="retrait-code" onclick="openDemandeModal('wave_to_cash')">
+            <div class="icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.5">
+                    <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor"/>
+                    <path d="M7 11h10M12 11v6" stroke="currentColor"/>
+                    <circle cx="12" cy="11" r="1" fill="currentColor"/>
+                </svg>
+            </div>
+            <span class="text">RETRAIT PAR CODE</span>
+        </div>
+
+        <div class="recent-section">
+            <div class="recent-header">
+                <h3>📋 Dernières transactions</h3>
+                <a href="{% url 'historique_agent' %}">Voir tout →</a>
+            </div>
+            {% if dernieres_transactions %}
+                {% for t in dernieres_transactions|slice:":5" %}
+                <div class="transaction-item">
+                    <div class="transaction-info">
+                        <div class="transaction-type">
+                            {% if t.type_transaction == 'depot' %}
+                                <span class="badge-depot"> Dépôt {{ t.get_operateur_display }}</span>
+                            {% elif t.type_transaction == 'retrait' %}
+                                <span class="badge-retrait"> Retrait {{ t.get_operateur_display }}</span>
+                            {% else %}
+                                <span class="badge-credit"> Crédit {{ t.get_operateur_display }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="transaction-date">{{ t.date|date:"d/m/Y H:i" }}</div>
+                        <div class="transaction-date">📞 {{ t.numero_client }}</div>
+                    </div>
+                    <div class="transaction-amount">
+                        {{ t.montant|floatformat:0|default:"0"|intcomma }}<br>
+                        <span style="font-size: 10px;">FCFA</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 40px; color: #8a8e9e; background: white; border-radius: 20px;">
+                    📭 Aucune transaction récente
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal transaction -->
+    <div id="transactionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalOperatorName">Orange Money</h3>
+                <p>Choisissez l'opération</p>
+            </div>
+            <div class="modal-body">
+                <div class="btn-group">
+                    <a href="#" id="btnDepot" class="btn-depot"> Dépôt</a>
+                    <a href="#" id="btnRetrait" class="btn-retrait"> Retrait</a>
+                    <a href="#" id="btnCredit" class="btn-credit"> Crédit</a>
+                </div>
+                <button class="btn-close" onclick="closeModal()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal ARGENT CASH avec sélecteur -->
+    <div id="argentCashModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💰 ARGENT CASH</h3>
+                <p>Choisissez le type d'UV à échanger</p>
+            </div>
+            <div class="modal-body">
+                {% csrf_token %}
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" id="csrfToken">
+                <select id="argentCashType" class="form-select">
+                    <option value="uv_to_cash">📱 UV TOUCHPIONT → ARGENT CASH</option>
+                    <option value="wave_to_cash">💳 UV WAVE → ARGENT CASH</option>
+                </select>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Montant (FCFA)</label>
+                    <input type="number" id="argentCashMontant" class="form-select" placeholder="Ex: 50000" min="1000" step="1000">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Motif (optionnel)</label>
+                    <input type="text" id="argentCashMotif" class="form-select" placeholder="Motif de la demande">
+                </div>
+                <button class="btn-depot" style="width: 100%;" onclick="submitArgentCash()">📤 Envoyer la demande</button>
+                <button class="btn-close" onclick="closeArgentCashModal()" style="margin-top: 12px;">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal demande standard -->
+    <div id="demandeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔄 Échange de fonds</h3>
+                <p>Demande à l'administrateur</p>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'demander_approvisionnement' %}" id="demandeForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="type_echange" id="demandeType" value="">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Montant (FCFA)</label>
+                        <input type="number" name="montant" required min="1000" step="1000" 
+                               style="width: 100%; padding: 14px; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 16px;">
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">Motif (optionnel)</label>
+                        <input type="text" name="motif" style="width: 100%; padding: 14px; border: 1px solid #e0e0e0; border-radius: 16px;">
+                    </div>
+                    <button type="submit" class="btn-depot" style="width: 100%;">📤 Envoyer la demande</button>
+                    <button type="button" class="btn-close" onclick="closeDemandeModal()" style="margin-top: 12px;">Annuler</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">⏳ Chargement...</div>
+
+    <script>
+        // Menu profil
+        function toggleProfileMenu() {
+            const menu = document.getElementById('profileMenu');
+            menu.classList.toggle('show');
+        }
+
+        function closeProfileMenuAndRedirect(url) {
+            document.getElementById('profileMenu').classList.remove('show');
+            window.location.href = url;
+        }
+
+        document.addEventListener('click', function(event) {
+            const profile = document.querySelector('.profile');
+            const menu = document.getElementById('profileMenu');
+            if (profile && !profile.contains(event.target) && menu && !menu.contains(event.target)) {
+                menu.classList.remove('show');
+            }
+        });
+
+        // Modals transactions
+        function openModal(operator) {
+            const names = { orange: 'Orange Money', malitel: 'Moov Africa', telecel: 'Telecel', wave: 'Wave' };
+            document.getElementById('modalOperatorName').textContent = names[operator];
+            
+            const btnDepot = document.getElementById('btnDepot');
+            const btnRetrait = document.getElementById('btnRetrait');
+            const btnCredit = document.getElementById('btnCredit');
+            
+            const baseUrl = "{% url 'transaction_user' 'OPERATEUR' 'depot' %}";
+            btnDepot.href = baseUrl.replace('OPERATEUR', operator).replace('depot', 'depot');
+            btnRetrait.href = baseUrl.replace('OPERATEUR', operator).replace('depot', 'retrait');
+            btnCredit.href = baseUrl.replace('OPERATEUR', operator).replace('depot', 'credit');
+            
+            if (operator === 'wave') {
+                btnCredit.style.display = 'none';
+                btnDepot.style.display = 'block';
+                btnRetrait.style.display = 'block';
+            } else if (operator === 'telecel') {
+                btnDepot.style.display = 'none';
+                btnRetrait.style.display = 'none';
+                btnCredit.style.display = 'block';
+            } else {
+                btnDepot.style.display = 'block';
+                btnRetrait.style.display = 'block';
+                btnCredit.style.display = 'block';
+            }
+            
+            document.getElementById('transactionModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('transactionModal').style.display = 'none';
+        }
+
+        // Modal ARGENT CASH
+        function openArgentCashModal() {
+            document.getElementById('argentCashModal').style.display = 'flex';
+        }
+
+        function closeArgentCashModal() {
+            document.getElementById('argentCashModal').style.display = 'none';
+        }
+
+        function submitArgentCash() {
+    const type = document.getElementById('argentCashType').value;
+    const montant = document.getElementById('argentCashMontant').value;
+    const motif = document.getElementById('argentCashMotif').value;
+    const csrftoken = document.getElementById('csrfToken').value;
+
+    if (!montant || montant < 1000) {
+        alert('Veuillez saisir un montant valide (minimum 1000 FCFA)');
+        return;
+    }
+
+    fetch("{% url 'demander_approvisionnement_api' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken,
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new URLSearchParams({
+            'type_echange': type,
+            'montant': montant,
+            'motif': motif
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeArgentCashModal();
+            alert('✅ Demande envoyée avec succès !');
+            window.location.reload();
+        } else {
+            alert('❌ Erreur: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur de connexion: ' + error.message);
+    });
+}
+
+        // Modal demande standard
+        function openDemandeModal(type) {
+            document.getElementById('demandeType').value = type;
+            document.getElementById('demandeModal').style.display = 'flex';
+        }
+
+        function closeDemandeModal() {
+            document.getElementById('demandeModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target === document.getElementById('transactionModal')) closeModal();
+            if (event.target === document.getElementById('demandeModal')) closeDemandeModal();
+            if (event.target === document.getElementById('argentCashModal')) closeArgentCashModal();
+        }
+
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', () => {
+                document.getElementById('loading').style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html>

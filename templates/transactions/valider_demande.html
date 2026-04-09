@@ -1,0 +1,47 @@
+<!-- templates/transactions/valider_demande.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Agent Money</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: white; border-radius: 20px; overflow: hidden; }
+        .card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+        .card-body { padding: 30px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+        .info-row .label { font-weight: bold; color: #666; }
+        .btn-valider { background: #28a745; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; margin-right: 10px; }
+        .btn-refuser { background: #dc3545; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; }
+        .btn-back { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 8px; text-align: center; }
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header"><h2>✅ Valider une demande</h2></div>
+            <div class="card-body">
+                {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}
+                <div class="info-row"><span class="label">Agent:</span><span>{{ demande.agent.nom }}</span></div>
+                <div class="info-row"><span class="label">Type d'échange:</span><span>{{ demande.get_type_echange_display }}</span></div>
+                <div class="info-row"><span class="label">Montant:</span><span><strong>{{ demande.montant|floatformat:0 }} FCFA</strong></span></div>
+                {% if demande.motif %}<div class="info-row"><span class="label">Motif:</span><span>{{ demande.motif }}</span></div>{% endif %}
+                <div class="info-row"><span class="label">Date demande:</span><span>{{ demande.date_demande|date:"d/m/Y H:i" }}</span></div>
+                <div style="margin-top: 30px; text-align: center;">
+                    <form method="post" style="display: inline-block;">
+                        {% csrf_token %}
+                        <button type="submit" name="action" value="valider" class="btn-valider">✅ Valider</button>
+                        <button type="submit" name="action" value="refuser" class="btn-refuser">❌ Refuser</button>
+                    </form>
+                </div>
+                <div style="text-align: center;"><a href="{% url 'dashboard_admin' %}" class="btn-back">← Retour</a></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,883 @@
+<!-- templates/transactions/gestion_agents.html -->
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Gestion des agents - Admin Money</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
+        /* ========== SIDEBAR ========== */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100%;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 28px 24px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .sidebar-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+
+        .sidebar-menu .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            color: #475569;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-menu .menu-item:hover {
+            background: #f8fafc;
+            color: #4f46e5;
+        }
+
+        .sidebar-menu .menu-item.active {
+            background: #eef2ff;
+            color: #4f46e5;
+            border-left-color: #4f46e5;
+        }
+
+        .sidebar-menu .menu-item svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            fill: none;
+        }
+
+        /* ========== HEADER MOBILE ========== */
+        .header-mobile {
+            background: white;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: none;
+        }
+
+        .header-mobile-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .back-btn svg {
+            width: 24px;
+            height: 24px;
+            stroke: #1e293b;
+        }
+
+        .mobile-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* ========== MAIN CONTENT ========== */
+        .main-content {
+            margin-left: 260px;
+            padding: 32px 40px;
+        }
+
+        /* Header page */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-title h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .page-title p {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(79,70,229,0.2);
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+        }
+
+        /* Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-box {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -12px rgba(0,0,0,0.15);
+        }
+
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon.blue { background: #eef2ff; color: #4f46e5; }
+        .stat-icon.green { background: #ecfdf5; color: #10b981; }
+        .stat-icon.orange { background: #fffbeb; color: #f59e0b; }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        /* Filtres */
+        .filters-bar {
+            background: white;
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+            margin-bottom: 6px;
+        }
+
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+
+        /* ========== TABLEAU ========== */
+        .table-container {
+            background: white;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            overflow-x: auto;
+        }
+
+        .agents-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        .agents-table th {
+            text-align: left;
+            padding: 16px 20px;
+            background: #f8fafc;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .agents-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        .agents-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .agent-name-cell {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .agent-phone-cell {
+            color: #64748b;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .soldes-cell {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .solde-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 70px;
+        }
+
+        .solde-label {
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        .solde-value {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-icon {
+            padding: 8px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-view {
+            background: #eef2ff;
+            color: #4f46e5;
+        }
+        .btn-view:hover { background: #e0e7ff; }
+
+        .btn-edit {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .btn-edit:hover { background: #fde68a; }
+
+        .btn-caisse {
+            background: #ccfbf1;
+            color: #0f766e;
+        }
+        .btn-caisse:hover { background: #99f6e4; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-container {
+            background: white;
+            border-radius: 32px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #94a3b8;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: #f1f5f9;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .btn-submit:hover {
+            background: #4338ca;
+        }
+
+        .alert {
+            padding: 14px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .alert-success { background: #d1fae5; color: #065f46; }
+        .alert-error { background: #fee2e2; color: #991b1b; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #94a3b8;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .header-mobile {
+                display: block;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+            .stats-row {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .soldes-cell {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .action-buttons {
+                flex-direction: column;
+            }
+            .btn-icon {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>🏦 Agent Money</h2>
+            <p>Administration</p>
+        </div>
+        <div class="sidebar-menu">
+            <a href="{% url 'dashboard_admin' %}" class="menu-item">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/>
+                </svg>
+                <span>Tableau de bord</span>
+            </a>
+            <a href="{% url 'historique_admin' %}" class="menu-item">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="16" rx="1"/>
+                    <path d="M8 2v4M16 2v4M3 10h18"/>
+                </svg>
+                <span>Transactions</span>
+            </a>
+            <a href="{% url 'gestion_agents' %}" class="menu-item active">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>Agents</span>
+            </a>
+            <a href="#" class="menu-item">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-3"/>
+                    <path d="M12 2v12M8 10l4 4 4-4"/>
+                </svg>
+                <span>Rapports</span>
+            </a>
+            <form method="post" action="{% url 'logout' %}" style="margin-top: auto;">
+                {% csrf_token %}
+                <button type="submit" class="menu-item" style="width: 100%; background: none; border: none; cursor: pointer; margin-top: 40px;">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l4-4-4-4M12 3h8v8"/>
+                    </svg>
+                    <span>Déconnexion</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Header mobile -->
+    <div class="header-mobile">
+        <div class="header-mobile-content">
+            <a href="{% url 'dashboard_admin' %}" class="back-btn">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </a>
+            <div class="mobile-title">Agents</div>
+            <div style="width: 40px;"></div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>👥 Gestion des agents</h1>
+                <p>Liste complète de tous les agents</p>
+            </div>
+            <button class="btn-primary" onclick="openAddModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Nouvel agent
+            </button>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-icon blue">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="stat-number">{{ agents|length }}</div>
+                    <div class="stat-label">Total agents</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon green">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 8v8M8 12h8"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="stat-number">{{ agents_actifs|default:0 }}</div>
+                    <div class="stat-label">Agents actifs</div>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon orange">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 8v4M12 16h.01"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="stat-number">{{ agents_inactifs|default:0 }}</div>
+                    <div class="stat-label">Agents inactifs</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="filters-bar">
+            <div class="filter-group">
+                <label>🔍 Rechercher</label>
+                <input type="text" id="search-input" placeholder="Nom ou téléphone..." onkeyup="filterTable()">
+            </div>
+            <div class="filter-group">
+                <label>📊 Statut</label>
+                <select id="status-filter" onchange="filterTable()">
+                    <option value="all">Tous</option>
+                    <option value="actif">Actifs</option>
+                    <option value="inactif">Inactifs</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tableau -->
+        <div class="table-container">
+            <table class="agents-table" id="agents-table">
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Contact</th>
+                        <th>Statut</th>
+                        <th>Soldes</th>
+                        <th>Inscription</th>
+                        <th>Actions</th>
+                    </thead>
+                <tbody id="table-body">
+                    {% for agent in agents %}
+                    <tr data-name="{{ agent.nom|lower }}" data-phone="{{ agent.telephone }}" data-status="{% if agent.est_actif %}actif{% else %}inactif{% endif %}">
+                        <td class="agent-name-cell">{{ agent.nom }}</td>
+                        <td class="agent-phone-cell">{{ agent.telephone }}</td>
+                        <td>
+                            <span class="status-badge {% if agent.est_actif %}status-active{% else %}status-inactive{% endif %}">
+                                {{ agent.est_actif|yesno:"Actif,Inactif" }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="soldes-cell">
+                                <div class="solde-item">
+                                    <span class="solde-label">💰 Cash</span>
+                                    <span class="solde-value">{{ agent.user.caisse.solde_cash|floatformat:0|default:"0"|intcomma }}</span>
+                                </div>
+                                <div class="solde-item">
+                                    <span class="solde-label">📱 UV</span>
+                                    <span class="solde-value">{{ agent.user.caisse.solde_uv|floatformat:0|default:"0"|intcomma }}</span>
+                                </div>
+                                <div class="solde-item">
+                                    <span class="solde-label">💳 Wave</span>
+                                    <span class="solde-value">{{ agent.user.caisse.solde_wave|floatformat:0|default:"0"|intcomma }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="font-size: 12px; color: #64748b;">{{ agent.created_at|date:"d/m/Y" }}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn-icon btn-view" onclick="window.location.href='{% url 'detail_agent' agent.id %}'">👤 Profil</button>
+                                <button class="btn-icon btn-edit" onclick="openEditModal({{ agent.id }}, '{{ agent.nom }}', '{{ agent.telephone }}', '{{ agent.email }}', {{ agent.est_actif|lower }})">✏️ Modifier</button>
+                                <button class="btn-icon btn-caisse" onclick="openCaisseModal({{ agent.id }}, '{{ agent.nom }}')">💰 Caisse</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="empty-state">📭 Aucun agent enregistré</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Agent -->
+    <div id="agentModal" class="modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="modalTitle">Ajouter un agent</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'ajouter_agent' %}" id="agentForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="agent_id" id="agent_id">
+                    <div class="form-group">
+                        <label>Nom complet</label>
+                        <input type="text" name="nom" id="agent_nom" required placeholder="Jean Dupont">
+                    </div>
+                    <div class="form-group">
+                        <label>Téléphone</label>
+                        <input type="tel" name="telephone" id="agent_telephone" required placeholder="70000000">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" id="agent_email" placeholder="jean@example.com">
+                    </div>
+                    <div class="form-group" id="password-group">
+                        <label>Mot de passe</label>
+                        <input type="password" name="password" id="agent_password" placeholder="8 caractères minimum">
+                    </div>
+                    <div class="form-group">
+                        <label>Statut</label>
+                        <select name="est_actif" id="agent_actif">
+                            <option value="true">Actif</option>
+                            <option value="false">Inactif</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-submit">Enregistrer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Caisse -->
+    <div id="caisseModal" class="modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="caisseModalTitle">Gérer la caisse</h3>
+                <button class="modal-close" onclick="closeCaisseModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'modifier_caisse' %}" id="caisseForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="agent_id" id="caisse_agent_id">
+                    <div class="form-group">
+                        <label>💰 Argent Cash (FCFA)</label>
+                        <input type="number" name="solde_cash" id="caisse_cash" step="1000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>📱 UV Touspiont (FCFA)</label>
+                        <input type="number" name="solde_uv" id="caisse_uv" step="1000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>💳 UV Wave (FCFA)</label>
+                        <input type="number" name="solde_wave" id="caisse_wave" step="1000" required>
+                    </div>
+                    <button type="submit" class="btn-submit">💾 Enregistrer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function filterTable() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const status = document.getElementById('status-filter').value;
+            const rows = document.querySelectorAll('#table-body tr');
+            
+            rows.forEach(row => {
+                if (row.querySelector('.empty-state')) return;
+                
+                const name = row.dataset.name;
+                const phone = row.dataset.phone;
+                const rowStatus = row.dataset.status;
+                let match = true;
+                
+                if (search && !name.includes(search) && !phone.includes(search)) {
+                    match = false;
+                }
+                if (status !== 'all' && rowStatus !== status) {
+                    match = false;
+                }
+                row.style.display = match ? '' : 'none';
+            });
+        }
+
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Ajouter un agent';
+            document.getElementById('agent_id').value = '';
+            document.getElementById('agent_nom').value = '';
+            document.getElementById('agent_telephone').value = '';
+            document.getElementById('agent_email').value = '';
+            document.getElementById('agent_password').value = '';
+            document.getElementById('agent_actif').value = 'true';
+            document.getElementById('password-group').style.display = 'block';
+            document.getElementById('agentModal').style.display = 'flex';
+        }
+
+        function openEditModal(id, nom, telephone, email, estActif) {
+            document.getElementById('modalTitle').textContent = 'Modifier l\'agent';
+            document.getElementById('agent_id').value = id;
+            document.getElementById('agent_nom').value = nom;
+            document.getElementById('agent_telephone').value = telephone;
+            document.getElementById('agent_email').value = email;
+            document.getElementById('agent_actif').value = estActif ? 'true' : 'false';
+            document.getElementById('password-group').style.display = 'none';
+            document.getElementById('agentModal').style.display = 'flex';
+        }
+
+        function openCaisseModal(agentId, agentNom) {
+            document.getElementById('caisseModalTitle').textContent = `Caisse - ${agentNom}`;
+            document.getElementById('caisse_agent_id').value = agentId;
+            
+            fetch(`/api/agent-caisse/${agentId}/`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('caisse_cash').value = data.solde_cash;
+                    document.getElementById('caisse_uv').value = data.solde_uv;
+                    document.getElementById('caisse_wave').value = data.solde_wave;
+                });
+            
+            document.getElementById('caisseModal').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('agentModal').style.display = 'none'; }
+        function closeCaisseModal() { document.getElementById('caisseModal').style.display = 'none'; }
+
+        window.onclick = function(event) {
+            if (event.target === document.getElementById('agentModal')) closeModal();
+            if (event.target === document.getElementById('caisseModal')) closeCaisseModal();
+        }
+    </script>
+</body>
+</html>

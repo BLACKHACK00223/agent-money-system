@@ -1,0 +1,855 @@
+<!-- templates/transactions/transaction_form.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>{{ title }} - Agent Money</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px 24px;
+            text-align: center;
+        }
+
+        .card-header h2 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .card-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .card-body {
+            padding: 28px 24px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #1a1a2e;
+            font-size: 14px;
+        }
+
+        .form-group .required {
+            color: #dc3545;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 16px 18px;
+            border: 2px solid #e8e8e8;
+            border-radius: 24px;
+            font-size: 16px;
+            transition: all 0.3s;
+            font-family: inherit;
+            background: #f8f9fa;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
+        }
+
+        /* Boutons montants prédéfinis */
+        .amount-buttons {
+            margin-top: 12px;
+        }
+
+        .amount-buttons-title {
+            font-size: 12px;
+            color: #8a8e9e;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .amount-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .amount-chip {
+            background: #f0f2f5;
+            border: none;
+            padding: 12px 8px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a2e;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .amount-chip:active {
+            transform: scale(0.96);
+            background: #e0e4e8;
+        }
+
+        .amount-chip.special {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border: 1px solid #667eea30;
+            color: #667eea;
+        }
+
+        /* Bouton continuer */
+        .btn-continue {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 16px;
+        }
+
+        .btn-continue:active {
+            transform: scale(0.98);
+        }
+
+        .btn-continue:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-back {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 14px 24px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            text-align: center;
+            width: 100%;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-back:active {
+            transform: scale(0.98);
+        }
+
+        /* Modal de confirmation */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 40px;
+            width: 90%;
+            max-width: 380px;
+            overflow: hidden;
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 28px 24px;
+            text-align: center;
+        }
+
+        .modal-header .modal-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 12px auto;
+        }
+
+        .modal-header .modal-icon svg {
+            width: 56px;
+            height: 56px;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+
+        .modal-header p {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        /* Cartes récapitulatives */
+        .recap-card {
+            background: #f8f9fc;
+            border-radius: 20px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .recap-card-header {
+            background: #eef2f7;
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #667eea;
+            letter-spacing: 0.5px;
+        }
+
+        .recap-card-body {
+            padding: 16px;
+        }
+
+        .recap-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .recap-row:not(:last-child) {
+            border-bottom: 1px solid #e8ecf0;
+        }
+
+        .recap-row .label {
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .recap-row .value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        .recap-row .value.highlight {
+            font-size: 20px;
+            color: #28a745;
+        }
+
+        /* Résumé */
+        .recap-summary {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8edf8 100%);
+            border-radius: 20px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        .summary-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #28a745;
+        }
+
+        .summary-note {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: #8a8e9e;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed #d0d5dd;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .btn-confirm {
+            flex: 1;
+            padding: 16px;
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+            border: none;
+            border-radius: 28px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            padding: 16px;
+            background: #f0f2f5;
+            color: #6c757d;
+            border: none;
+            border-radius: 28px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-confirm:active {
+            transform: scale(0.97);
+        }
+
+        .btn-cancel:active {
+            transform: scale(0.97);
+            background: #e4e8ed;
+        }
+
+        /* Modal de succès */
+        .success-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .success-content {
+            background: white;
+            border-radius: 40px;
+            width: 90%;
+            max-width: 380px;
+            overflow: hidden;
+            text-align: center;
+            animation: modalSlide 0.3s ease;
+        }
+
+        .success-header {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            color: white;
+            padding: 40px 24px;
+        }
+
+        .success-header .icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px auto;
+        }
+
+        .success-header .icon svg {
+            width: 64px;
+            height: 64px;
+        }
+
+        .success-header h3 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .success-body {
+            padding: 28px 24px;
+        }
+
+        .ref-number {
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 20px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 16px 0;
+            word-break: break-all;
+        }
+
+        .btn-print {
+            width: 100%;
+            padding: 16px;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .btn-print:active {
+            transform: scale(0.97);
+        }
+
+        .btn-close-success {
+            width: 100%;
+            padding: 16px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-close-success:active {
+            transform: scale(0.97);
+        }
+
+        .alert {
+            padding: 14px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 20px 32px;
+            border-radius: 60px;
+            z-index: 1200;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 12px; }
+            .card-header { padding: 24px 20px; }
+            .card-header h2 { font-size: 24px; }
+            .card-body { padding: 20px; }
+            .amount-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h2>{{ title }}</h2>
+                <p>Remplissez les informations ci-dessous</p>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" id="transactionForm">
+                    {% csrf_token %}
+                    
+                    <!-- Numéro client -->
+                    <div class="form-group">
+                        <label>📞 Numéro client <span class="required">*</span></label>
+                        <input type="tel" name="numero_client" id="id_numero_client" 
+                               class="form-control" placeholder="Ex: 70 00 00 00" required>
+                    </div>
+
+                    <!-- Montant -->
+                    <div class="form-group">
+                        <label>💰 Montant (FCFA) <span class="required">*</span></label>
+                        <input type="number" name="montant" id="id_montant" 
+                               class="form-control" placeholder="Ex: 5 000" 
+                               min="100" step="100" required>
+                        
+                        <!-- Boutons montants prédéfinis -->
+                        <div class="amount-buttons">
+                            <div class="amount-buttons-title">
+                                <span>⚡</span> Montants rapides
+                            </div>
+                            <div class="amount-grid">
+                                <button type="button" class="amount-chip" data-amount="1000">1 000</button>
+                                <button type="button" class="amount-chip" data-amount="2000">2 000</button>
+                                <button type="button" class="amount-chip" data-amount="5000">5 000</button>
+                                <button type="button" class="amount-chip" data-amount="10000">10 000</button>
+                                <button type="button" class="amount-chip" data-amount="15000">15 000</button>
+                                <button type="button" class="amount-chip" data-amount="20000">20 000</button>
+                                <button type="button" class="amount-chip" data-amount="25000">25 000</button>
+                                <button type="button" class="amount-chip" data-amount="50000">50 000</button>
+                                <button type="button" class="amount-chip special" data-amount="100000">100 000</button>
+                                <button type="button" class="amount-chip special" data-amount="250000">250 000</button>
+                                <button type="button" class="amount-chip special" data-amount="500000">500 000</button>
+                                <button type="button" class="amount-chip special" data-amount="1000000">1 000 000</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Champs cachés -->
+                    <input type="hidden" name="type_transaction" value="{{ type_transaction }}">
+                    <input type="hidden" name="operateur" value="{{ operateur }}">
+                    <input type="hidden" name="nom_client" id="id_nom_client" value="">
+                    <input type="hidden" name="notes" id="id_notes" value="">
+
+                    <button type="button" class="btn-continue" id="continueBtn" disabled>
+                        ➡️ Continuer
+                    </button>
+                </form>
+
+                <a href="{% if is_admin %}{% url 'dashboard_admin' %}{% else %}{% url 'dashboard_agent' %}{% endif %}" class="btn-back">
+                    ← Retour
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmation avec SVG -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+                        <path d="M8 7v10M16 7v10M12 7v10" stroke="currentColor"/>
+                    </svg>
+                </div>
+                <h3>Confirmation</h3>
+                <p>Vérifiez les informations avant validation</p>
+            </div>
+            <div class="modal-body">
+                <!-- Carte client -->
+                <div class="recap-card">
+                    <div class="recap-card-header">
+                        <span>👤 CLIENT</span>
+                    </div>
+                    <div class="recap-card-body">
+                        <div class="recap-row">
+                            <span class="label">📞 Numéro</span>
+                            <span class="value" id="recapClient">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carte transaction -->
+                <div class="recap-card">
+                    <div class="recap-card-header">
+                        <span>💳 TRANSACTION</span>
+                    </div>
+                    <div class="recap-card-body">
+                        <div class="recap-row">
+                            <span class="label">🏦 Opérateur</span>
+                            <span class="value">{{ operateur|capfirst }}</span>
+                        </div>
+                        <div class="recap-row">
+                            <span class="label">⚡ Type</span>
+                            <span class="value" id="recapType">-</span>
+                        </div>
+                        <div class="recap-row">
+                            <span class="label">💰 Montant</span>
+                            <span class="value highlight" id="recapMontant">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Résumé -->
+                <div class="recap-summary">
+                    <div class="summary-row">
+                        <span>Total à payer</span>
+                        <span class="summary-amount" id="recapTotal">-</span>
+                    </div>
+                </div>
+
+                <div class="modal-buttons">
+                    <button class="btn-cancel" onclick="closeModal()">
+                        <span>✕</span> Annuler
+                    </button>
+                    <button class="btn-confirm" id="confirmBtn">
+                        <span>✓</span> Confirmer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de succès avec SVG -->
+    <div id="successModal" class="success-modal">
+        <div class="success-content">
+            <div class="success-header">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                        <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h3>Succès !</h3>
+                <p>Transaction effectuée</p>
+            </div>
+            <div class="success-body">
+                <div class="ref-number" id="successRef">Référence: -</div>
+                <button class="btn-print" id="printBtn">🖨️ Imprimer le reçu</button>
+                <button class="btn-close-success" id="closeSuccessBtn">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">⏳ Traitement en cours...</div>
+
+    <script>
+        // Récupérer le token CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+        const operateur = '{{ operateur }}';
+        const typeTransaction = '{{ type_transaction }}';
+        
+        const montantInput = document.getElementById('id_montant');
+        const numeroInput = document.getElementById('id_numero_client');
+        const continueBtn = document.getElementById('continueBtn');
+        const form = document.getElementById('transactionForm');
+
+        let currentMontant = 0;
+        let lastReference = '';
+
+        // Formatage des nombres
+        function formatNumber(number) {
+            return new Intl.NumberFormat('fr-FR').format(number);
+        }
+
+        // Mettre à jour le bouton
+        function updateButton(montant) {
+            if (!montant || montant < 100) {
+                continueBtn.disabled = true;
+                return;
+            }
+            currentMontant = montant;
+            continueBtn.disabled = false;
+        }
+
+        // Ajouter un montant
+        function setAmount(amount) {
+            montantInput.value = amount;
+            updateButton(amount);
+            montantInput.dispatchEvent(new Event('input'));
+        }
+
+        // Ouvrir le modal de confirmation
+        function openModal() {
+            const client = numeroInput.value.trim();
+            if (!client) {
+                alert('Veuillez saisir le numéro du client');
+                return;
+            }
+
+            const montant = parseFloat(montantInput.value);
+            if (!montant || montant < 100) {
+                alert('Le montant minimum est de 100 FCFA');
+                return;
+            }
+
+            let typeText = '';
+            let typeIcon = '';
+            if (typeTransaction === 'depot') {
+                typeText = 'Dépôt';
+                typeIcon = '💰';
+            } else if (typeTransaction === 'retrait') {
+                typeText = 'Retrait';
+                typeIcon = '💸';
+            } else {
+                typeText = 'Crédit';
+                typeIcon = '📱';
+            }
+
+            document.getElementById('recapClient').textContent = client;
+            document.getElementById('recapMontant').innerHTML = `${formatNumber(currentMontant)} <span style="font-size: 12px;">FCFA</span>`;
+            document.getElementById('recapType').innerHTML = `${typeIcon} ${typeText}`;
+            document.getElementById('recapTotal').innerHTML = `${formatNumber(currentMontant)} <span style="font-size: 14px;">FCFA</span>`;
+
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').style.display = 'none';
+        }
+
+        // Afficher le modal de succès
+        function showSuccessModal(reference) {
+            lastReference = reference;
+            document.getElementById('successRef').textContent = `Référence: ${reference}`;
+            document.getElementById('successModal').style.display = 'flex';
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').style.display = 'none';
+            window.location.href = '{% if is_admin %}{% url "dashboard_admin" %}{% else %}{% url "dashboard_agent" %}{% endif %}';
+        }
+
+        // Imprimer le reçu
+        function printReceipt() {
+            if (lastReference) {
+                window.open(`/impression/${lastReference}/`, '_blank');
+            }
+        }
+
+        // Soumettre le formulaire via AJAX
+        function submitTransaction() {
+            const formData = new FormData(form);
+            
+            document.getElementById('loading').style.display = 'block';
+            closeModal();
+
+            fetch(form.action || window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrftoken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erreur réseau: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.success) {
+                    showSuccessModal(data.reference);
+                } else {
+                    alert('Erreur: ' + (data.error || 'Transaction échouée'));
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                console.error('Erreur:', error);
+                alert('Erreur de connexion: ' + error.message);
+            });
+        }
+
+        // Écouter les changements de montant
+        montantInput.addEventListener('input', function() {
+            const montant = parseFloat(this.value);
+            updateButton(montant);
+        });
+
+        // Boutons montants prédéfinis
+        document.querySelectorAll('.amount-chip').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const amount = parseInt(this.dataset.amount);
+                setAmount(amount);
+            });
+        });
+
+        // Bouton continuer
+        continueBtn.addEventListener('click', openModal);
+
+        // Bouton confirmer
+        document.getElementById('confirmBtn').addEventListener('click', submitTransaction);
+
+        // Boutons succès
+        document.getElementById('printBtn').addEventListener('click', printReceipt);
+        document.getElementById('closeSuccessBtn').addEventListener('click', closeSuccessModal);
+
+        // Focus sur le premier champ
+        numeroInput.focus();
+
+        // Fermer modals en cliquant à l'extérieur
+        window.onclick = function(event) {
+            const modal = document.getElementById('confirmModal');
+            const successModal = document.getElementById('successModal');
+            if (event.target === modal) closeModal();
+            if (event.target === successModal) closeSuccessModal();
+        }
+    </script>
+</body>
+</html>

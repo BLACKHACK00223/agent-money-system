@@ -1,0 +1,223 @@
+<!-- templates/transactions/recu.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reçu - {{ transaction.reference }}</title>
+    <style>
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none;
+            }
+            .receipt {
+                margin: 0;
+                padding: 10px;
+            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .receipt {
+            max-width: 300px;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 5px;
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .header h2 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .info-row .label {
+            font-weight: bold;
+        }
+        
+        .separator {
+            border-top: 1px dashed #ccc;
+            margin: 15px 0;
+        }
+        
+        .montant {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            margin-top: 15px;
+            border-top: 1px dashed #ccc;
+            padding-top: 10px;
+        }
+        
+        .btn-print {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .btn-print:hover {
+            background: #5a67d8;
+        }
+        
+        .qr-code {
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .signature {
+            margin-top: 30px;
+            font-size: 11px;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #000;
+            width: 150px;
+            margin: 5px auto 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="header">
+            <h2>{{ transaction.sous_agent.agent_principal.point_service }}</h2>
+            <p>{{ transaction.sous_agent.agent_principal.adresse }}</p>
+            <p>Tel: {{ transaction.sous_agent.agent_principal.telephone }}</p>
+            <p>Agent: {{ transaction.sous_agent.nom }}</p>
+        </div>
+        
+        <div class="info-row">
+            <span class="label">Type:</span>
+            <span>{{ transaction.get_type_transaction_display }}</span>
+        </div>
+        
+        <div class="info-row">
+            <span class="label">Opérateur:</span>
+            <span>{{ transaction.get_operateur_display }}</span>
+        </div>
+        
+        <div class="info-row">
+            <span class="label">Client:</span>
+            <span>{{ transaction.numero_client }}</span>
+        </div>
+        
+        {% if transaction.nom_client %}
+        <div class="info-row">
+            <span class="label">Nom:</span>
+            <span>{{ transaction.nom_client }}</span>
+        </div>
+        {% endif %}
+        
+        <div class="separator"></div>
+        
+        <div class="montant">
+            {{ transaction.montant|floatformat:0 }} FCFA
+        </div>
+        
+        <div class="separator"></div>
+        
+        <div class="info-row">
+            <span class="label">Commission:</span>
+            <span>{{ transaction.commission|floatformat:0 }} FCFA</span>
+        </div>
+        
+        <div class="info-row">
+            <span class="label">Frais opérateur:</span>
+            <span>{{ transaction.frais_operateur|floatformat:0 }} FCFA</span>
+        </div>
+        
+        <div class="info-row">
+            <span class="label">Référence:</span>
+            <span><small>{{ transaction.reference }}</small></span>
+        </div>
+        
+        <div class="info-row">
+            <span class="label">Date:</span>
+            <span>{{ transaction.date|date:"d/m/Y H:i:s" }}</span>
+        </div>
+        
+        {% if transaction.reference_operateur %}
+        <div class="info-row">
+            <span class="label">Réf opérateur:</span>
+            <span><small>{{ transaction.reference_operateur }}</small></span>
+        </div>
+        {% endif %}
+        
+        <div class="separator"></div>
+        
+        <div class="footer">
+            <p>Merci pour votre confiance</p>
+            <p>Ce reçu fait foi de transaction</p>
+            <p>{{ date_impression|date:"d/m/Y H:i:s" }}</p>
+        </div>
+        
+        <div class="signature">
+            <div class="signature-line"></div>
+            <p style="text-align: center;">Signature du client</p>
+        </div>
+    </div>
+    
+    <button class="btn-print no-print" onclick="window.print()">
+        🖨️ Imprimer le reçu
+    </button>
+    
+    <script>
+        // Impression automatique
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        }
+    </script>
+</body>
+</html>

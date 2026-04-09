@@ -1,0 +1,68 @@
+<!-- templates/transactions/demande_approvisionnement.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Agent Money</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #17a2b8 0%, #0f6c7c 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 550px; margin: 0 auto; }
+        .card { background: white; border-radius: 20px; overflow: hidden; }
+        .card-header { background: linear-gradient(135deg, #17a2b8 0%, #0f6c7c 100%); color: white; padding: 30px; text-align: center; }
+        .card-header h2 { font-size: 28px; }
+        .card-body { padding: 30px; }
+        .soldes-actuels { background: #f8f9fa; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; justify-content: space-around; text-align: center; }
+        .solde-item .label { font-size: 12px; color: #6c757d; }
+        .solde-item .value { font-size: 20px; font-weight: bold; color: #17a2b8; }
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-control { width: 100%; padding: 12px 15px; border: 2px solid #e1e5e9; border-radius: 12px; font-size: 16px; }
+        .form-control:focus { outline: none; border-color: #17a2b8; }
+        .info-box { background: #fff3cd; padding: 15px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #ffc107; }
+        .btn-submit { width: 100%; padding: 14px; background: linear-gradient(135deg, #17a2b8 0%, #0f6c7c 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+        .btn-back { display: inline-block; margin-top: 15px; padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 10px; }
+        .alert { padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; z-index: 1000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header"><h2>🔄 Demande d'approvisionnement</h2><p>Échangez vos fonds</p></div>
+            <div class="card-body">
+                {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}
+                <div class="soldes-actuels"><div class="solde-item"><div class="label">💰 Cash</div><div class="value">{{ caisse.solde_cash|floatformat:0 }} FCFA</div></div><div class="solde-item"><div class="label">📱 UV</div><div class="value" style="color:#fd7e14;">{{ caisse.solde_uv|floatformat:0 }} FCFA</div></div><div class="solde-item"><div class="label">💳 Wave</div><div class="value" style="color:#17a2b8;">{{ caisse.solde_wave|floatformat:0 }} FCFA</div></div></div>
+                <form method="post" id="demande-form">
+                    {% csrf_token %}
+                    <div class="form-group"><label>Type d'échange <span style="color:#dc3545;">*</span></label><select name="type_echange" id="id_type_echange" class="form-control" required><option value="">-- Choisir --</option><option value="uv_to_cash">📱 UV → Cash (J'ai trop d'UV)</option><option value="wave_to_cash">💳 Wave → Cash (J'ai trop de Wave)</option><option value="cash_to_uv">💰 Cash → UV (Je manque d'UV)</option><option value="cash_to_wave">💰 Cash → Wave (Je manque de Wave)</option></select></div>
+                    <div class="form-group"><label>Montant (FCFA) <span style="color:#dc3545;">*</span></label><input type="number" name="montant" id="id_montant" class="form-control" min="1000" step="1000" placeholder="Ex: 50000" required><small style="color:#6c757d;">Minimum: 1 000 FCFA</small></div>
+                    <div class="form-group"><label>Motif</label><textarea name="motif" id="id_motif" class="form-control" rows="2" placeholder="Optionnel"></textarea></div>
+                    <div class="info-box" id="info-box"><p>💡 Sélectionnez le type et entrez le montant</p></div>
+                    <button type="submit" class="btn-submit" id="btn-submit">📤 Envoyer la demande</button>
+                </form>
+                <div style="text-align:center;"><a href="{% url 'dashboard_agent' %}" class="btn-back">← Retour</a></div>
+            </div>
+        </div>
+    </div>
+    <div class="loading" id="loading">⏳ Envoi en cours...</div>
+    <script>
+        const typeSelect=document.getElementById('id_type_echange');
+        const montantInput=document.getElementById('id_montant');
+        const infoBox=document.getElementById('info-box');
+        const btnSubmit=document.getElementById('btn-submit');
+        const soldeUV={{ caisse.solde_uv|default:0 }};
+        const soldeWave={{ caisse.solde_wave|default:0 }};
+        const soldeCash={{ caisse.solde_cash|default:0 }};
+        function formatNumber(n){return new Intl.NumberFormat('fr-FR').format(n);}
+        function updateInfo(){const type=typeSelect.value;const montant=parseFloat(montantInput.value);if(!type){infoBox.innerHTML='<p>💡 Sélectionnez le type et entrez le montant</p>';btnSubmit.disabled=false;return;}if(!montant||montant<1000){infoBox.innerHTML='<p>⚠️ Montant minimum 1 000 FCFA</p>';btnSubmit.disabled=true;return;}
+        if(type==='uv_to_cash'){if(montant>soldeUV){infoBox.innerHTML=`<p style="color:#dc3545;">❌ Solde UV insuffisant (${formatNumber(soldeUV)} FCFA)</p>`;btnSubmit.disabled=true;}else{infoBox.innerHTML=`<p>✅ Échange UV → Cash</p><p>📱 UV: ${formatNumber(montant)} FCFA → 💰 Cash: ${formatNumber(montant)} FCFA</p><hr><p>📊 Après: UV: ${formatNumber(soldeUV-montant)} FCFA | Cash: ${formatNumber(soldeCash+montant)} FCFA</p>`;btnSubmit.disabled=false;}}
+        else if(type==='wave_to_cash'){if(montant>soldeWave){infoBox.innerHTML=`<p style="color:#dc3545;">❌ Solde Wave insuffisant (${formatNumber(soldeWave)} FCFA)</p>`;btnSubmit.disabled=true;}else{infoBox.innerHTML=`<p>✅ Échange Wave → Cash</p><p>💳 Wave: ${formatNumber(montant)} FCFA → 💰 Cash: ${formatNumber(montant)} FCFA</p><hr><p>📊 Après: Wave: ${formatNumber(soldeWave-montant)} FCFA | Cash: ${formatNumber(soldeCash+montant)} FCFA</p>`;btnSubmit.disabled=false;}}
+        else if(type==='cash_to_uv'){if(montant>soldeCash){infoBox.innerHTML=`<p style="color:#dc3545;">❌ Solde Cash insuffisant (${formatNumber(soldeCash)} FCFA)</p>`;btnSubmit.disabled=true;}else{infoBox.innerHTML=`<p>✅ Échange Cash → UV</p><p>💰 Cash: ${formatNumber(montant)} FCFA → 📱 UV: ${formatNumber(montant)} FCFA</p><hr><p>📊 Après: Cash: ${formatNumber(soldeCash-montant)} FCFA | UV: ${formatNumber(soldeUV+montant)} FCFA</p>`;btnSubmit.disabled=false;}}
+        else if(type==='cash_to_wave'){if(montant>soldeCash){infoBox.innerHTML=`<p style="color:#dc3545;">❌ Solde Cash insuffisant (${formatNumber(soldeCash)} FCFA)</p>`;btnSubmit.disabled=true;}else{infoBox.innerHTML=`<p>✅ Échange Cash → Wave</p><p>💰 Cash: ${formatNumber(montant)} FCFA → 💳 Wave: ${formatNumber(montant)} FCFA</p><hr><p>📊 Après: Cash: ${formatNumber(soldeCash-montant)} FCFA | Wave: ${formatNumber(soldeWave+montant)} FCFA</p>`;btnSubmit.disabled=false;}}}
+        typeSelect.addEventListener('change',updateInfo);montantInput.addEventListener('input',updateInfo);
+    </script>
+</body>
+</html>

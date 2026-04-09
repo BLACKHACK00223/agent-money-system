@@ -1,0 +1,320 @@
+<!-- templates/transactions/historique.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Agent Money</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+        }
+
+        .navbar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .navbar-menu a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+        }
+
+        .navbar-menu a:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .filter-group input, .filter-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .btn-filter {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .btn-filter:hover {
+            background: #5a67d8;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-depot { background: #d4edda; color: #155724; }
+        .badge-retrait { background: #f8d7da; color: #721c24; }
+        .badge-credit { background: #fff3cd; color: #856404; }
+
+        .totals {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .total-item {
+            text-align: center;
+        }
+
+        .total-item .label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .total-item .value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .btn-print {
+            background: #17a2b8;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .pagination a {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            text-decoration: none;
+            color: #667eea;
+            border-radius: 5px;
+        }
+
+        .pagination a:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .table {
+                font-size: 12px;
+            }
+            .table th, .table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">🏦 Agent Money System</div>
+            <div class="navbar-menu">
+                <a href="{% url 'home' %}">🏠 Accueil</a>
+                <a href="{% url 'historique' %}">📜 Historique</a>
+                <a href="{% url 'rapport' %}">📊 Rapports</a>
+                <a href="{% url 'logout' %}">🚪 Déconnexion</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h2>📜 Historique des transactions</h2>
+            
+            <!-- Filtres -->
+            <form method="get" class="filters">
+                <div class="filter-group">
+                    <label>Sous-agent</label>
+                    <select name="sous_agent">
+                        <option value="">Tous</option>
+                        {% for sa in sous_agents %}
+                        <option value="{{ sa.id }}" {% if filtres.sous_agent == sa.id|stringformat:"s" %}selected{% endif %}>
+                            {{ sa.nom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Date début</label>
+                    <input type="date" name="date_debut" value="{{ filtres.date_debut }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label>Date fin</label>
+                    <input type="date" name="date_fin" value="{{ filtres.date_fin }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label>Opérateur</label>
+                    <select name="operateur">
+                        <option value="">Tous</option>
+                        <option value="orange" {% if filtres.operateur == 'orange' %}selected{% endif %}>Orange Money</option>
+                        <option value="wave" {% if filtres.operateur == 'wave' %}selected{% endif %}>Wave</option>
+                        <option value="malitel" {% if filtres.operateur == 'malitel' %}selected{% endif %}>Malitel</option>
+                        <option value="telecel" {% if filtres.operateur == 'telecel' %}selected{% endif %}>Telecel</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Type</label>
+                    <select name="type">
+                        <option value="">Tous</option>
+                        <option value="depot" {% if filtres.type == 'depot' %}selected{% endif %}>Dépôt</option>
+                        <option value="retrait" {% if filtres.type == 'retrait' %}selected{% endif %}>Retrait</option>
+                        <option value="credit" {% if filtres.type == 'credit' %}selected{% endif %}>Crédit</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <button type="submit" class="btn-filter">🔍 Filtrer</button>
+                </div>
+            </form>
+            
+            <!-- Totaux -->
+            <div class="totals">
+                <div class="total-item">
+                    <div class="label">Total transactions</div>
+                    <div class="value">{{ transactions|length }}</div>
+                </div>
+                <div class="total-item">
+                    <div class="label">Montant total</div>
+                    <div class="value">{{ total_montant|floatformat:0 }} FCFA</div>
+                </div>
+                <div class="total-item">
+                    <div class="label">Commission totale</div>
+                    <div class="value">{{ total_commission|floatformat:0 }} FCFA</div>
+                </div>
+            </div>
+            
+            <!-- Tableau des transactions -->
+            {% if transactions %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Référence</th>
+                        <th>Date</th>
+                        <th>Sous-agent</th>
+                        <th>Type</th>
+                        <th>Opérateur</th>
+                        <th>Client</th>
+                        <th>Montant</th>
+                        <th>Commission</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trans in transactions %}
+                    <tr>
+                        <td><small>{{ trans.reference }}</small></td>
+                        <td><small>{{ trans.date|date:"d/m/Y H:i" }}</small></td>
+                        <td>{{ trans.sous_agent.nom }}</td>
+                        <td>
+                            <span class="badge badge-{{ trans.type_transaction }}">
+                                {{ trans.get_type_transaction_display }}
+                            </span>
+                        </td>
+                        <td>{{ trans.get_operateur_display }}</td>
+                        <td>{{ trans.numero_client }}</td>
+                        <td><strong>{{ trans.montant|floatformat:0 }}</strong></td>
+                        <td>{{ trans.commission|floatformat:0 }}</td>
+                        <td>
+                            <a href="{% url 'impression_recu' trans.reference %}" target="_blank" class="btn-print">
+                                🖨️
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="text-align: center; color: #999; padding: 40px;">
+                Aucune transaction trouvée pour cette période
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

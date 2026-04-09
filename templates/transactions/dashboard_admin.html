@@ -1,0 +1,1527 @@
+<!-- templates/transactions/dashboard_admin.html -->
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>{{ title }} - Admin Money</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+        }
+
+        /* ========== MOBILE FIRST (par défaut) ========== */
+
+        /* Header mobile */
+        .header {
+            background: white;
+            padding: 20px 20px 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 4px 12px 4px 4px;
+            border-radius: 50px;
+            transition: background 0.2s;
+        }
+
+        .profile:active {
+            background: #f0f0f0;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .profile-info {
+            line-height: 1.3;
+        }
+
+        .profile-name {
+            font-weight: 700;
+            font-size: 16px;
+            color: #1a1a2e;
+        }
+
+        .profile-role {
+            font-size: 12px;
+            color: #8a8e9e;
+        }
+
+        .profile-menu {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            width: 200px;
+            overflow: hidden;
+            z-index: 100;
+            display: none;
+        }
+
+        .profile-menu.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .profile-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            text-decoration: none;
+            color: #333;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+            width: 100%;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .profile-menu-item:active {
+            background: #f5f5f5;
+        }
+
+        .logout-menu {
+            color: #dc3545;
+            border-bottom: none;
+        }
+
+        .menu-btn {
+            background: none;
+            border: none;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: background 0.2s;
+        }
+
+        .menu-btn:active {
+            background: #f0f0f0;
+        }
+
+        .menu-btn span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: #1a1a2e;
+            border-radius: 2px;
+        }
+
+        .container {
+            padding: 0 16px 30px 16px;
+        }
+
+        /* Cartes de solde (mobile) */
+        .balance-cards {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+
+        .balance-card {
+            background: white;
+            border-radius: 24px;
+            padding: 18px;
+            min-width: 150px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+        }
+
+        .balance-card .icon {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 12px;
+        }
+
+        .balance-card .icon svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .balance-card .label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #8a8e9e;
+            margin-bottom: 4px;
+        }
+
+        .balance-card .amount {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 16px;
+            padding-left: 4px;
+        }
+
+        /* Grille opérateurs (mobile 2x2) */
+        .operators-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .operator-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px 16px;
+            text-align: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .operator-card:active {
+            transform: scale(0.97);
+            background: #fafafa;
+        }
+
+        .operator-logo {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 12px auto;
+        }
+
+        .operator-logo svg {
+            width: 56px;
+            height: 56px;
+        }
+
+        .operator-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 4px;
+        }
+
+        .operator-sub {
+            font-size: 11px;
+            color: #8a8e9e;
+        }
+
+        /* Liste agents (mobile cartes) */
+        .agents-section {
+            margin-top: 24px;
+        }
+
+        .agents-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 16px;
+        }
+
+        .agents-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .agent-item {
+            background: white;
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: 1px solid #f0f0f0;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .agent-phone {
+            font-size: 12px;
+            color: #8a8e9e;
+            margin-bottom: 8px;
+        }
+
+        .agent-soldes {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .agent-solde {
+            text-align: center;
+            flex: 1;
+        }
+
+        .agent-solde .label {
+            font-size: 10px;
+            color: #8a8e9e;
+        }
+
+        .agent-solde .value {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        /* Demandes */
+        .demandes-section {
+            margin-top: 24px;
+        }
+
+        .demandes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 16px;
+        }
+
+        .demandes-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .demande-item {
+            background: #fff3cd;
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: 1px solid #ffeaa7;
+        }
+
+        .demande-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .demande-agent {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .demande-type {
+            font-size: 12px;
+            color: #856404;
+        }
+
+        .demande-montant {
+            font-weight: 700;
+            font-size: 16px;
+            margin: 8px 0;
+        }
+
+        .demande-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-valider {
+            flex: 1;
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-refuser {
+            flex: 1;
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 10px;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 10px;
+        }
+
+        /* Transactions récentes (mobile) */
+        .recent-section {
+            margin-top: 24px;
+        }
+
+        .recent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 16px;
+        }
+
+        .recent-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .recent-header a {
+            font-size: 12px;
+            color: #1a73e8;
+            text-decoration: none;
+        }
+
+        .transaction-item {
+            background: white;
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 10px;
+            border: 1px solid #f0f0f0;
+        }
+
+        .transaction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .transaction-type {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .transaction-amount {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .transaction-info {
+            font-size: 11px;
+            color: #8a8e9e;
+            margin-bottom: 4px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 28px;
+            width: 85%;
+            max-width: 350px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-depot, .btn-retrait, .btn-credit {
+            padding: 16px;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-depot { background: #28a745; color: white; }
+        .btn-retrait { background: #dc3545; color: white; }
+        .btn-credit { background: #fd7e14; color: white; }
+
+        .btn-close {
+            background: #f0f0f0;
+            color: #666;
+            border: none;
+            padding: 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 40px;
+            z-index: 1200;
+        }
+
+        /* ========== STYLES PC (min-width: 768px) ========== */
+        @media (min-width: 768px) {
+            /* Sidebar PC */
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 260px;
+                height: 100%;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                color: white;
+                z-index: 100;
+                overflow-y: auto;
+            }
+
+            .sidebar-header {
+                padding: 25px 20px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+
+            .sidebar-header h2 {
+                font-size: 20px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .sidebar-menu {
+                padding: 20px 0;
+            }
+
+            .sidebar-menu .menu-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 20px;
+                color: rgba(255,255,255,0.8);
+                text-decoration: none;
+                transition: all 0.3s;
+                border-left: 3px solid transparent;
+                width: 100%;
+                background: none;
+                border: none;
+                cursor: pointer;
+            }
+
+            .sidebar-menu .menu-item:hover {
+                background: rgba(255,255,255,0.1);
+                color: white;
+            }
+
+            .sidebar-menu .menu-item.active {
+                background: rgba(255,255,255,0.1);
+                border-left-color: #667eea;
+                color: white;
+            }
+
+            .sidebar-menu .menu-item svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .logout-sidebar {
+                margin-top: 50px;
+                border-top: 1px solid rgba(255,255,255,0.1);
+            }
+
+            /* Cacher header mobile sur PC */
+            .header {
+                display: none;
+            }
+
+            /* Main content PC */
+            .main-content {
+                margin-left: 260px;
+                padding: 20px 30px;
+            }
+
+            /* Messages PC */
+            .messages-pc {
+                margin-bottom: 20px;
+            }
+
+            /* Stats cards PC */
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+
+            .stat-card {
+                background: white;
+                border-radius: 16px;
+                padding: 20px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                transition: transform 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+
+            .stat-card:hover {
+                transform: translateY(-3px);
+            }
+
+            .stat-card .icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .stat-card .icon.primary { background: #e8eaf6; color: #667eea; }
+            .stat-card .icon.success { background: #e8f5e9; color: #28a745; }
+            .stat-card .icon.danger { background: #ffebee; color: #dc3545; }
+            .stat-card .icon.warning { background: #fff3e0; color: #fd7e14; }
+
+            .stat-card .info .value {
+                font-size: 24px;
+                font-weight: 700;
+            }
+
+            .stat-card .info .label {
+                font-size: 13px;
+                color: #8a8e9e;
+            }
+
+            .evolution.positive { color: #28a745; }
+            .evolution.negative { color: #dc3545; }
+
+            /* Soldes Admin PC */
+            .soldes-pc {
+                background: white;
+                border-radius: 20px;
+                padding: 20px;
+                margin-bottom: 30px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            }
+
+            .soldes-pc h3 {
+                margin-bottom: 20px;
+                font-size: 18px;
+            }
+
+            .soldes-grid-pc {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+            }
+
+            .solde-card-pc {
+                background: #f8f9fa;
+                border-radius: 16px;
+                padding: 20px;
+                text-align: center;
+            }
+
+            .solde-card-pc .label {
+                font-size: 14px;
+                color: #8a8e9e;
+                margin-bottom: 8px;
+            }
+
+            .solde-card-pc .amount {
+                font-size: 28px;
+                font-weight: 700;
+            }
+
+            .solde-card-pc.cash .amount { color: #28a745; }
+            .solde-card-pc.uv .amount { color: #fd7e14; }
+            .solde-card-pc.wave .amount { color: #17a2b8; }
+
+            /* Agents table PC */
+            .agents-table-pc {
+                background: white;
+                border-radius: 20px;
+                padding: 20px;
+                margin-bottom: 30px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                overflow-x: auto;
+            }
+
+            .agents-table-pc h3 {
+                margin-bottom: 20px;
+                font-size: 18px;
+            }
+
+            .data-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #f0f0f0;
+            }
+
+            .data-table th {
+                background: #f8f9fa;
+                font-weight: 600;
+                color: #666;
+            }
+
+            .data-table tr:hover {
+                background: #f8f9fa;
+            }
+
+            /* Transactions table PC */
+            .transactions-table-pc {
+                background: white;
+                border-radius: 20px;
+                padding: 20px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                overflow-x: auto;
+            }
+
+            .transactions-table-pc h3 {
+                margin-bottom: 20px;
+                font-size: 18px;
+            }
+
+            .btn-print {
+                background: #17a2b8;
+                color: white;
+                padding: 5px 12px;
+                border-radius: 6px;
+                text-decoration: none;
+                font-size: 12px;
+            }
+
+            /* Cacher les éléments mobiles sur PC */
+            .balance-cards, .agents-section, .recent-section {
+                display: none;
+            }
+        }
+
+        /* ========== STYLES MOBILE UNIQUEMENT (max-width: 767px) ========== */
+        @media (max-width: 767px) {
+            .sidebar, .stats-grid, .soldes-pc, .agents-table-pc, .transactions-table-pc, .messages-pc {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ========== SIDEBAR PC ========== -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>🏦 Agent Money</h2>
+            <p style="font-size: 12px; opacity: 0.7; margin-top: 5px;">Administration</p>
+        </div>
+        <div class="sidebar-menu">
+            <a href="{% url 'dashboard_admin' %}" class="menu-item active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/>
+                </svg>
+                <span>Tableau de bord</span>
+            </a>
+            <a href="{% url 'historique_admin' %}" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="16" rx="1"/>
+                    <path d="M8 2v4M16 2v4M3 10h18"/>
+                </svg>
+                <span>Transactions</span>
+            </a>
+            <a href="{% url 'gestion_agents' %}" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>Agents</span>
+            </a>
+            <a href="#" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-3"/>
+                    <path d="M12 2v12M8 10l4 4 4-4"/>
+                </svg>
+                <span>Rapports</span>
+            </a>
+            <form method="post" action="{% url 'logout' %}" style="margin-top: 50px;">
+                {% csrf_token %}
+                <button type="submit" class="menu-item logout-sidebar" style="width: 100%; background: none; border: none; cursor: pointer;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l4-4-4-4M12 3h8v8"/>
+                    </svg>
+                    <span>Déconnexion</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========== HEADER MOBILE ========== -->
+    <div class="header">
+        <div class="header-top">
+            <div class="profile" onclick="toggleProfileMenu()">
+                <div class="avatar">{{ admin.nom|slice:":1"|upper }}{{ admin.nom|slice:"1:2"|upper }}</div>
+                <div class="profile-info">
+                    <div class="profile-name">{{ admin.nom }}</div>
+                    <div class="profile-role">Administrateur</div>
+                </div>
+            </div>
+            <button class="menu-btn" onclick="window.location.href='{% url "historique_admin" %}'">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Menu profil mobile -->
+    <div class="profile-menu" id="profileMenu">
+        <button class="profile-menu-item" onclick="closeProfileMenuAndRedirect('{% url "historique_admin" %}')">
+            <span>📜</span>
+            <span>Transactions</span>
+        </button>
+        <button class="profile-menu-item" onclick="closeProfileMenuAndRedirect('{% url "gestion_agents" %}')">
+            <span>👥</span>
+            <span>Agents</span>
+        </button>
+        <button class="profile-menu-item" onclick="closeProfileMenuAndRedirect('#'); alert('Page Rapports à venir')">
+            <span>📊</span>
+            <span>Rapports</span>
+        </button>
+        <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+            {% csrf_token %}
+            <button type="submit" class="profile-menu-item logout-menu">
+                <span>🚪</span>
+                <span>Déconnexion</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- ========== MAIN CONTENT PC ========== -->
+    <div class="main-content">
+        <!-- Messages PC -->
+        <div class="messages-pc">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- ========== STATS CARDS (PC) ========== -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="icon primary">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value">{{ total_agents }}</div>
+                    <div class="label">Agents actifs</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon success">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value">{{ stats_today.nombre }}</div>
+                    <div class="label">Transactions aujourd'hui</div>
+                    <div class="evolution {% if evolution.nombre >= 0 %}positive{% else %}negative{% endif %}" style="font-size: 12px; margin-top: 5px;">
+                        {% if evolution.nombre >= 0 %}▲{% else %}▼{% endif %} {{ evolution.nombre|floatformat:1 }}%
+                        <span style="font-size: 10px; color: #8a8e9e;">vs hier ({{ stats_yesterday.nombre }})</span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon danger">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 8v4M12 16h.01"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value">{{ demandes_attente|length }}</div>
+                    <div class="label">Demandes en attente</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon warning">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value">{{ total_commission|floatformat:0|default:"0"|intcomma }}</div>
+                    <div class="label">Commission totale</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== ÉVOLUTION DÉTAILLÉE ========== -->
+        <div class="stats-grid" style="margin-bottom: 30px;">
+            <div class="stat-card">
+                <div class="icon success">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 8v8M8 12h8"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value">{{ stats_today.depots|floatformat:0|intcomma }}</div>
+                    <div class="label">Dépôts (FCFA)</div>
+                    <div class="evolution {% if evolution.depots >= 0 %}positive{% else %}negative{% endif %}" style="font-size: 12px; margin-top: 5px;">
+                        {% if evolution.depots >= 0 %}▲{% else %}▼{% endif %} {{ evolution.depots|floatformat:1 }}%
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon danger">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M8 12h8"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value">{{ stats_today.retraits|floatformat:0|intcomma }}</div>
+                    <div class="label">Retraits (FCFA)</div>
+                    <div class="evolution {% if evolution.retraits >= 0 %}positive{% else %}negative{% endif %}" style="font-size: 12px; margin-top: 5px;">
+                        {% if evolution.retraits >= 0 %}▲{% else %}▼{% endif %} {{ evolution.retraits|floatformat:1 }}%
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon warning">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value">{{ stats_today.credits|floatformat:0|intcomma }}</div>
+                    <div class="label">Crédits (FCFA)</div>
+                    <div class="evolution {% if evolution.credits >= 0 %}positive{% else %}negative{% endif %}" style="font-size: 12px; margin-top: 5px;">
+                        {% if evolution.credits >= 0 %}▲{% else %}▼{% endif %} {{ evolution.credits|floatformat:1 }}%
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon primary">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value" style="color: #28a745;">{{ nouveaux_agents_today }}</div>
+                    <div class="label">Nouveaux agents</div>
+                    <div style="font-size: 12px; color: #8a8e9e;">Hier: {{ nouveaux_agents_yesterday }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== STATS DES DEMANDES ========== -->
+        <div class="stats-grid" style="margin-bottom: 30px;">
+            <div class="stat-card">
+                <div class="icon warning">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="16" rx="1"/>
+                        <path d="M8 2v4M16 2v4M3 10h18"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value">{{ demandes_stats.aujourdhui }}</div>
+                    <div class="label">Demandes aujourd'hui</div>
+                    <div style="font-size: 12px; color: #8a8e9e;">Hier: {{ demandes_stats.hier }}</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon primary">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 8v4M12 16h.01"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value" style="color: #ffc107;">{{ demandes_stats.total_attente }}</div>
+                    <div class="label">En attente</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon success">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 8v8M8 12h8"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value" style="color: #28a745;">{{ demandes_stats.total_validees }}</div>
+                    <div class="label">Validées</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="icon danger">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M8 12h8"/>
+                    </svg>
+                </div>
+                <div class="info">
+                    <div class="value" style="color: #dc3545;">{{ demandes_stats.total_refusees }}</div>
+                    <div class="label">Refusées</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== TOP AGENTS ========== -->
+        {% if top_agents %}
+        <div class="stats-grid" style="margin-bottom: 30px;">
+            <div class="stat-card" style="grid-column: span 4;">
+                <div class="icon warning">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/>
+                    </svg>
+                </div>
+                <div class="info" style="flex: 1;">
+                    <div class="value">🏆 Top agents (aujourd'hui)</div>
+                    <div class="label" style="margin-top: 10px;">
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        {% for ta in top_agents %}
+                            <div style="background: #f8f9fa; padding: 10px 18px; border-radius: 12px; min-width: 150px;">
+                                <strong>{{ ta.agent.nom }}</strong><br>
+                                📊 {{ ta.transactions }} transactions<br>
+                                💰 {{ ta.montant|floatformat:0|intcomma }} FCFA
+                            </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- ========== SOLDES ADMIN (PC) ========== -->
+        <div class="soldes-pc">
+            <h3>💰 Mon compte (Administrateur)</h3>
+            <div class="soldes-grid-pc">
+                <div class="solde-card-pc cash">
+                    <div class="label">ARGENT CASH</div>
+                    <div class="amount">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} FCFA</div>
+                </div>
+                <div class="solde-card-pc uv">
+                    <div class="label">UV TOUCHPIONT</div>
+                    <div class="amount">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }} FCFA</div>
+                </div>
+                <div class="solde-card-pc wave">
+                    <div class="label">UV WAVE</div>
+                    <div class="amount">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }} FCFA</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== DEMANDES EN ATTENTE (PC) ========== -->
+        {% if demandes_attente %}
+        <div class="agents-table-pc">
+            <h3>⏳ Demandes d'approvisionnement en attente</h3>
+            {% for demande in demandes_attente %}
+            <div style="background: #fff3cd; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <strong>{{ demande.agent.nom }}</strong> - {{ demande.get_type_echange_display }}<br>
+                    <strong>{{ demande.montant|floatformat:0|intcomma }} FCFA</strong>
+                    {% if demande.motif %}<br><small>Motif: {{ demande.motif }}</small>{% endif %}
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <form method="post" action="{% url 'valider_demande' demande.id %}">
+                        {% csrf_token %}
+                        <button type="submit" name="action" value="valider" style="background: #28a745; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer;">✅ Valider</button>
+                    </form>
+                    <form method="post" action="{% url 'valider_demande' demande.id %}">
+                        {% csrf_token %}
+                        <button type="submit" name="action" value="refuser" style="background: #dc3545; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer;">❌ Refuser</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- ========== LISTE DES AGENTS (PC) ========== -->
+        <div class="agents-table-pc">
+            <h3>👥 Liste des agents</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Téléphone</th>
+                        <th>Status</th>
+                        <th>Cash</th>
+                        <th>UV Touspiont</th>
+                        <th>UV Wave</th>
+                        <th>Date création</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for agent in agents %}
+                    <tr>
+                        <td><strong>{{ agent.nom }}</strong></td>
+                        <td>{{ agent.telephone }}</td>
+                        <td>
+                            {% if agent.est_actif %}
+                                <span style="background: #d4edda; color: #155724; padding: 4px 10px; border-radius: 20px; font-size: 12px;">Actif</span>
+                            {% else %}
+                                <span style="background: #f8d7da; color: #721c24; padding: 4px 10px; border-radius: 20px; font-size: 12px;">Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ agent.user.caisse.solde_cash|floatformat:0|default:"0"|intcomma }} FCFA</td>
+                        <td>{{ agent.user.caisse.solde_uv|floatformat:0|default:"0"|intcomma }} FCFA</td>
+                        <td>{{ agent.user.caisse.solde_wave|floatformat:0|default:"0"|intcomma }} FCFA</td>
+                        <td>{{ agent.created_at|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" style="text-align: center;">Aucun agent enregistré</td>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== DERNIÈRES TRANSACTIONS (PC) ========== -->
+        <div class="transactions-table-pc">
+            <h3>📋 Dernières transactions</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Référence</th>
+                        <th>Utilisateur</th>
+                        <th>Type</th>
+                        <th>Opérateur</th>
+                        <th>Client</th>
+                        <th>Montant</th>
+                        <th>Commission</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in dernieres_transactions %}
+                    <tr>
+                        <td><small>{{ t.reference }}</small></td>
+                        <td>{% if t.user.admin_profile %}🏦 Admin{% else %}👤 {{ t.user.agent_profile.nom }}{% endif %}</td>
+                        <td>
+                            {% if t.type_transaction == 'depot' %}
+                                <span style="color: #28a745;">Dépôt</span>
+                            {% elif t.type_transaction == 'retrait' %}
+                                <span style="color: #dc3545;">Retrait</span>
+                            {% else %}
+                                <span style="color: #fd7e14;">Crédit</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.get_operateur_display }}</td>
+                        <td>{{ t.numero_client }}</td>
+                        <td><strong>{{ t.montant|floatformat:0|default:"0"|intcomma }} FCFA</strong></td>
+                        <td>{{ t.commission|floatformat:0|default:"0"|intcomma }} FCFA</td>
+                        <td><small>{{ t.date|date:"d/m/Y H:i" }}</small></td>
+                        <td><a href="{% url 'impression_recu' t.reference %}" target="_blank" class="btn-print">🖨️</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" style="text-align: center;">Aucune transaction</td>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== VERSION MOBILE (cartes) ========== -->
+        <div class="container">
+            <!-- Messages mobile -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Soldes Admin mobile -->
+            <div class="balance-cards">
+                <div class="balance-card">
+                    <div class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="9" stroke="currentColor"/>
+                            <path d="M12 8v8M8 12h8" stroke="currentColor"/>
+                            <path d="M5 3L3 5M19 3L21 5M5 21L3 19M19 21L21 19" stroke="currentColor" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="label">ARGENT CASH</div>
+                    <div class="amount">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} FCFA</div>
+                </div>
+                <div class="balance-card">
+                    <div class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#fd7e14" stroke-width="1.5">
+                            <path d="M12 2v20M17 7H7M17 12H7M17 17H7" stroke="currentColor" stroke-linecap="round"/>
+                            <circle cx="12" cy="12" r="9" stroke="currentColor"/>
+                            <path d="M12 9v6" stroke="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="label">UV TOUCHPIONT</div>
+                    <div class="amount">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }}</div>
+                </div>
+                <div class="balance-card">
+                    <div class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#17a2b8" stroke-width="1.5">
+                            <path d="M2 12h20M12 2v20" stroke="currentColor"/>
+                            <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" opacity="0.5"/>
+                        </svg>
+                    </div>
+                    <div class="label">UV WAVE</div>
+                    <div class="amount">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }}</div>
+                </div>
+            </div>
+
+            <!-- Demandes en attente mobile -->
+            {% if demandes_attente %}
+            <div class="demandes-section">
+                <div class="demandes-header">
+                    <h3>⏳ Demandes en attente</h3>
+                    <span>{{ demandes_attente|length }}</span>
+                </div>
+                {% for demande in demandes_attente %}
+                <div class="demande-item">
+                    <div class="demande-header">
+                        <span class="demande-agent">{{ demande.agent.nom }}</span>
+                        <span class="demande-type">{{ demande.get_type_echange_display }}</span>
+                    </div>
+                    <div class="demande-montant">{{ demande.montant|floatformat:0|intcomma }} FCFA</div>
+                    <div class="demande-actions">
+                        <form method="post" action="{% url 'valider_demande' demande.id %}" style="flex: 1;">
+                            {% csrf_token %}
+                            <button type="submit" name="action" value="valider" class="btn-valider">✅ Valider</button>
+                        </form>
+                        <form method="post" action="{% url 'valider_demande' demande.id %}" style="flex: 1;">
+                            {% csrf_token %}
+                            <button type="submit" name="action" value="refuser" class="btn-refuser">❌ Refuser</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- SERVICES mobile -->
+            <div class="section-title">⚡ SERVICES</div>
+            <div class="operators-grid">
+                <div class="operator-card orange" onclick="openModal('orange')">
+                    <div class="operator-logo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6600" stroke-width="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+                            <path d="M8 7v10M16 7v10M12 7v10" stroke="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="operator-name">Orange Money</div>
+                    <div class="operator-sub">Dépôt / Retrait / Crédit</div>
+                </div>
+                <div class="operator-card moov" onclick="openModal('malitel')">
+                    <div class="operator-logo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#0066cc" stroke-width="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+                            <path d="M7 8h10M7 12h10M7 16h6" stroke="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="operator-name">Moov Africa</div>
+                    <div class="operator-sub">Dépôt / Retrait / Crédit</div>
+                </div>
+                <div class="operator-card telecel" onclick="openModal('telecel')">
+                    <div class="operator-logo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
+                            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                            <path d="M12 7v3M12 14v3" stroke="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="operator-name">Telecel</div>
+                    <div class="operator-sub">Crédit uniquement</div>
+                </div>
+                <div class="operator-card wave" onclick="openModal('wave')">
+                    <div class="operator-logo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#17a2b8" stroke-width="1.5">
+                            <path d="M2 12h20M12 2v20" stroke="currentColor"/>
+                            <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" opacity="0.5"/>
+                        </svg>
+                    </div>
+                    <div class="operator-name">Wave</div>
+                    <div class="operator-sub">Dépôt / Retrait</div>
+                </div>
+            </div>
+
+            <!-- Agents mobile -->
+            <div class="agents-section">
+                <div class="agents-header">
+                    <h3>👥 Agents</h3>
+                    <a href="{% url 'gestion_agents' %}">Voir tout →</a>
+                </div>
+                {% for agent in agents %}
+                <div class="agent-item">
+                    <div class="agent-header">
+                        <span class="agent-name">{{ agent.nom }}</span>
+                        {% if agent.est_actif %}
+                            <span class="badge-success">Actif</span>
+                        {% else %}
+                            <span class="badge-danger">Inactif</span>
+                        {% endif %}
+                    </div>
+                    <div class="agent-phone">📞 {{ agent.telephone }}</div>
+                    <div class="agent-soldes">
+                        <div class="agent-solde">
+                            <div class="label">💰 Cash</div>
+                            <div class="value">{{ agent.user.caisse.solde_cash|floatformat:0|default:"0"|intcomma }}</div>
+                        </div>
+                        <div class="agent-solde">
+                            <div class="label">📱 UV</div>
+                            <div class="value">{{ agent.user.caisse.solde_uv|floatformat:0|default:"0"|intcomma }}</div>
+                        </div>
+                        <div class="agent-solde">
+                            <div class="label">💳 Wave</div>
+                            <div class="value">{{ agent.user.caisse.solde_wave|floatformat:0|default:"0"|intcomma }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="text-align: center; padding: 40px; color: #8a8e9e; background: white; border-radius: 20px;">
+                    📭 Aucun agent enregistré
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Transactions récentes mobile -->
+            <div class="recent-section">
+                <div class="recent-header">
+                    <h3>📋 Dernières transactions</h3>
+                    <a href="{% url 'historique_admin' %}">Voir tout →</a>
+                </div>
+                {% if dernieres_transactions %}
+                    {% for t in dernieres_transactions|slice:":5" %}
+                    <div class="transaction-item">
+                        <div class="transaction-header">
+                            <div class="transaction-type">
+                                {% if t.type_transaction == 'depot' %}
+                                    <span style="color:#28a745;">💰 Dépôt</span>
+                                {% elif t.type_transaction == 'retrait' %}
+                                    <span style="color:#dc3545;">💸 Retrait</span>
+                                {% else %}
+                                    <span style="color:#fd7e14;">📱 Crédit</span>
+                                {% endif %}
+                                {{ t.get_operateur_display }}
+                            </div>
+                            <div class="transaction-amount">
+                                {{ t.montant|floatformat:0|default:"0"|intcomma }} FCFA
+                            </div>
+                        </div>
+                        <div class="transaction-info">
+                            {% if t.user.admin_profile %}
+                                👤 Admin - {{ t.user.admin_profile.nom }}
+                            {% else %}
+                                👤 Agent - {{ t.user.agent_profile.nom }}
+                            {% endif %}
+                        </div>
+                        <div class="transaction-info">📞 {{ t.numero_client }} • {{ t.date|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 40px; color: #8a8e9e; background: white; border-radius: 20px;">
+                        📭 Aucune transaction récente
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal transaction -->
+    <div id="transactionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalOperatorName">Orange Money</h3>
+                <p>Choisissez l'opération</p>
+            </div>
+            <div class="modal-body">
+                <div class="btn-group">
+                    <a href="#" id="btnDepot" class="btn-depot">💰 Dépôt</a>
+                    <a href="#" id="btnRetrait" class="btn-retrait">💸 Retrait</a>
+                    <a href="#" id="btnCredit" class="btn-credit">📱 Crédit</a>
+                </div>
+                <button class="btn-close" onclick="closeModal()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">⏳ Chargement...</div>
+
+    <script>
+        function toggleProfileMenu() {
+            const menu = document.getElementById('profileMenu');
+            menu.classList.toggle('show');
+        }
+
+        function closeProfileMenuAndRedirect(url) {
+            document.getElementById('profileMenu').classList.remove('show');
+            window.location.href = url;
+        }
+
+        document.addEventListener('click', function(event) {
+            const profile = document.querySelector('.profile');
+            const menu = document.getElementById('profileMenu');
+            if (profile && !profile.contains(event.target) && menu && !menu.contains(event.target)) {
+                menu.classList.remove('show');
+            }
+        });
+
+        function openModal(operator) {
+            const names = { orange: 'Orange Money', malitel: 'Moov Africa', telecel: 'Telecel', wave: 'Wave' };
+            document.getElementById('modalOperatorName').textContent = names[operator];
+            
+            const btnDepot = document.getElementById('btnDepot');
+            const btnRetrait = document.getElementById('btnRetrait');
+            const btnCredit = document.getElementById('btnCredit');
+            
+            const baseUrl = "{% url 'transaction_user' 'OPERATEUR' 'depot' %}";
+            btnDepot.href = baseUrl.replace('OPERATEUR', operator).replace('depot', 'depot');
+            btnRetrait.href = baseUrl.replace('OPERATEUR', operator).replace('depot', 'retrait');
+            btnCredit.href = baseUrl.replace('OPERATEUR', operator).replace('depot', 'credit');
+            
+            if (operator === 'wave') {
+                btnCredit.style.display = 'none';
+                btnDepot.style.display = 'block';
+                btnRetrait.style.display = 'block';
+            } else if (operator === 'telecel') {
+                btnDepot.style.display = 'none';
+                btnRetrait.style.display = 'none';
+                btnCredit.style.display = 'block';
+            } else {
+                btnDepot.style.display = 'block';
+                btnRetrait.style.display = 'block';
+                btnCredit.style.display = 'block';
+            }
+            
+            document.getElementById('transactionModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('transactionModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('transactionModal');
+            if (event.target === modal) closeModal();
+        }
+
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', () => {
+                document.getElementById('loading').style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html>
