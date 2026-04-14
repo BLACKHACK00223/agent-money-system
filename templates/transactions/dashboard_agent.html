@@ -1,5 +1,6 @@
 <!-- templates/transactions/dashboard_agent.html -->
 {% load humanize %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -169,6 +170,13 @@
             min-width: 150px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.05);
             border: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .balance-card:active {
+            transform: scale(0.98);
+            background: #fafafa;
         }
 
         .balance-card .icon {
@@ -177,9 +185,10 @@
             margin-bottom: 12px;
         }
 
-        .balance-card .icon svg {
-            width: 40px;
-            height: 40px;
+        .balance-card .icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .balance-card .label {
@@ -230,11 +239,16 @@
             width: 56px;
             height: 56px;
             margin: 0 auto 12px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .operator-logo svg {
-            width: 56px;
-            height: 56px;
+        .operator-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 12px;
         }
 
         .operator-name {
@@ -279,49 +293,16 @@
             margin: 0 auto 6px auto;
         }
 
-        .action-btn .icon svg {
-            width: 32px;
-            height: 32px;
+        .action-btn .icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .action-btn .label {
             font-size: 11px;
             font-weight: 600;
             color: #1a1a2e;
-        }
-
-        .retrait-code {
-            background: white;
-            border-radius: 20px;
-            padding: 16px;
-            margin-top: 16px;
-            text-align: center;
-            border: 1px solid #f0f0f0;
-            cursor: pointer;
-        }
-
-        .retrait-code:active {
-            background: #fafafa;
-        }
-
-        .retrait-code .icon {
-            width: 28px;
-            height: 28px;
-            display: inline-block;
-            margin-right: 10px;
-            vertical-align: middle;
-        }
-
-        .retrait-code .icon svg {
-            width: 28px;
-            height: 28px;
-        }
-
-        .retrait-code .text {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1a1a2e;
-            vertical-align: middle;
         }
 
         .recent-section {
@@ -530,34 +511,25 @@
         {% endif %}
 
         <div class="balance-cards">
-            <div class="balance-card">
+            <div class="balance-card" onclick="openArgentCashModal()">
                 <div class="icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="1.5">
-                        <circle cx="12" cy="12" r="9" stroke="currentColor"/>
-                        <path d="M12 8v8M8 12h8" stroke="currentColor"/>
-                        <path d="M5 3L3 5M19 3L21 5M5 21L3 19M19 21L21 19" stroke="currentColor" stroke-linecap="round"/>
-                    </svg>
+                    <img src="{% static 'image/inco_cash.webp' %}" alt="Argent Cash" 
+                         onerror="this.onerror=null; this.src='{% static 'image/inco_cash1.avif' %}'; this.onerror=function(){this.src='{% static 'image/inco_cash2.webp' %}'}">
                 </div>
                 <div class="label">ARGENT CASH</div>
                 <div class="amount">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} FCFA</div>
             </div>
-            <div class="balance-card">
+            <div class="balance-card" onclick="openDemandeModal('cash_to_uv')">
                 <div class="icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#fd7e14" stroke-width="1.5">
-                        <path d="M12 2v20M17 7H7M17 12H7M17 17H7" stroke="currentColor" stroke-linecap="round"/>
-                        <circle cx="12" cy="12" r="9" stroke="currentColor"/>
-                        <path d="M12 9v6" stroke="currentColor"/>
-                    </svg>
+                    <img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpiont">
                 </div>
                 <div class="label">UV TOUCHPIONT</div>
                 <div class="amount">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }}</div>
             </div>
-            <div class="balance-card">
+            <div class="balance-card" onclick="openDemandeModal('cash_to_wave')">
                 <div class="icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#17a2b8" stroke-width="1.5">
-                        <path d="M2 12h20M12 2v20" stroke="currentColor"/>
-                        <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" opacity="0.5"/>
-                    </svg>
+                    <img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave"
+                         onerror="this.onerror=null; this.src='{% static 'image/inco_wave1.webp' %}'; this.onerror=function(){this.src='{% static 'image/inco_wave1.webp' %}'}">
                 </div>
                 <div class="label">UV WAVE</div>
                 <div class="amount">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }}</div>
@@ -569,41 +541,29 @@
         <div class="operators-grid">
             <div class="operator-card orange" onclick="openModal('orange')">
                 <div class="operator-logo">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#ff6600" stroke-width="1.5">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
-                        <path d="M8 7v10M16 7v10M12 7v10" stroke="currentColor"/>
-                    </svg>
+                    <img src="{% static 'image/inco_orange.jpeg' %}" alt="Orange Money">
                 </div>
                 <div class="operator-name">Orange Money</div>
                 <div class="operator-sub">Dépôt / Retrait / Crédit</div>
             </div>
             <div class="operator-card moov" onclick="openModal('malitel')">
                 <div class="operator-logo">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#0066cc" stroke-width="1.5">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
-                        <path d="M7 8h10M7 12h10M7 16h6" stroke="currentColor"/>
-                    </svg>
+                    <img src="{% static 'image/inco_moov.jpeg' %}" alt="Moov Africa">
                 </div>
                 <div class="operator-name">Moov Africa</div>
                 <div class="operator-sub">Dépôt / Retrait / Crédit</div>
             </div>
             <div class="operator-card telecel" onclick="openModal('telecel')">
                 <div class="operator-logo">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#dc3545" stroke-width="1.5">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
-                        <circle cx="12" cy="12" r="2" fill="currentColor"/>
-                        <path d="M12 7v3M12 14v3" stroke="currentColor"/>
-                    </svg>
+                    <img src="{% static 'image/inco_telecel.jpeg' %}" alt="Telecel">
                 </div>
                 <div class="operator-name">Telecel</div>
                 <div class="operator-sub">Crédit uniquement</div>
             </div>
             <div class="operator-card wave" onclick="openModal('wave')">
                 <div class="operator-logo">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#17a2b8" stroke-width="1.5">
-                        <path d="M2 12h20M12 2v20" stroke="currentColor"/>
-                        <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" opacity="0.5"/>
-                    </svg>
+                    <img src="{% static 'image/inco_wave1.webp' %}" alt="Wave"
+                         onerror="this.onerror=null; this.src='{% static 'image/inco_wave1.webp' %}'; this.onerror=function(){this.src='{% static 'image/inco_wave1.webp' %}'}">
                 </div>
                 <div class="operator-name">Wave</div>
                 <div class="operator-sub">Dépôt / Retrait</div>
@@ -613,43 +573,24 @@
         <div class="actions-bar">
             <div class="action-btn" onclick="openArgentCashModal()">
                 <div class="icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#28a745" stroke-width="1.5">
-                        <circle cx="12" cy="12" r="9" stroke="currentColor"/>
-                        <path d="M12 8v8M8 12h8" stroke="currentColor"/>
-                        <path d="M5 3L3 5M19 3L21 5M5 21L3 19M19 21L21 19" stroke="currentColor" stroke-linecap="round"/>
-                    </svg>
+                    <img src="{% static 'image/inco_cash.webp' %}" alt="Argent Cash"
+                         onerror="this.onerror=null; this.src='{% static 'image/inco_cash1.avif' %}'; this.onerror=function(){this.src='{% static 'image/inco_cash2.webp' %}'}">
                 </div>
                 <div class="label">ARGENT CASH</div>
             </div>
             <div class="action-btn" onclick="openDemandeModal('cash_to_uv')">
                 <div class="icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#fd7e14" stroke-width="1.5">
-                        <circle cx="12" cy="12" r="9" stroke="currentColor"/>
-                        <path d="M12 8v8M8 12h8" stroke="currentColor"/>
-                    </svg>
+                    <img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpiont">
                 </div>
                 <div class="label">UV TOUCHPIONT</div>
             </div>
             <div class="action-btn" onclick="openDemandeModal('cash_to_wave')">
                 <div class="icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#17a2b8" stroke-width="1.5">
-                        <path d="M2 12h20M12 2v20" stroke="currentColor"/>
-                        <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" opacity="0.5"/>
-                    </svg>
+                    <img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave"
+                         onerror="this.onerror=null; this.src='{% static 'image/inco_wave1.webp' %}'; this.onerror=function(){this.src='{% static 'image/inco_wave1.webp' %}'}">
                 </div>
                 <div class="label">UV WAVE</div>
             </div>
-        </div>
-
-        <div class="retrait-code" onclick="openDemandeModal('wave_to_cash')">
-            <div class="icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#6c757d" stroke-width="1.5">
-                    <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor"/>
-                    <path d="M7 11h10M12 11v6" stroke="currentColor"/>
-                    <circle cx="12" cy="11" r="1" fill="currentColor"/>
-                </svg>
-            </div>
-            <span class="text">RETRAIT PAR CODE</span>
         </div>
 
         <div class="recent-section">
@@ -663,11 +604,11 @@
                     <div class="transaction-info">
                         <div class="transaction-type">
                             {% if t.type_transaction == 'depot' %}
-                                <span class="badge-depot"> Dépôt {{ t.get_operateur_display }}</span>
+                                <span class="badge-depot">📥 Dépôt {{ t.get_operateur_display }}</span>
                             {% elif t.type_transaction == 'retrait' %}
-                                <span class="badge-retrait"> Retrait {{ t.get_operateur_display }}</span>
+                                <span class="badge-retrait">📤 Retrait {{ t.get_operateur_display }}</span>
                             {% else %}
-                                <span class="badge-credit"> Crédit {{ t.get_operateur_display }}</span>
+                                <span class="badge-credit">💳 Crédit {{ t.get_operateur_display }}</span>
                             {% endif %}
                         </div>
                         <div class="transaction-date">{{ t.date|date:"d/m/Y H:i" }}</div>
@@ -696,9 +637,9 @@
             </div>
             <div class="modal-body">
                 <div class="btn-group">
-                    <a href="#" id="btnDepot" class="btn-depot"> Dépôt</a>
-                    <a href="#" id="btnRetrait" class="btn-retrait"> Retrait</a>
-                    <a href="#" id="btnCredit" class="btn-credit"> Crédit</a>
+                    <a href="#" id="btnDepot" class="btn-depot">📥 Dépôt</a>
+                    <a href="#" id="btnRetrait" class="btn-retrait">📤 Retrait</a>
+                    <a href="#" id="btnCredit" class="btn-credit">💳 Crédit</a>
                 </div>
                 <button class="btn-close" onclick="closeModal()">Fermer</button>
             </div>
@@ -827,44 +768,44 @@
         }
 
         function submitArgentCash() {
-    const type = document.getElementById('argentCashType').value;
-    const montant = document.getElementById('argentCashMontant').value;
-    const motif = document.getElementById('argentCashMotif').value;
-    const csrftoken = document.getElementById('csrfToken').value;
+            const type = document.getElementById('argentCashType').value;
+            const montant = document.getElementById('argentCashMontant').value;
+            const motif = document.getElementById('argentCashMotif').value;
+            const csrftoken = document.getElementById('csrfToken').value;
 
-    if (!montant || montant < 1000) {
-        alert('Veuillez saisir un montant valide (minimum 1000 FCFA)');
-        return;
-    }
+            if (!montant || montant < 1000) {
+                alert('Veuillez saisir un montant valide (minimum 1000 FCFA)');
+                return;
+            }
 
-    fetch("{% url 'demander_approvisionnement_api' %}", {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': csrftoken,
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: new URLSearchParams({
-            'type_echange': type,
-            'montant': montant,
-            'motif': motif
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            closeArgentCashModal();
-            alert('✅ Demande envoyée avec succès !');
-            window.location.reload();
-        } else {
-            alert('❌ Erreur: ' + data.error);
+            fetch("{% url 'demander_approvisionnement_api' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrftoken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new URLSearchParams({
+                    'type_echange': type,
+                    'montant': montant,
+                    'motif': motif
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeArgentCashModal();
+                    alert('✅ Demande envoyée avec succès !');
+                    window.location.reload();
+                } else {
+                    alert('❌ Erreur: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur de connexion: ' + error.message);
+            });
         }
-    })
-    .catch(error => {
-        console.error('Erreur:', error);
-        alert('Erreur de connexion: ' + error.message);
-    });
-}
 
         // Modal demande standard
         function openDemandeModal(type) {
