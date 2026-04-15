@@ -1591,7 +1591,6 @@ from django.contrib.auth.decorators import login_required
 import csv
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
-
 @login_required
 def exporter_rapport_complet_agent(request, format_type):
     """
@@ -1599,7 +1598,8 @@ def exporter_rapport_complet_agent(request, format_type):
     Pour agent ou admin
     format_type: 'csv' ou 'excel'
     """
-    today = datetime.now().date()
+    from django.utils import timezone
+    today = timezone.now().date()
     yesterday = today - timedelta(days=1)
     
     # Vérifier si l'utilisateur est un agent ou un admin
@@ -1640,10 +1640,9 @@ def exporter_rapport_complet_agent(request, format_type):
         except:
             return HttpResponse("Impossible de générer le rapport. Données manquantes.", status=400)
     
-    # Calcul des totaux
+    # Calcul des totaux (sans commission)
     total_entree = transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
     total_sortie = transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
-    total_commission = transactions.aggregate(Sum('commission'))['commission__sum'] or 0
     
     # Calcul des soldes d'hier
     transactions_today = transactions.filter(date__date=today)
@@ -1682,7 +1681,7 @@ def exporter_rapport_complet_agent(request, format_type):
     
     if format_type == 'csv':
         response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = f'attachment; filename="rapport_complet_{user_name}_{datetime.now().strftime("%Y%m%d_%H%M")}.csv"'
+        response['Content-Disposition'] = f'attachment; filename="rapport_complet_{user_name}_{timezone.now().strftime("%Y%m%d_%H%M")}.csv"'
         
         # Ajouter BOM pour UTF-8
         response.write('\ufeff')
@@ -1690,7 +1689,7 @@ def exporter_rapport_complet_agent(request, format_type):
         
         # En-tête principal
         writer.writerow([f"RAPPORT COMPLET - {user_name} ({user_type})"])
-        writer.writerow([f"Date d'export: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"])
+        writer.writerow([f"Date d'export: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"])
         writer.writerow([])
         
         # SOLDES
@@ -1705,7 +1704,6 @@ def exporter_rapport_complet_agent(request, format_type):
         writer.writerow(["=== TOTAUX DES TRANSACTIONS ==="])
         writer.writerow(["Total Entrées", f"{total_entree:,.0f} FCFA"])
         writer.writerow(["Total Sorties", f"{total_sortie:,.0f} FCFA"])
-        writer.writerow(["Total Commission", f"{total_commission:,.0f} FCFA"])
         writer.writerow(["Nombre de transactions", transactions.count()])
         writer.writerow([])
         
@@ -1724,7 +1722,7 @@ def exporter_rapport_complet_agent(request, format_type):
         
         # DETAIL DES TRANSACTIONS
         writer.writerow(["=== DETAIL DES TRANSACTIONS ==="])
-        writer.writerow(['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Commission (FCFA)', 'Date'])
+        writer.writerow(['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Date'])
         
         for t in transactions:
             writer.writerow([
@@ -1733,7 +1731,6 @@ def exporter_rapport_complet_agent(request, format_type):
                 t.get_operateur_display(),
                 t.numero_client,
                 f"{t.montant:,.0f}",
-                f"{t.commission:,.0f}",
                 t.date.strftime('%d/%m/%Y %H:%M:%S')
             ])
         
@@ -1741,7 +1738,7 @@ def exporter_rapport_complet_agent(request, format_type):
     
     elif format_type == 'excel':
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="rapport_complet_{user_name}_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"'
+        response['Content-Disposition'] = f'attachment; filename="rapport_complet_{user_name}_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx"'
         
         wb = Workbook()
         
@@ -1759,7 +1756,7 @@ def exporter_rapport_complet_agent(request, format_type):
         ws_summary['A1'].font = title_font
         ws_summary['A1'].alignment = center_align
         
-        ws_summary['A2'] = f"Date d'export: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+        ws_summary['A2'] = f"Date d'export: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"
         
         # Soldes
         ws_summary['A4'] = "SOLDES"
@@ -1790,20 +1787,18 @@ def exporter_rapport_complet_agent(request, format_type):
         ws_summary['B11'] = f"{total_entree:,.0f} FCFA"
         ws_summary['A12'] = "Total Sorties"
         ws_summary['B12'] = f"{total_sortie:,.0f} FCFA"
-        ws_summary['A13'] = "Total Commission"
-        ws_summary['B13'] = f"{total_commission:,.0f} FCFA"
-        ws_summary['A14'] = "Nombre de transactions"
-        ws_summary['B14'] = transactions.count()
+        ws_summary['A13'] = "Nombre de transactions"
+        ws_summary['B13'] = transactions.count()
         
         # Stats des demandes
-        ws_summary['A16'] = "STATISTIQUES DES DEMANDES"
-        ws_summary['A16'].font = header_font
-        ws_summary['A17'] = "En attente"
-        ws_summary['B17'] = demandes.filter(statut='attente').count()
-        ws_summary['A18'] = "Validées"
-        ws_summary['B18'] = demandes.filter(statut='valide').count()
-        ws_summary['A19'] = "Refusées"
-        ws_summary['B19'] = demandes.filter(statut='refuse').count()
+        ws_summary['A15'] = "STATISTIQUES DES DEMANDES"
+        ws_summary['A15'].font = header_font
+        ws_summary['A16'] = "En attente"
+        ws_summary['B16'] = demandes.filter(statut='attente').count()
+        ws_summary['A17'] = "Validées"
+        ws_summary['B17'] = demandes.filter(statut='valide').count()
+        ws_summary['A18'] = "Refusées"
+        ws_summary['B18'] = demandes.filter(statut='refuse').count()
         
         ws_summary.column_dimensions['A'].width = 25
         ws_summary.column_dimensions['B'].width = 25
@@ -1832,7 +1827,7 @@ def exporter_rapport_complet_agent(request, format_type):
         # ========== FEUILLE 3: TRANSACTIONS ==========
         ws_trans = wb.create_sheet("Transactions")
         
-        headers_trans = ['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Commission (FCFA)', 'Date']
+        headers_trans = ['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Date']
         for col, header in enumerate(headers_trans, 1):
             cell = ws_trans.cell(row=1, column=col, value=header)
             cell.font = header_font
@@ -1844,15 +1839,13 @@ def exporter_rapport_complet_agent(request, format_type):
             ws_trans.cell(row=row, column=3, value=t.get_operateur_display())
             ws_trans.cell(row=row, column=4, value=t.numero_client)
             ws_trans.cell(row=row, column=5, value=float(t.montant))
-            ws_trans.cell(row=row, column=6, value=float(t.commission))
-            ws_trans.cell(row=row, column=7, value=t.date.strftime('%d/%m/%Y %H:%M:%S'))
+            ws_trans.cell(row=row, column=6, value=t.date.strftime('%d/%m/%Y %H:%M:%S'))
         
         # Format des nombres
         for row in range(2, transactions.count() + 2):
             ws_trans.cell(row=row, column=5).number_format = '#,##0'
-            ws_trans.cell(row=row, column=6).number_format = '#,##0'
         
-        for col in range(1, 8):
+        for col in range(1, 7):
             ws_trans.column_dimensions[chr(64 + col)].width = 18
         
         wb.save(response)
