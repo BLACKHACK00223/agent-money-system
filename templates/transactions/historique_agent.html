@@ -595,12 +595,12 @@
                     <div class="filter-row">
                         <div class="filter-group">
                             <label>📅 Du</label>
-                            <input type="date" name="date_debut" value="{{ request.GET.date_debut }}" id="date_debut" 
+                            <input type="date" name="date_debut" value="{{ request.GET.date_debut|default:date_debut }}" id="date_debut" 
                                    max="{% now 'Y-m-d' %}">
                         </div>
                         <div class="filter-group">
                             <label>📅 Au</label>
-                            <input type="date" name="date_fin" value="{{ request.GET.date_fin }}" id="date_fin"
+                            <input type="date" name="date_fin" value="{{ request.GET.date_fin|default:date_fin }}" id="date_fin"
                                    max="{% now 'Y-m-d' %}">
                         </div>
                     </div>
@@ -756,22 +756,31 @@
             }
         }
         
-        dateDebut.addEventListener('change', validateDates);
-        dateFin.addEventListener('change', validateDates);
+        if (dateDebut) dateDebut.addEventListener('change', validateDates);
+        if (dateFin) dateFin.addEventListener('change', validateDates);
         
         // Réinitialisation des filtres
         function resetFilters() {
-            document.getElementById('date_debut').value = '';
-            document.getElementById('date_fin').value = '';
-            document.getElementById('operateur').value = '';
-            document.getElementById('type').value = '';
+            const dateDebutInput = document.getElementById('date_debut');
+            const dateFinInput = document.getElementById('date_fin');
+            const operateurSelect = document.getElementById('operateur');
+            const typeSelect = document.getElementById('type');
+            
+            if (dateDebutInput) dateDebutInput.value = '';
+            if (dateFinInput) dateFinInput.value = '';
+            if (operateurSelect) operateurSelect.value = '';
+            if (typeSelect) typeSelect.value = '';
+            
             document.getElementById('filterForm').submit();
         }
         
         // Afficher le loading au submit
-        document.getElementById('filterForm').addEventListener('submit', function() {
-            document.getElementById('loading').style.display = 'block';
-        });
+        const filterForm = document.getElementById('filterForm');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function() {
+                document.getElementById('loading').style.display = 'block';
+            });
+        }
         
         // Masquer le loading au chargement
         window.addEventListener('load', function() {

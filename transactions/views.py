@@ -1,4 +1,4 @@
-# transactions/views.py (version simplifiée avec Admin et Agent)
+# transactions/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -15,12 +15,15 @@ from django.contrib import messages
 from django.db.models import Sum
 from datetime import datetime
 from decimal import Decimal
-
+import django.shortcuts
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
 from .models import Admin, Agent, Caisse, Transaction, DemandeApprovisionnement, ApprovisionnementDirect
 from .forms import (OrangeTransactionForm, WaveTransactionForm, 
                    MalitelTransactionForm, TelecelTransactionForm)
 
 from django.contrib.auth import logout
+from django.views.decorators.http import require_http_methods
 
 def logout_view(request):
     """Vue personnalisée pour la déconnexion"""
@@ -50,12 +53,6 @@ def dashboard_redirect(request):
     # Sinon, rediriger vers login
     messages.error(request, 'Vous n\'avez pas de profil configuré.')
     return redirect('login')
-# transactions/views.py
-from datetime import datetime, timedelta
-from django.db.models import Sum, Q, Count
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.contrib import messages
 
 @login_required
 def dashboard_admin(request):
@@ -210,6 +207,7 @@ def dashboard_admin(request):
     except Admin.DoesNotExist:
         messages.error(request, 'Vous n\'êtes pas configuré comme administrateur.')
         return redirect('login')
+
 @login_required
 def dashboard_agent(request):
     """
@@ -284,10 +282,6 @@ def dashboard_agent(request):
     except Agent.DoesNotExist:
         messages.error(request, 'Vous n\'êtes pas configuré comme agent.')
         return redirect('login')
-
-# transactions/views.py
-
-from django.views.decorators.http import require_http_methods
 
 @login_required
 @require_http_methods(["POST"])
@@ -562,15 +556,6 @@ def transaction_user(request, operateur, type_transaction):
     }
     return render(request, 'transactions/transaction_form.html', context)
 
-# transactions/views.py
-from decimal import Decimal
-from datetime import datetime
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-
 @login_required
 def demander_approvisionnement(request):
     """
@@ -686,8 +671,6 @@ def demander_approvisionnement(request):
     }
     return render(request, 'transactions/demande_approvisionnement.html', context)
 
-
-# transactions/views.py
 @login_required
 def valider_demande(request, demande_id):
     """
@@ -699,7 +682,7 @@ def valider_demande(request, demande_id):
         messages.error(request, 'Vous n\'êtes pas autorisé.')
         return redirect('login')
     
-    demande = get_object_or_404(DemandeApprovisionnement, id=demande_id)
+    demande = django.shortcuts.get_object_or_404(DemandeApprovisionnement, id=demande_id)
     
     print(f"=== VALIDATION DEMANDE ===")
     print(f"Demande ID: {demande_id}")
@@ -744,21 +727,12 @@ def impression_recu(request, transaction_id):
     """
     Imprimer le reçu d'une transaction
     """
-    transaction = get_object_or_404(Transaction, reference=transaction_id)
+    transaction = django.shortcuts.get_object_or_404(Transaction, reference=transaction_id)
     context = {
         'transaction': transaction,
         'date_impression': datetime.now()
     }
     return render(request, 'transactions/recu.html', context)
-
-# transactions/views.py
-from django.core.paginator import Paginator
-from django.http import JsonResponse
-from django.db.models import Sum, Q
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from datetime import datetime
 
 @login_required
 def historique_admin(request):
@@ -881,11 +855,15 @@ def historique_admin(request):
     }
     return render(request, 'transactions/historique_admin.html', context)
 
+from django.utils import timezone
+from datetime import datetime
+
 @login_required
 def historique_agent(request):
     """
     Historique des transactions pour l'AGENT (ses propres transactions)
     Avec filtres par date, opérateur et type
+    Affiche par défaut les transactions du jour
     """
     try:
         agent = Agent.objects.get(user=request.user)
@@ -896,24 +874,34 @@ def historique_agent(request):
     # Récupérer toutes les transactions de l'agent
     transactions = Transaction.objects.filter(user=request.user).order_by('-date')
     
-    # ========== FILTRES ==========
-    # Filtre par date début
-    date_debut = request.GET.get('date_debut')
-    if date_debut:
-        try:
-            date_debut_obj = datetime.strptime(date_debut, '%Y-%m-%d').date()
-            transactions = transactions.filter(date__date__gte=date_debut_obj)
-        except ValueError:
-            pass
+    # Date d'aujourd'hui avec timezone
+    today = timezone.now().date()
     
-    # Filtre par date fin
+    # ========== FILTRES ==========
+    date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
-    if date_fin:
-        try:
-            date_fin_obj = datetime.strptime(date_fin, '%Y-%m-%d').date()
-            transactions = transactions.filter(date__date__lte=date_fin_obj)
-        except ValueError:
-            pass
+    
+    # Si aucun filtre de date n'est appliqué, afficher uniquement les transactions du jour
+    if not date_debut and not date_fin:
+        transactions = transactions.filter(date__date=today)
+        date_debut = today.strftime('%Y-%m-%d')
+        date_fin = today.strftime('%Y-%m-%d')
+    else:
+        # Filtre par date début
+        if date_debut:
+            try:
+                date_debut_obj = datetime.strptime(date_debut, '%Y-%m-%d').date()
+                transactions = transactions.filter(date__date__gte=date_debut_obj)
+            except ValueError:
+                pass
+        
+        # Filtre par date fin
+        if date_fin:
+            try:
+                date_fin_obj = datetime.strptime(date_fin, '%Y-%m-%d').date()
+                transactions = transactions.filter(date__date__lte=date_fin_obj)
+            except ValueError:
+                pass
     
     # Filtre par opérateur
     operateur = request.GET.get('operateur')
@@ -937,9 +925,10 @@ def historique_agent(request):
         'total_entree': total_entree,
         'total_sortie': total_sortie,
         'total_commission': total_commission,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
     }
     return render(request, 'transactions/historique_agent.html', context)
-
 @login_required
 def historique_demandes_agent(request):
     """
@@ -984,15 +973,6 @@ def ajax_calculer_frais(request):
         'frais': str(frais),
         'total_a_payer': str(montant + frais) if type_transaction == 'depot' else str(montant)
     })
-    
-# transactions/views.py
-from django.contrib.auth.models import User
-from django.contrib.auth.hashers import make_password
-from django.http import JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from decimal import Decimal
 
 @login_required
 def gestion_agents(request):
@@ -1215,43 +1195,6 @@ def activer_agent(request, agent_id):
         messages.error(request, 'Agent non trouvé.')
     
     return redirect('gestion_agents')
-# transactions/views.py
-from django.shortcuts import get_object_or_404
-
-
-from datetime import datetime, timedelta
-from django.db.models import Sum
-
-# transactions/views.py - detail_agent
-# transactions/views.py - detail_agent (version complète)
-from datetime import datetime, timedelta
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Sum, Q
-from django.core.paginator import Paginator
-from django.http import HttpResponse
-import csv
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, PatternFill
-
-# transactions/views.py
-from datetime import datetime, timedelta
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Sum
-from django.core.paginator import Paginator
-from decimal import Decimal
-
-# transactions/views.py - detail_agent modifié
-# transactions/views.py - detail_agent avec demandes dans l'évolution
-from datetime import datetime, timedelta
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Sum
-from django.core.paginator import Paginator
 
 @login_required
 def detail_agent(request, agent_id):
@@ -1264,7 +1207,7 @@ def detail_agent(request, agent_id):
         messages.error(request, 'Vous n\'êtes pas autorisé.')
         return redirect('login')
     
-    agent = get_object_or_404(Agent, id=agent_id)
+    agent = django.shortcuts.get_object_or_404(Agent, id=agent_id)
     user = agent.user
     caisse = user.caisse
     
@@ -1437,8 +1380,6 @@ def detail_agent(request, agent_id):
         'show_all_demandes': show_all_demandes,
     }
     return render(request, 'transactions/detail_agent.html', context)
-
-# transactions/views.py - fonction export_transactions mise à jour
 
 def export_transactions(transactions, agent, caisse, total_entree, total_sortie, total_commission, demandes, format_type):
     """
@@ -1634,6 +1575,282 @@ def export_transactions(transactions, agent, caisse, total_entree, total_sortie,
             ws_trans.cell(row=row, column=5, value=float(t.montant))
             ws_trans.cell(row=row, column=6, value=float(t.commission))
             ws_trans.cell(row=row, column=7, value=t.date.strftime('%d/%m/%Y %H:%M:%S'))
+        
+        for col in range(1, 8):
+            ws_trans.column_dimensions[chr(64 + col)].width = 18
+        
+        wb.save(response)
+        return response
+    
+    return None
+
+from datetime import datetime, timedelta
+from django.db.models import Sum
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+import csv
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
+
+@login_required
+def exporter_rapport_complet_agent(request, format_type):
+    """
+    Exporte un rapport complet: soldes, transactions, demandes
+    Pour agent ou admin
+    format_type: 'csv' ou 'excel'
+    """
+    today = datetime.now().date()
+    yesterday = today - timedelta(days=1)
+    
+    # Vérifier si l'utilisateur est un agent ou un admin
+    if hasattr(request.user, 'agent'):
+        # C'est un agent
+        agent = request.user.agent
+        caisse = agent.user.caisse
+        user_type = "Agent"
+        user_name = agent.nom
+        
+        # Récupérer les transactions de l'agent
+        transactions = Transaction.objects.filter(user=request.user).order_by('-date')
+        
+        # Récupérer les demandes de l'agent
+        demandes = DemandeApprovisionnement.objects.filter(agent=agent).order_by('-date_demande')
+        
+    elif hasattr(request.user, 'admin_profile'):
+        # C'est un admin
+        admin = request.user.admin_profile
+        caisse = request.user.caisse
+        user_type = "Administrateur"
+        user_name = admin.nom
+        
+        # Récupérer toutes les transactions (admin voit tout)
+        transactions = Transaction.objects.all().order_by('-date')
+        
+        # Récupérer toutes les demandes (admin voit tout)
+        demandes = DemandeApprovisionnement.objects.all().order_by('-date_demande')
+        
+    else:
+        # Superutilisateur ou autre - essayer de récupérer la caisse
+        try:
+            caisse = Caisse.objects.get(user=request.user)
+            user_type = "Utilisateur"
+            user_name = request.user.username
+            transactions = Transaction.objects.filter(user=request.user).order_by('-date')
+            demandes = DemandeApprovisionnement.objects.filter(agent__user=request.user).order_by('-date_demande')
+        except:
+            return HttpResponse("Impossible de générer le rapport. Données manquantes.", status=400)
+    
+    # Calcul des totaux
+    total_entree = transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
+    total_sortie = transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
+    total_commission = transactions.aggregate(Sum('commission'))['commission__sum'] or 0
+    
+    # Calcul des soldes d'hier
+    transactions_today = transactions.filter(date__date=today)
+    
+    cash_depot_today = transactions_today.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
+    cash_retrait_today = transactions_today.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_cash_today = cash_depot_today - cash_retrait_today
+    
+    uv_depot_today = transactions_today.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='depot'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    uv_retrait_today = transactions_today.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='retrait'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    uv_credit_today = transactions_today.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='credit'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_uv_today = uv_retrait_today - uv_depot_today - uv_credit_today
+    
+    wave_depot_today = transactions_today.filter(
+        operateur='wave',
+        type_transaction='depot'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    wave_retrait_today = transactions_today.filter(
+        operateur='wave',
+        type_transaction='retrait'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_wave_today = wave_retrait_today - wave_depot_today
+    
+    solde_cash_hier = caisse.solde_cash - variation_cash_today
+    solde_uv_hier = caisse.solde_uv - variation_uv_today
+    solde_wave_hier = caisse.solde_wave - variation_wave_today
+    
+    if format_type == 'csv':
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="rapport_complet_{user_name}_{datetime.now().strftime("%Y%m%d_%H%M")}.csv"'
+        
+        # Ajouter BOM pour UTF-8
+        response.write('\ufeff')
+        writer = csv.writer(response)
+        
+        # En-tête principal
+        writer.writerow([f"RAPPORT COMPLET - {user_name} ({user_type})"])
+        writer.writerow([f"Date d'export: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"])
+        writer.writerow([])
+        
+        # SOLDES
+        writer.writerow(["=== SOLDES ==="])
+        writer.writerow(["Compte", "Solde actuel", "Solde hier", "Variation"])
+        writer.writerow(["Argent Cash", f"{caisse.solde_cash:,.0f} FCFA", f"{solde_cash_hier:,.0f} FCFA", f"{caisse.solde_cash - solde_cash_hier:+,.0f} FCFA"])
+        writer.writerow(["UV Touspiont", f"{caisse.solde_uv:,.0f} FCFA", f"{solde_uv_hier:,.0f} FCFA", f"{caisse.solde_uv - solde_uv_hier:+,.0f} FCFA"])
+        writer.writerow(["UV Wave", f"{caisse.solde_wave:,.0f} FCFA", f"{solde_wave_hier:,.0f} FCFA", f"{caisse.solde_wave - solde_wave_hier:+,.0f} FCFA"])
+        writer.writerow([])
+        
+        # TOTAUX TRANSACTIONS
+        writer.writerow(["=== TOTAUX DES TRANSACTIONS ==="])
+        writer.writerow(["Total Entrées", f"{total_entree:,.0f} FCFA"])
+        writer.writerow(["Total Sorties", f"{total_sortie:,.0f} FCFA"])
+        writer.writerow(["Total Commission", f"{total_commission:,.0f} FCFA"])
+        writer.writerow(["Nombre de transactions", transactions.count()])
+        writer.writerow([])
+        
+        # DEMANDES
+        writer.writerow(["=== DEMANDES D'APPROVISIONNEMENT ==="])
+        writer.writerow(["Date", "Type", "Montant", "Statut", "Motif"])
+        for d in demandes:
+            writer.writerow([
+                d.date_demande.strftime('%d/%m/%Y %H:%M'),
+                d.get_type_echange_display(),
+                f"{d.montant:,.0f} FCFA",
+                d.get_statut_display(),
+                d.motif or ""
+            ])
+        writer.writerow([])
+        
+        # DETAIL DES TRANSACTIONS
+        writer.writerow(["=== DETAIL DES TRANSACTIONS ==="])
+        writer.writerow(['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Commission (FCFA)', 'Date'])
+        
+        for t in transactions:
+            writer.writerow([
+                t.reference,
+                t.get_type_transaction_display(),
+                t.get_operateur_display(),
+                t.numero_client,
+                f"{t.montant:,.0f}",
+                f"{t.commission:,.0f}",
+                t.date.strftime('%d/%m/%Y %H:%M:%S')
+            ])
+        
+        return response
+    
+    elif format_type == 'excel':
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="rapport_complet_{user_name}_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx"'
+        
+        wb = Workbook()
+        
+        # Styles
+        title_font = Font(bold=True, size=14)
+        header_font = Font(bold=True, size=12)
+        center_align = Alignment(horizontal='center')
+        
+        # ========== FEUILLE 1: RÉCAPITULATIF ==========
+        ws_summary = wb.active
+        ws_summary.title = "Récapitulatif"
+        
+        ws_summary.merge_cells('A1:D1')
+        ws_summary['A1'] = f"RAPPORT COMPLET - {user_name} ({user_type})"
+        ws_summary['A1'].font = title_font
+        ws_summary['A1'].alignment = center_align
+        
+        ws_summary['A2'] = f"Date d'export: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+        
+        # Soldes
+        ws_summary['A4'] = "SOLDES"
+        ws_summary['A4'].font = header_font
+        ws_summary['A5'] = "Compte"
+        ws_summary['B5'] = "Solde actuel"
+        ws_summary['C5'] = "Solde hier"
+        ws_summary['D5'] = "Variation"
+        
+        for col in range(1, 5):
+            ws_summary.cell(row=5, column=col).font = header_font
+            ws_summary.cell(row=5, column=col).alignment = center_align
+        
+        soldes_data = [
+            ["Argent Cash", f"{caisse.solde_cash:,.0f} FCFA", f"{solde_cash_hier:,.0f} FCFA", f"{caisse.solde_cash - solde_cash_hier:+,.0f} FCFA"],
+            ["UV Touspiont", f"{caisse.solde_uv:,.0f} FCFA", f"{solde_uv_hier:,.0f} FCFA", f"{caisse.solde_uv - solde_uv_hier:+,.0f} FCFA"],
+            ["UV Wave", f"{caisse.solde_wave:,.0f} FCFA", f"{solde_wave_hier:,.0f} FCFA", f"{caisse.solde_wave - solde_wave_hier:+,.0f} FCFA"],
+        ]
+        
+        for row, data in enumerate(soldes_data, 6):
+            for col, val in enumerate(data, 1):
+                ws_summary.cell(row=row, column=col, value=val)
+        
+        # Totaux transactions
+        ws_summary['A10'] = "TOTAUX DES TRANSACTIONS"
+        ws_summary['A10'].font = header_font
+        ws_summary['A11'] = "Total Entrées"
+        ws_summary['B11'] = f"{total_entree:,.0f} FCFA"
+        ws_summary['A12'] = "Total Sorties"
+        ws_summary['B12'] = f"{total_sortie:,.0f} FCFA"
+        ws_summary['A13'] = "Total Commission"
+        ws_summary['B13'] = f"{total_commission:,.0f} FCFA"
+        ws_summary['A14'] = "Nombre de transactions"
+        ws_summary['B14'] = transactions.count()
+        
+        # Stats des demandes
+        ws_summary['A16'] = "STATISTIQUES DES DEMANDES"
+        ws_summary['A16'].font = header_font
+        ws_summary['A17'] = "En attente"
+        ws_summary['B17'] = demandes.filter(statut='attente').count()
+        ws_summary['A18'] = "Validées"
+        ws_summary['B18'] = demandes.filter(statut='valide').count()
+        ws_summary['A19'] = "Refusées"
+        ws_summary['B19'] = demandes.filter(statut='refuse').count()
+        
+        ws_summary.column_dimensions['A'].width = 25
+        ws_summary.column_dimensions['B'].width = 25
+        ws_summary.column_dimensions['C'].width = 25
+        ws_summary.column_dimensions['D'].width = 20
+        
+        # ========== FEUILLE 2: DEMANDES ==========
+        ws_demandes = wb.create_sheet("Demandes")
+        
+        headers_demandes = ['Date', 'Type', 'Montant', 'Statut', 'Motif']
+        for col, header in enumerate(headers_demandes, 1):
+            cell = ws_demandes.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.alignment = center_align
+        
+        for row, d in enumerate(demandes, 2):
+            ws_demandes.cell(row=row, column=1, value=d.date_demande.strftime('%d/%m/%Y %H:%M'))
+            ws_demandes.cell(row=row, column=2, value=d.get_type_echange_display())
+            ws_demandes.cell(row=row, column=3, value=f"{d.montant:,.0f} FCFA")
+            ws_demandes.cell(row=row, column=4, value=d.get_statut_display())
+            ws_demandes.cell(row=row, column=5, value=d.motif or "")
+        
+        for col in range(1, 6):
+            ws_demandes.column_dimensions[chr(64 + col)].width = 20
+        
+        # ========== FEUILLE 3: TRANSACTIONS ==========
+        ws_trans = wb.create_sheet("Transactions")
+        
+        headers_trans = ['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Commission (FCFA)', 'Date']
+        for col, header in enumerate(headers_trans, 1):
+            cell = ws_trans.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.alignment = center_align
+        
+        for row, t in enumerate(transactions, 2):
+            ws_trans.cell(row=row, column=1, value=t.reference)
+            ws_trans.cell(row=row, column=2, value=t.get_type_transaction_display())
+            ws_trans.cell(row=row, column=3, value=t.get_operateur_display())
+            ws_trans.cell(row=row, column=4, value=t.numero_client)
+            ws_trans.cell(row=row, column=5, value=float(t.montant))
+            ws_trans.cell(row=row, column=6, value=float(t.commission))
+            ws_trans.cell(row=row, column=7, value=t.date.strftime('%d/%m/%Y %H:%M:%S'))
+        
+        # Format des nombres
+        for row in range(2, transactions.count() + 2):
+            ws_trans.cell(row=row, column=5).number_format = '#,##0'
+            ws_trans.cell(row=row, column=6).number_format = '#,##0'
         
         for col in range(1, 8):
             ws_trans.column_dimensions[chr(64 + col)].width = 18

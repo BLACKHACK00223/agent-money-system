@@ -48,7 +48,6 @@
             line-height: 1.5;
         }
 
-        /* Header */
         .header {
             background: white;
             padding: 16px 20px;
@@ -131,7 +130,6 @@
             border-radius: 2px;
         }
 
-        /* Profile Menu */
         .profile-menu {
             position: absolute;
             top: 72px;
@@ -139,7 +137,7 @@
             background: white;
             border-radius: 16px;
             box-shadow: var(--shadow-xl);
-            width: 220px;
+            width: 240px;
             overflow: hidden;
             z-index: 100;
             display: none;
@@ -182,14 +180,12 @@
             border-bottom: none;
         }
 
-        /* Container */
         .container {
             padding: 20px 16px 32px 16px;
             max-width: 500px;
             margin: 0 auto;
         }
 
-        /* Balance Cards */
         .balance-cards {
             display: flex;
             gap: 12px;
@@ -250,7 +246,6 @@
             color: var(--gray-600);
         }
 
-        /* Section Title */
         .section-title {
             font-size: 15px;
             font-weight: 600;
@@ -265,7 +260,6 @@
             font-size: 18px;
         }
 
-        /* Operators Grid */
         .operators-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -318,7 +312,6 @@
             color: var(--gray-600);
         }
 
-        /* Actions Bar */
         .actions-bar {
             display: flex;
             justify-content: space-around;
@@ -361,7 +354,6 @@
             color: var(--gray-700);
         }
 
-        /* Recent Section */
         .recent-section {
             margin-top: 8px;
         }
@@ -390,7 +382,6 @@
             text-decoration: underline;
         }
 
-        /* Transaction Items */
         .transaction-item {
             background: white;
             border-radius: 16px;
@@ -429,7 +420,6 @@
         .badge-retrait { color: var(--danger); }
         .badge-credit { color: var(--warning); }
 
-        /* Modals - Design épuré et professionnel */
         .modal {
             display: none;
             position: fixed;
@@ -459,7 +449,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Header modal - sobre et élégant */
         .modal-header {
             background: white;
             padding: 28px 24px 16px 24px;
@@ -484,7 +473,6 @@
             padding: 24px;
         }
 
-        /* Form elements */
         .form-group {
             margin-bottom: 20px;
         }
@@ -514,7 +502,6 @@
             box-shadow: 0 0 0 3px var(--primary-light);
         }
 
-        /* Boutons modal */
         .btn-group {
             display: flex;
             flex-direction: column;
@@ -596,7 +583,6 @@
             background: var(--gray-200);
         }
 
-        /* Alertes */
         .alert {
             padding: 12px 16px;
             border-radius: 14px;
@@ -608,7 +594,6 @@
         .alert-error { background: var(--danger-light); color: var(--danger); }
         .alert-info { background: var(--primary-light); color: var(--primary); }
 
-        /* Loading */
         .loading {
             display: none;
             position: fixed;
@@ -624,7 +609,6 @@
             backdrop-filter: blur(8px);
         }
 
-        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -634,7 +618,6 @@
             border: 1px solid var(--gray-200);
         }
 
-        /* Responsive */
         @media (max-width: 400px) {
             .balance-card {
                 min-width: 115px;
@@ -672,6 +655,18 @@
             <span>📋</span>
             <span>Mes demandes</span>
         </button>
+        
+        <!-- Boutons d'export - style identique aux autres items -->
+        <button class="profile-menu-item" onclick="exportRapportCSV()">
+            <span>📄</span>
+            <span>Exporter CSV</span>
+        </button>
+        
+        <button class="profile-menu-item" onclick="exportRapportExcel()">
+            <span>📊</span>
+            <span>Exporter Excel</span>
+        </button>
+
         <form method="post" action="{% url 'logout' %}" style="margin: 0;">
             {% csrf_token %}
             <button type="submit" class="profile-menu-item logout-menu">
@@ -688,7 +683,6 @@
             {% endfor %}
         {% endif %}
 
-        <!-- Balance Cards -->
         <div class="balance-cards">
             <div class="balance-card" onclick="openArgentCashModal()">
                 <div class="icon">
@@ -714,7 +708,6 @@
             </div>
         </div>
 
-        <!-- Services -->
         <div class="section-title">
             <span>⚡</span> Services
         </div>
@@ -750,7 +743,6 @@
             </div>
         </div>
 
-        <!-- Quick Actions -->
         <div class="section-title">
             <span>🔧</span> Actions rapides
         </div>
@@ -777,7 +769,6 @@
             </div>
         </div>
 
-        <!-- Recent Transactions -->
         <div class="recent-section">
             <div class="recent-header">
                 <h3>📋 Historique récent</h3>
@@ -813,7 +804,6 @@
         </div>
     </div>
 
-    <!-- Modal Transaction - Design épuré -->
     <div id="transactionModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -831,7 +821,6 @@
         </div>
     </div>
 
-    <!-- Modal Argent Cash - Design épuré -->
     <div id="argentCashModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -866,7 +855,6 @@
         </div>
     </div>
 
-    <!-- Modal Demande Standard - Design épuré -->
     <div id="demandeModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -898,7 +886,6 @@
     <div class="loading" id="loading">⏳ Traitement en cours...</div>
 
     <script>
-        // Profile Menu
         function toggleProfileMenu() {
             const menu = document.getElementById('profileMenu');
             menu.classList.toggle('show');
@@ -917,7 +904,6 @@
             }
         });
 
-        // Transaction Modal
         function openModal(operator) {
             const names = { orange: 'Orange Money', malitel: 'Moov Africa', telecel: 'Telecel', wave: 'Wave' };
             document.getElementById('modalOperatorName').textContent = names[operator];
@@ -952,7 +938,6 @@
             document.getElementById('transactionModal').style.display = 'none';
         }
 
-        // Argent Cash Modal
         function openArgentCashModal() {
             document.getElementById('argentCashModal').style.display = 'flex';
         }
@@ -1001,7 +986,6 @@
             });
         }
 
-        // Standard Demand Modal
         function openDemandeModal(type) {
             document.getElementById('demandeType').value = type;
             document.getElementById('demandeModal').style.display = 'flex';
@@ -1011,19 +995,36 @@
             document.getElementById('demandeModal').style.display = 'none';
         }
 
-        // Close modals on outside click
         window.onclick = function(event) {
             if (event.target === document.getElementById('transactionModal')) closeModal();
             if (event.target === document.getElementById('demandeModal')) closeDemandeModal();
             if (event.target === document.getElementById('argentCashModal')) closeArgentCashModal();
         }
 
-        // Show loading on form submit
         document.querySelectorAll('form').forEach(form => {
             form.addEventListener('submit', () => {
                 document.getElementById('loading').style.display = 'block';
             });
         });
+
+        // Export Rapport Complet
+        function exportRapportCSV() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            window.location.href = "{% url 'exporter_rapport_complet_agent_csv' %}";
+            setTimeout(() => {
+                loading.style.display = 'none';
+            }, 1000);
+        }
+
+        function exportRapportExcel() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            window.location.href = "{% url 'exporter_rapport_complet_agent_excel' %}";
+            setTimeout(() => {
+                loading.style.display = 'none';
+            }, 1000);
+        }
     </script>
 </body>
 </html>
