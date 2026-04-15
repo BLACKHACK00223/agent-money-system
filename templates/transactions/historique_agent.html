@@ -1,5 +1,6 @@
 <!-- templates/transactions/historique_agent.html -->
 {% load humanize %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -14,78 +15,149 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --primary-light: #e8f0fe;
+            --success: #137333;
+            --success-light: #e6f4ea;
+            --warning: #e37400;
+            --warning-light: #fef7e0;
+            --danger: #c5221f;
+            --danger-light: #fce8e6;
+            --gray-50: #f8f9fa;
+            --gray-100: #f1f3f4;
+            --gray-200: #e8eaed;
+            --gray-300: #dadce0;
+            --gray-400: #bdc1c6;
+            --gray-500: #9aa0a6;
+            --gray-600: #80868b;
+            --gray-700: #5f6368;
+            --gray-800: #3c4043;
+            --gray-900: #202124;
+            --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+            --shadow-md: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: #f5f7fb;
-            color: #1a1a2e;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.5;
         }
 
         /* Header */
         .header {
             background: white;
-            padding: 20px 16px 12px 16px;
-            border-bottom: 1px solid #e8e8e8;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--gray-200);
             position: sticky;
             top: 0;
-            z-index: 20;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.95);
         }
 
         .header-top {
             display: flex;
             align-items: center;
-            justify-content: center;
-            position: relative;
-            margin-bottom: 16px;
+            justify-content: space-between;
+            max-width: 500px;
+            margin: 0 auto;
         }
 
         .back-btn {
-            background: none;
+            background: var(--gray-100);
             border: none;
             cursor: pointer;
             padding: 8px;
-            position: absolute;
-            left: 0;
-            color: #1a1a2e;
+            border-radius: 40px;
+            color: var(--gray-700);
             text-decoration: none;
-            display: inline-block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            width: 36px;
+            height: 36px;
+        }
+
+        .back-btn:hover {
+            background: var(--gray-200);
         }
 
         .back-btn svg {
-            width: 24px;
-            height: 24px;
-            stroke: #1a1a2e;
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
             stroke-width: 2;
             fill: none;
         }
 
         .page-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #1a1a2e;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .header-placeholder {
+            width: 36px;
         }
 
         /* Container */
         .container {
-            padding: 0 16px 30px 16px;
+            padding: 20px 16px 32px 16px;
+            max-width: 500px;
+            margin: 0 auto;
         }
 
-        /* Filtres */
-        .filters-bar {
+        /* Filtres - Design compact et responsive */
+        .filters-card {
             background: white;
             border-radius: 20px;
             padding: 16px;
-            margin: 16px 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            border: 1px solid #e8e8e8;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+        }
+
+        .filters-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--gray-200);
         }
 
         .filters-title {
             font-size: 13px;
             font-weight: 600;
-            color: #8a8e9e;
-            margin-bottom: 12px;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
+        .filters-title svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--gray-600);
+        }
+
+        .filter-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* Grille de filtres responsive */
         .filters-grid {
             display: flex;
             flex-direction: column;
@@ -94,239 +166,355 @@
 
         .filter-row {
             display: flex;
-            gap: 12px;
             flex-wrap: wrap;
+            gap: 12px;
         }
 
         .filter-group {
             flex: 1;
-            min-width: 120px;
+            min-width: calc(50% - 6px);
+        }
+
+        .filter-group.full-width {
+            min-width: 100%;
         }
 
         .filter-group label {
             display: block;
-            font-size: 11px;
-            color: #8a8e9e;
-            margin-bottom: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 6px;
         }
 
-        .filter-group select, .filter-group input {
+        .filter-group input,
+        .filter-group select {
             width: 100%;
             padding: 10px 12px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--gray-300);
             border-radius: 12px;
             font-size: 14px;
             background: white;
             font-family: inherit;
+            transition: all 0.2s;
+            color: var(--gray-800);
         }
 
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        /* Date inputs spécifiques */
+        .filter-group input[type="date"] {
+            color-scheme: light;
+        }
+
+        /* Actions des filtres */
         .filter-actions {
             display: flex;
-            gap: 10px;
-            margin-top: 12px;
+            gap: 12px;
+            margin-top: 8px;
         }
 
         .btn-filter {
             flex: 1;
-            padding: 10px;
-            background: #667eea;
+            padding: 10px 16px;
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 12px;
-            font-weight: 600;
+            border-radius: 14px;
+            font-weight: 500;
+            font-size: 14px;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-filter:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
         }
 
         .btn-reset {
             flex: 1;
-            padding: 10px;
-            background: #f0f0f0;
-            color: #666;
+            padding: 10px 16px;
+            background: var(--gray-100);
+            color: var(--gray-700);
             border: none;
-            border-radius: 12px;
-            font-weight: 600;
+            border-radius: 14px;
+            font-weight: 500;
+            font-size: 14px;
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-reset:hover {
+            background: var(--gray-200);
         }
 
         /* Stats */
         .stats-container {
             background: white;
-            border-radius: 24px;
+            border-radius: 20px;
             padding: 20px;
-            margin: 20px 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            border: 1px solid #e8e8e8;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
         }
 
-        .stats-row {
+        .stats-grid {
             display: flex;
             justify-content: space-between;
-            gap: 20px;
+            gap: 16px;
         }
 
-        .stat-item {
+        .stat-card {
             flex: 1;
             text-align: center;
+            padding: 8px 4px;
         }
 
         .stat-label {
-            font-size: 13px;
-            color: #8a8e9e;
-            margin-bottom: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--gray-600);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .stat-value {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
-            color: #1a1a2e;
+            color: var(--gray-900);
         }
 
         .stat-value.entree {
-            color: #28a745;
+            color: var(--success);
         }
 
         .stat-value.sortie {
-            color: #dc3545;
+            color: var(--danger);
         }
 
-        /* Transaction item */
+        .stat-value small {
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--gray-600);
+        }
+
+        /* Transaction items */
         .transaction-item {
             background: white;
             border-radius: 16px;
-            padding: 12px;
+            padding: 16px;
             margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            border: 1px solid #e8e8e8;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+            transition: all 0.2s;
+        }
+
+        .transaction-item:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--gray-300);
         }
 
         .transaction-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
 
         .transaction-type {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
         }
 
         .transaction-type svg {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
         }
 
-        .badge-depot { color: #28a745; }
-        .badge-retrait { color: #dc3545; }
-        .badge-credit { color: #fd7e14; }
+        .badge-depot { 
+            color: var(--success);
+            background: var(--success-light);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+        }
+        .badge-retrait { 
+            color: var(--danger);
+            background: var(--danger-light);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+        }
+        .badge-credit { 
+            color: var(--warning);
+            background: var(--warning-light);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+        }
 
         .transaction-amount {
             font-size: 16px;
             font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .transaction-details {
+            margin-bottom: 8px;
         }
 
         .transaction-date {
             font-size: 11px;
-            color: #8a8e9e;
+            color: var(--gray-600);
             margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .transaction-date svg {
+            width: 12px;
+            height: 12px;
+            stroke: var(--gray-500);
         }
 
         .transaction-id {
             font-size: 10px;
-            color: #b0b0b0;
+            color: var(--gray-500);
             font-family: monospace;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
         }
 
-        .transaction-client-row {
+        .transaction-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding-top: 8px;
+            border-top: 1px solid var(--gray-200);
         }
 
         .transaction-client {
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #1a1a2e;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-800);
             font-family: monospace;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
         }
 
         .transaction-client svg {
             width: 14px;
             height: 14px;
-            stroke: #667eea;
+            stroke: var(--gray-600);
         }
 
         .btn-print {
-            background: none;
+            background: var(--gray-100);
             border: none;
             cursor: pointer;
-            padding: 6px;
+            padding: 6px 10px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            border-radius: 30px;
-            transition: background 0.2s;
+            gap: 6px;
+            border-radius: 20px;
+            transition: all 0.2s;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--gray-700);
         }
 
         .btn-print:hover {
-            background: #f0f0f0;
+            background: var(--gray-200);
         }
 
         .btn-print svg {
-            width: 20px;
-            height: 20px;
-            stroke: #17a2b8;
-            stroke-width: 1.5;
-            fill: none;
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
         }
 
         /* Pagination */
         .pagination {
             display: flex;
             justify-content: center;
-            gap: 8px;
+            flex-wrap: wrap;
+            gap: 6px;
             margin-top: 24px;
             padding: 16px 0;
         }
 
         .page-btn {
-            padding: 8px 14px;
+            padding: 8px 12px;
             background: white;
-            border: 1px solid #e8e8e8;
+            border: 1px solid var(--gray-300);
             border-radius: 12px;
-            font-size: 14px;
+            font-size: 13px;
+            font-weight: 500;
             cursor: pointer;
             text-decoration: none;
-            color: #1a1a2e;
+            color: var(--gray-700);
+            transition: all 0.2s;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .page-btn:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-400);
         }
 
         .page-btn.active {
-            background: #667eea;
+            background: var(--primary);
             color: white;
-            border-color: #667eea;
+            border-color: var(--primary);
         }
 
         .page-btn.disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             pointer-events: none;
         }
 
+        /* Empty state */
         .empty-state {
             text-align: center;
             padding: 60px 20px;
             background: white;
             border-radius: 20px;
+            border: 1px solid var(--gray-200);
             margin: 20px 0;
         }
 
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 8px;
+        }
+
+        .empty-state-sub {
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        /* Loading */
         .loading {
             display: none;
             position: fixed;
@@ -335,9 +523,40 @@
             transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.8);
             color: white;
-            padding: 16px 24px;
+            padding: 12px 20px;
             border-radius: 40px;
-            z-index: 1200;
+            z-index: 1000;
+            font-size: 14px;
+            backdrop-filter: blur(8px);
+        }
+
+        /* Responsive */
+        @media (max-width: 400px) {
+            .container {
+                padding: 16px 12px 32px 12px;
+            }
+            
+            .filter-group {
+                min-width: 100%;
+            }
+            
+            .stats-grid {
+                gap: 8px;
+            }
+            
+            .stat-value {
+                font-size: 20px;
+            }
+            
+            .transaction-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .transaction-amount {
+                align-self: flex-end;
+            }
         }
     </style>
 </head>
@@ -351,38 +570,55 @@
                 </svg>
             </a>
             <div class="page-title">Transactions</div>
+            <div class="header-placeholder"></div>
         </div>
     </div>
 
     <div class="container">
-        <!-- Filtres -->
-        <div class="filters-bar">
-            <div class="filters-title">FILTRES</div>
+        <!-- Filtres améliorés -->
+        <div class="filters-card">
+            <div class="filters-header">
+                <div class="filters-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 4h16v2l-6 6v6l-4 2v-8L4 6V4z"/>
+                    </svg>
+                    FILTRES
+                </div>
+                {% if request.GET.date_debut or request.GET.date_fin or request.GET.operateur or request.GET.type %}
+                    <span class="filter-badge">Actifs</span>
+                {% endif %}
+            </div>
+            
             <form method="get" id="filterForm">
                 <div class="filters-grid">
+                    <!-- Ligne Date Début / Date Fin -->
                     <div class="filter-row">
                         <div class="filter-group">
-                            <label>DATE DÉBUT</label>
-                            <input type="date" name="date_debut" value="{{ request.GET.date_debut }}" id="date_debut">
+                            <label>📅 Du</label>
+                            <input type="date" name="date_debut" value="{{ request.GET.date_debut }}" id="date_debut" 
+                                   max="{% now 'Y-m-d' %}">
                         </div>
                         <div class="filter-group">
-                            <label>DATE FIN</label>
-                            <input type="date" name="date_fin" value="{{ request.GET.date_fin }}" id="date_fin">
+                            <label>📅 Au</label>
+                            <input type="date" name="date_fin" value="{{ request.GET.date_fin }}" id="date_fin"
+                                   max="{% now 'Y-m-d' %}">
                         </div>
                     </div>
+                    
+                    <!-- Ligne Opérateur / Type -->
                     <div class="filter-row">
                         <div class="filter-group">
-                            <label>OPÉRATEUR</label>
+                            <label>🏢 Opérateur</label>
                             <select name="operateur" id="operateur">
                                 <option value="">Tous</option>
                                 <option value="orange" {% if request.GET.operateur == 'orange' %}selected{% endif %}>Orange Money</option>
                                 <option value="wave" {% if request.GET.operateur == 'wave' %}selected{% endif %}>Wave</option>
-                                <option value="malitel" {% if request.GET.operateur == 'malitel' %}selected{% endif %}>Malitel</option>
+                                <option value="malitel" {% if request.GET.operateur == 'malitel' %}selected{% endif %}>Moov Africa</option>
                                 <option value="telecel" {% if request.GET.operateur == 'telecel' %}selected{% endif %}>Telecel</option>
                             </select>
                         </div>
                         <div class="filter-group">
-                            <label>TYPE</label>
+                            <label>🔄 Type</label>
                             <select name="type" id="type">
                                 <option value="">Tous</option>
                                 <option value="depot" {% if request.GET.type == 'depot' %}selected{% endif %}>Dépôt</option>
@@ -391,28 +627,30 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <!-- Actions -->
                     <div class="filter-actions">
-                        <button type="submit" class="btn-filter">APPLIQUER</button>
-                        <button type="button" class="btn-reset" onclick="resetFilters()">RÉINITIALISER</button>
+                        <button type="submit" class="btn-filter">🔍 Appliquer</button>
+                        <button type="button" class="btn-reset" onclick="resetFilters()">🗑️ Réinitialiser</button>
                     </div>
                 </div>
             </form>
         </div>
 
-        <!-- Stats (totaux filtrés avec séparateur) -->
+        <!-- Stats -->
         <div class="stats-container">
-            <div class="stats-row">
-                <div class="stat-item">
+            <div class="stats-grid">
+                <div class="stat-card">
                     <div class="stat-label">Transactions</div>
-                    <div class="stat-value">{{ transactions|length }}</div>
+                    <div class="stat-value">{{ transactions.paginator.count|default:0 }}</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-label">TOTAL ENTRE</div>
-                    <div class="stat-value entree">{{ total_entree|floatformat:0|default:"0"|intcomma }}</div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Entrées</div>
+                    <div class="stat-value entree">{{ total_entree|floatformat:0|default:"0"|intcomma }}<small> F</small></div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-label">TOTAL SORTIE</div>
-                    <div class="stat-value sortie">{{ total_sortie|floatformat:0|default:"0"|intcomma }}</div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Sorties</div>
+                    <div class="stat-value sortie">{{ total_sortie|floatformat:0|default:"0"|intcomma }}<small> F</small></div>
                 </div>
             </div>
         </div>
@@ -425,53 +663,53 @@
                     <div class="transaction-header">
                         <div class="transaction-type">
                             {% if t.type_transaction == 'depot' %}
-                                <svg viewBox="0 0 24 24" stroke="#28a745" stroke-width="1.5" fill="none">
-                                    <circle cx="12" cy="12" r="9" stroke="currentColor"/>
-                                    <path d="M12 8v8M8 12h8" stroke="currentColor"/>
-                                </svg>
-                                <span class="badge-depot"> Dépôt {{ t.get_operateur_display }}</span>
+                                <span class="badge-depot">📥 Dépôt {{ t.get_operateur_display }}</span>
                             {% elif t.type_transaction == 'retrait' %}
-                                <svg viewBox="0 0 24 24" stroke="#b1626a" stroke-width="1.5" fill="none">
-                                    <circle cx="12" cy="12" r="9" stroke="currentColor"/>
-                                    <path d="M8 12h8" stroke="currentColor"/>
-                                </svg>
-                                <span class="badge-retrait"> Retrait {{ t.get_operateur_display }}</span>
+                                <span class="badge-retrait">📤 Retrait {{ t.get_operateur_display }}</span>
                             {% else %}
-                                <svg viewBox="0 0 24 24" stroke="#fd7e14" stroke-width="1.5" fill="none">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor"/>
-                                    <path d="M8 7v10M16 7v10M12 7v10" stroke="currentColor"/>
-                                </svg>
-                                <span class="badge-credit"> Crédit {{ t.get_operateur_display }}</span>
+                                <span class="badge-credit">💳 Crédit {{ t.get_operateur_display }}</span>
                             {% endif %}
                         </div>
                         <div class="transaction-amount">
-                            {{ t.montant|floatformat:0|intcomma }} FCFA
+                            {{ t.montant|floatformat:0|intcomma }} F
                         </div>
                     </div>
-                    <div class="transaction-date">{{ t.date|date:"d-m-Y H:i:s" }}</div>
-                    <div class="transaction-id">ID : {{ t.reference }}</div>
-                    <div class="transaction-client-row">
+                    
+                    <div class="transaction-details">
+                        <div class="transaction-date">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            {{ t.date|date:"d/m/Y à H:i" }}
+                        </div>
+                        <div class="transaction-id">Réf: {{ t.reference|slice:":20" }}{% if t.reference|length > 20 %}...{% endif %}</div>
+                    </div>
+                    
+                    <div class="transaction-footer">
                         <div class="transaction-client">
-                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" fill="none">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor"/>
-                                <circle cx="12" cy="7" r="4" stroke="currentColor"/>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
                             </svg>
                             {{ t.numero_client|slice:":2" }} {{ t.numero_client|slice:"2:4" }} {{ t.numero_client|slice:"4:6" }} {{ t.numero_client|slice:"6:8" }}
                         </div>
                         <button class="btn-print" onclick="window.open('/impression/{{ t.reference }}/', '_blank')">
-                            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path d="M6 9V3h12v6" stroke="currentColor"/>
-                                <rect x="4" y="9" width="16" height="10" rx="1" stroke="currentColor"/>
-                                <path d="M8 15h8" stroke="currentColor"/>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M6 9V3h12v6"/>
+                                <rect x="4" y="9" width="16" height="10" rx="1"/>
+                                <path d="M8 15h8"/>
                             </svg>
+                            Imprimer
                         </button>
                     </div>
                 </div>
                 {% endfor %}
             {% else %}
                 <div class="empty-state">
-                    <div>📭 Aucune transaction trouvée</div>
-                    <div style="font-size: 12px; margin-top: 8px;">Essayez de modifier vos filtres</div>
+                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-text">Aucune transaction trouvée</div>
+                    <div class="empty-state-sub">Essayez de modifier vos filtres</div>
                 </div>
             {% endif %}
         </div>
@@ -480,23 +718,23 @@
         {% if transactions.has_other_pages %}
         <div class="pagination">
             {% if transactions.has_previous %}
-                <a href="?page={{ transactions.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">← Précédent</a>
+                <a href="?page={{ transactions.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">←</a>
             {% else %}
-                <span class="page-btn disabled">← Précédent</span>
+                <span class="page-btn disabled">←</span>
             {% endif %}
             
             {% for num in transactions.paginator.page_range %}
                 {% if transactions.number == num %}
                     <span class="page-btn active">{{ num }}</span>
-                {% else %}
+                {% elif num > transactions.number|add:'-3' and num < transactions.number|add:'3' %}
                     <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">{{ num }}</a>
                 {% endif %}
             {% endfor %}
             
             {% if transactions.has_next %}
-                <a href="?page={{ transactions.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">Suivant →</a>
+                <a href="?page={{ transactions.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">→</a>
             {% else %}
-                <span class="page-btn disabled">Suivant →</span>
+                <span class="page-btn disabled">→</span>
             {% endif %}
         </div>
         {% endif %}
@@ -505,6 +743,23 @@
     <div class="loading" id="loading">⏳ Chargement...</div>
 
     <script>
+        // Validation des dates
+        const dateDebut = document.getElementById('date_debut');
+        const dateFin = document.getElementById('date_fin');
+        
+        function validateDates() {
+            if (dateDebut.value && dateFin.value) {
+                if (dateDebut.value > dateFin.value) {
+                    alert('⚠️ La date de début ne peut pas être postérieure à la date de fin.');
+                    dateFin.value = '';
+                }
+            }
+        }
+        
+        dateDebut.addEventListener('change', validateDates);
+        dateFin.addEventListener('change', validateDates);
+        
+        // Réinitialisation des filtres
         function resetFilters() {
             document.getElementById('date_debut').value = '';
             document.getElementById('date_fin').value = '';
@@ -512,9 +767,15 @@
             document.getElementById('type').value = '';
             document.getElementById('filterForm').submit();
         }
-
+        
+        // Afficher le loading au submit
         document.getElementById('filterForm').addEventListener('submit', function() {
             document.getElementById('loading').style.display = 'block';
+        });
+        
+        // Masquer le loading au chargement
+        window.addEventListener('load', function() {
+            document.getElementById('loading').style.display = 'none';
         });
     </script>
 </body>
