@@ -16,6 +16,8 @@ from django.db.models import Sum
 from datetime import datetime
 from decimal import Decimal
 import django.shortcuts
+from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from .models import Admin, Agent, Caisse, Transaction, DemandeApprovisionnement, ApprovisionnementDirect
@@ -858,6 +860,18 @@ def historique_admin(request):
 from django.utils import timezone
 from datetime import datetime
 
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.db.models import Sum
+from django.utils import timezone
+from datetime import datetime, timedelta
+import csv
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
+
 @login_required
 def historique_agent(request):
     """
@@ -880,13 +894,18 @@ def historique_agent(request):
     # ========== FILTRES ==========
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
+    operateur = request.GET.get('operateur')
+    type_transaction = request.GET.get('type')
     
     # Si aucun filtre de date n'est appliqué, afficher uniquement les transactions du jour
     if not date_debut and not date_fin:
         transactions = transactions.filter(date__date=today)
-        date_debut = today.strftime('%Y-%m-%d')
-        date_fin = today.strftime('%Y-%m-%d')
+        date_debut_display = today.strftime('%Y-%m-%d')
+        date_fin_display = today.strftime('%Y-%m-%d')
     else:
+        date_debut_display = date_debut
+        date_fin_display = date_fin
+        
         # Filtre par date début
         if date_debut:
             try:
@@ -904,12 +923,10 @@ def historique_agent(request):
                 pass
     
     # Filtre par opérateur
-    operateur = request.GET.get('operateur')
     if operateur:
         transactions = transactions.filter(operateur=operateur)
     
     # Filtre par type
-    type_transaction = request.GET.get('type')
     if type_transaction:
         transactions = transactions.filter(type_transaction=type_transaction)
     
@@ -918,17 +935,339 @@ def historique_agent(request):
     total_sortie = transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
     total_commission = transactions.aggregate(Sum('commission'))['commission__sum'] or 0
     
+    # ========== PAGINATION ==========
+    page = request.GET.get('page', 1)
+    paginator = Paginator(transactions, 10)
+    
+    try:
+        transactions_page = paginator.page(page)
+    except PageNotAnInteger:
+        transactions_page = paginator.page(1)
+    except EmptyPage:
+        transactions_page = paginator.page(paginator.num_pages)
+    
     context = {
         'title': 'Mes transactions',
         'agent': agent,
-        'transactions': transactions,
+        'transactions': transactions_page,
         'total_entree': total_entree,
         'total_sortie': total_sortie,
         'total_commission': total_commission,
-        'date_debut': date_debut,
-        'date_fin': date_fin,
+        'date_debut': date_debut_display,
+        'date_fin': date_fin_display,
     }
     return render(request, 'transactions/historique_agent.html', context)
+
+
+@login_required
+def exporter_historique_agent(request, format_type):
+    """
+    Exporte les transactions de l'agent avec les filtres appliqués
+    Inclut les soldes, variations et demandes
+    format_type: 'csv' ou 'excel'
+    """
+    try:
+        agent = Agent.objects.get(user=request.user)
+    except Agent.DoesNotExist:
+        messages.error(request, 'Vous n\'êtes pas autorisé.')
+        return redirect('login')
+    
+    # Récupérer les dates du filtre
+    date_debut_str = request.GET.get('date_debut')
+    date_fin_str = request.GET.get('date_fin')
+    
+    # Définir la période à analyser
+    if date_debut_str and date_fin_str:
+        try:
+            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
+            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            date_debut = timezone.now().date()
+            date_fin = timezone.now().date()
+    else:
+        # Par défaut: aujourd'hui
+        date_debut = timezone.now().date()
+        date_fin = timezone.now().date()
+    
+    # Vérifier que date_debut <= date_fin
+    if date_debut > date_fin:
+        date_debut, date_fin = date_fin, date_debut
+    
+    # Date du jour pour le nom du fichier
+    today = timezone.now().date()
+    
+    # Date de la veille pour calculer solde hier
+    date_hier = date_debut - timedelta(days=1)
+    
+    # Récupérer la caisse de l'agent
+    caisse = agent.user.caisse
+    
+    # Récupérer les transactions pour la période (date__date__range)
+    transactions = Transaction.objects.filter(
+        user=request.user,
+        date__date__range=[date_debut, date_fin]
+    ).order_by('-date')
+    
+    # Récupérer les demandes pour la période
+    demandes = DemandeApprovisionnement.objects.filter(
+        agent=agent,
+        date_demande__date__range=[date_debut, date_fin]
+    ).order_by('-date_demande')
+    
+    # Récupérer les transactions avant la période (jusqu'à la veille inclus)
+    transactions_avant = Transaction.objects.filter(
+        user=request.user,
+        date__date__lte=date_hier
+    )
+    
+    # ========== CALCUL DES TOTAUX POUR LA PÉRIODE ==========
+    total_entree = transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
+    total_sortie = transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
+    
+    # ========== CALCUL DES SOLDES ==========
+    
+    # 1. Calculer les soldes à HIER (avant la période)
+    cash_depot_avant = transactions_avant.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
+    cash_retrait_avant = transactions_avant.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_cash_avant = cash_depot_avant - cash_retrait_avant
+    
+    uv_depot_avant = transactions_avant.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='depot'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    uv_retrait_avant = transactions_avant.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='retrait'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    uv_credit_avant = transactions_avant.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='credit'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_uv_avant = uv_retrait_avant - uv_depot_avant - uv_credit_avant
+    
+    wave_depot_avant = transactions_avant.filter(
+        operateur='wave',
+        type_transaction='depot'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    wave_retrait_avant = transactions_avant.filter(
+        operateur='wave',
+        type_transaction='retrait'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_wave_avant = wave_retrait_avant - wave_depot_avant
+    
+    # Solde à HIER (avant la période)
+    solde_cash_hier = caisse.solde_cash - variation_cash_avant
+    solde_uv_hier = caisse.solde_uv - variation_uv_avant
+    solde_wave_hier = caisse.solde_wave - variation_wave_avant
+    
+    # 2. Calculer les variations PENDANT la période
+    cash_depot_periode = transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
+    cash_retrait_periode = transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_cash_periode = cash_depot_periode - cash_retrait_periode
+    
+    uv_depot_periode = transactions.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='depot'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    uv_retrait_periode = transactions.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='retrait'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    uv_credit_periode = transactions.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='credit'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_uv_periode = uv_retrait_periode - uv_depot_periode - uv_credit_periode
+    
+    wave_depot_periode = transactions.filter(
+        operateur='wave',
+        type_transaction='depot'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    wave_retrait_periode = transactions.filter(
+        operateur='wave',
+        type_transaction='retrait'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_wave_periode = wave_retrait_periode - wave_depot_periode
+    
+    # Solde à la FIN de la période
+    solde_cash_fin = solde_cash_hier + variation_cash_periode
+    solde_uv_fin = solde_uv_hier + variation_uv_periode
+    solde_wave_fin = solde_wave_hier + variation_wave_periode
+    
+    if format_type == 'csv':
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="historique_{today.strftime("%Y%m%d")}.csv"'
+        
+        response.write('\ufeff')
+        writer = csv.writer(response)
+        
+        # En-tête principal
+        writer.writerow([f"HISTORIQUE COMPLET - {agent.nom}"])
+        writer.writerow([f"Période: du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}"])
+        writer.writerow([f"Date d'export: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"])
+        writer.writerow([])
+        
+        # SOLDES
+        writer.writerow(["=== SOLDES ==="])
+        writer.writerow(["Compte", f"Solde au {date_hier.strftime('%d/%m/%Y')}", f"Solde au {date_fin.strftime('%d/%m/%Y')}", "Variation"])
+        writer.writerow(["Argent Cash", f"{solde_cash_hier:,.0f} FCFA", f"{solde_cash_fin:,.0f} FCFA", f"{variation_cash_periode:+,.0f} FCFA"])
+        writer.writerow(["UV Touspiont", f"{solde_uv_hier:,.0f} FCFA", f"{solde_uv_fin:,.0f} FCFA", f"{variation_uv_periode:+,.0f} FCFA"])
+        writer.writerow(["UV Wave", f"{solde_wave_hier:,.0f} FCFA", f"{solde_wave_fin:,.0f} FCFA", f"{variation_wave_periode:+,.0f} FCFA"])
+        writer.writerow([])
+        
+        # TOTAUX TRANSACTIONS
+        writer.writerow(["=== TOTAUX DES TRANSACTIONS ==="])
+        writer.writerow([f"Total Entrées (Dépôts)", f"{total_entree:,.0f} FCFA"])
+        writer.writerow([f"Total Sorties (Retraits)", f"{total_sortie:,.0f} FCFA"])
+        writer.writerow(["Nombre de transactions", transactions.count()])
+        writer.writerow([])
+        
+        # DEMANDES
+        writer.writerow(["=== DEMANDES D'APPROVISIONNEMENT ==="])
+        writer.writerow(["Date", "Type", "Montant", "Statut", "Motif"])
+        for d in demandes:
+            writer.writerow([
+                d.date_demande.strftime('%d/%m/%Y %H:%M'),
+                d.get_type_echange_display(),
+                f"{d.montant:,.0f} FCFA",
+                d.get_statut_display(),
+                d.motif or ""
+            ])
+        writer.writerow([])
+        
+        # DETAIL DES TRANSACTIONS
+        writer.writerow(["=== DETAIL DES TRANSACTIONS ==="])
+        writer.writerow(['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Date'])
+        
+        for t in transactions:
+            writer.writerow([
+                t.reference,
+                t.get_type_transaction_display(),
+                t.get_operateur_display(),
+                t.numero_client,
+                f"{t.montant:,.0f}",
+                t.date.strftime('%d/%m/%Y %H:%M:%S')
+            ])
+        
+        return response
+    
+    elif format_type == 'excel':
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="historique_{today.strftime("%Y%m%d")}.xlsx"'
+        
+        wb = Workbook()
+        
+        # Styles
+        title_font = Font(bold=True, size=14)
+        header_font = Font(bold=True, size=12)
+        center_align = Alignment(horizontal='center')
+        
+        # ========== FEUILLE 1: RÉCAPITULATIF ==========
+        ws_summary = wb.active
+        ws_summary.title = "Récapitulatif"
+        
+        ws_summary.merge_cells('A1:D1')
+        ws_summary['A1'] = f"HISTORIQUE COMPLET - {agent.nom}"
+        ws_summary['A1'].font = title_font
+        ws_summary['A1'].alignment = center_align
+        
+        ws_summary['A2'] = f"Période: du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}"
+        ws_summary['A3'] = f"Date d'export: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"
+        
+        # Soldes
+        ws_summary['A5'] = "SOLDES"
+        ws_summary['A5'].font = header_font
+        ws_summary['A6'] = "Compte"
+        ws_summary['B6'] = f"Solde au {date_hier.strftime('%d/%m/%Y')}"
+        ws_summary['C6'] = f"Solde au {date_fin.strftime('%d/%m/%Y')}"
+        ws_summary['D6'] = "Variation"
+        
+        for col in range(1, 5):
+            ws_summary.cell(row=6, column=col).font = header_font
+            ws_summary.cell(row=6, column=col).alignment = center_align
+        
+        soldes_data = [
+            ["Argent Cash", f"{solde_cash_hier:,.0f} FCFA", f"{solde_cash_fin:,.0f} FCFA", f"{variation_cash_periode:+,.0f} FCFA"],
+            ["UV Touspiont", f"{solde_uv_hier:,.0f} FCFA", f"{solde_uv_fin:,.0f} FCFA", f"{variation_uv_periode:+,.0f} FCFA"],
+            ["UV Wave", f"{solde_wave_hier:,.0f} FCFA", f"{solde_wave_fin:,.0f} FCFA", f"{variation_wave_periode:+,.0f} FCFA"],
+        ]
+        
+        for row, data in enumerate(soldes_data, 7):
+            for col, val in enumerate(data, 1):
+                ws_summary.cell(row=row, column=col, value=val)
+        
+        # Totaux transactions
+        ws_summary['A11'] = "TOTAUX DES TRANSACTIONS"
+        ws_summary['A11'].font = header_font
+        ws_summary['A12'] = "Total Entrées (Dépôts)"
+        ws_summary['B12'] = f"{total_entree:,.0f} FCFA"
+        ws_summary['A13'] = "Total Sorties (Retraits)"
+        ws_summary['B13'] = f"{total_sortie:,.0f} FCFA"
+        ws_summary['A14'] = "Nombre de transactions"
+        ws_summary['B14'] = transactions.count()
+        
+        # Stats des demandes
+        ws_summary['A16'] = "STATISTIQUES DES DEMANDES"
+        ws_summary['A16'].font = header_font
+        ws_summary['A17'] = "En attente"
+        ws_summary['B17'] = demandes.filter(statut='attente').count()
+        ws_summary['A18'] = "Validées"
+        ws_summary['B18'] = demandes.filter(statut='valide').count()
+        ws_summary['A19'] = "Refusées"
+        ws_summary['B19'] = demandes.filter(statut='refuse').count()
+        
+        ws_summary.column_dimensions['A'].width = 30
+        ws_summary.column_dimensions['B'].width = 25
+        ws_summary.column_dimensions['C'].width = 25
+        ws_summary.column_dimensions['D'].width = 20
+        
+        # ========== FEUILLE 2: DEMANDES ==========
+        ws_demandes = wb.create_sheet("Demandes")
+        
+        headers_demandes = ['Date', 'Type', 'Montant', 'Statut', 'Motif']
+        for col, header in enumerate(headers_demandes, 1):
+            cell = ws_demandes.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.alignment = center_align
+        
+        for row, d in enumerate(demandes, 2):
+            ws_demandes.cell(row=row, column=1, value=d.date_demande.strftime('%d/%m/%Y %H:%M'))
+            ws_demandes.cell(row=row, column=2, value=d.get_type_echange_display())
+            ws_demandes.cell(row=row, column=3, value=f"{d.montant:,.0f} FCFA")
+            ws_demandes.cell(row=row, column=4, value=d.get_statut_display())
+            ws_demandes.cell(row=row, column=5, value=d.motif or "")
+        
+        for col in range(1, 6):
+            ws_demandes.column_dimensions[chr(64 + col)].width = 20
+        
+        # ========== FEUILLE 3: TRANSACTIONS ==========
+        ws_trans = wb.create_sheet("Transactions")
+        
+        headers_trans = ['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Date']
+        for col, header in enumerate(headers_trans, 1):
+            cell = ws_trans.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.alignment = center_align
+        
+        for row, t in enumerate(transactions, 2):
+            ws_trans.cell(row=row, column=1, value=t.reference)
+            ws_trans.cell(row=row, column=2, value=t.get_type_transaction_display())
+            ws_trans.cell(row=row, column=3, value=t.get_operateur_display())
+            ws_trans.cell(row=row, column=4, value=t.numero_client)
+            ws_trans.cell(row=row, column=5, value=float(t.montant))
+            ws_trans.cell(row=row, column=6, value=t.date.strftime('%d/%m/%Y %H:%M:%S'))
+        
+        # Format des nombres
+        for row in range(2, transactions.count() + 2):
+            ws_trans.cell(row=row, column=5).number_format = '#,##0'
+        
+        for col in range(1, 7):
+            ws_trans.column_dimensions[chr(64 + col)].width = 18
+        
+        wb.save(response)
+        return response
+    
+    return None
 @login_required
 def historique_demandes_agent(request):
     """
@@ -1627,6 +1966,9 @@ def exporter_rapport_complet_agent(request, format_type):
         date_debut = timezone.now().date()
         date_fin = timezone.now().date()
     
+    # Date du jour pour le nom du fichier
+    today = timezone.now().date()
+    
     # Date de la veille pour calculer solde hier
     date_hier = date_debut - timedelta(days=1)
     
@@ -1645,8 +1987,12 @@ def exporter_rapport_complet_agent(request, format_type):
             date__date__lte=date_fin
         ).order_by('-date')
         
-        # Récupérer les demandes de l'agent
-        demandes = DemandeApprovisionnement.objects.filter(agent=agent).order_by('-date_demande')
+        # Récupérer les demandes de l'agent UNIQUEMENT pour la période
+        demandes = DemandeApprovisionnement.objects.filter(
+            agent=agent,
+            date_demande__date__gte=date_debut,
+            date_demande__date__lte=date_fin
+        ).order_by('-date_demande')
         
         # Calculer les soldes à la date de début
         transactions_avant = Transaction.objects.filter(
@@ -1667,8 +2013,11 @@ def exporter_rapport_complet_agent(request, format_type):
             date__date__lte=date_fin
         ).order_by('-date')
         
-        # Récupérer toutes les demandes
-        demandes = DemandeApprovisionnement.objects.all().order_by('-date_demande')
+        # Récupérer toutes les demandes pour la période
+        demandes = DemandeApprovisionnement.objects.filter(
+            date_demande__date__gte=date_debut,
+            date_demande__date__lte=date_fin
+        ).order_by('-date_demande')
         
         # Calculer les soldes à la date de début
         transactions_avant = Transaction.objects.filter(
@@ -1686,7 +2035,11 @@ def exporter_rapport_complet_agent(request, format_type):
                 date__date__gte=date_debut,
                 date__date__lte=date_fin
             ).order_by('-date')
-            demandes = DemandeApprovisionnement.objects.filter(agent__user=request.user).order_by('-date_demande')
+            demandes = DemandeApprovisionnement.objects.filter(
+                agent__user=request.user,
+                date_demande__date__gte=date_debut,
+                date_demande__date__lte=date_fin
+            ).order_by('-date_demande')
             transactions_avant = Transaction.objects.filter(
                 user=request.user,
                 date__date__lt=date_debut
@@ -1698,13 +2051,43 @@ def exporter_rapport_complet_agent(request, format_type):
     total_entree = transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
     total_sortie = transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
     
-    # ========== CALCUL DES SOLDES AVANT LA PÉRIODE ==========
-    # Soldes à la date de début (avant les transactions de la période)
-    cash_avant = caisse.solde_cash
-    uv_avant = caisse.solde_uv
-    wave_avant = caisse.solde_wave
+    # ========== CALCUL DES SOLDES ==========
     
-    # Calculer les variations de la période
+    # 1. Calculer les soldes à HIER (avant la période)
+    cash_depot_avant = transactions_avant.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
+    cash_retrait_avant = transactions_avant.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_cash_avant = cash_depot_avant - cash_retrait_avant
+    
+    uv_depot_avant = transactions_avant.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='depot'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    uv_retrait_avant = transactions_avant.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='retrait'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    uv_credit_avant = transactions_avant.filter(
+        operateur__in=['orange', 'malitel', 'telecel'],
+        type_transaction='credit'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_uv_avant = uv_retrait_avant - uv_depot_avant - uv_credit_avant
+    
+    wave_depot_avant = transactions_avant.filter(
+        operateur='wave',
+        type_transaction='depot'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    wave_retrait_avant = transactions_avant.filter(
+        operateur='wave',
+        type_transaction='retrait'
+    ).aggregate(Sum('montant'))['montant__sum'] or 0
+    variation_wave_avant = wave_retrait_avant - wave_depot_avant
+    
+    # Solde à HIER (avant la période)
+    solde_cash_hier = caisse.solde_cash - variation_cash_avant
+    solde_uv_hier = caisse.solde_uv - variation_uv_avant
+    solde_wave_hier = caisse.solde_wave - variation_wave_avant
+    
+    # 2. Calculer les variations PENDANT la période
     cash_depot_periode = transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
     cash_retrait_periode = transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
     variation_cash_periode = cash_depot_periode - cash_retrait_periode
@@ -1733,36 +2116,31 @@ def exporter_rapport_complet_agent(request, format_type):
     ).aggregate(Sum('montant'))['montant__sum'] or 0
     variation_wave_periode = wave_retrait_periode - wave_depot_periode
     
-    # Soldes à la date de début (début de période)
-    solde_cash_debut = cash_avant - variation_cash_periode
-    solde_uv_debut = uv_avant - variation_uv_periode
-    solde_wave_debut = wave_avant - variation_wave_periode
-    
-    # Soldes à la date de fin (fin de période)
-    solde_cash_fin = cash_avant
-    solde_uv_fin = uv_avant
-    solde_wave_fin = wave_avant
+    # Solde à la FIN de la période
+    solde_cash_fin = solde_cash_hier + variation_cash_periode
+    solde_uv_fin = solde_uv_hier + variation_uv_periode
+    solde_wave_fin = solde_wave_hier + variation_wave_periode
     
     if format_type == 'csv':
         response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = f'attachment; filename="rapport_{date_debut.strftime("%Y%m%d")}_{date_fin.strftime("%Y%m%d")}_{user_name}.csv"'
+        # Nom du fichier avec la date du jour
+        response['Content-Disposition'] = f'attachment; filename="rapport_{today.strftime("%Y%m%d")}.csv"'
         
         # Ajouter BOM pour UTF-8
         response.write('\ufeff')
         writer = csv.writer(response)
         
-        # En-tête principal
+        # En-tête principal (sans la ligne Période)
         writer.writerow([f"RAPPORT COMPLET - {user_name} ({user_type})"])
-        writer.writerow([f"Période: du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}"])
         writer.writerow([f"Date d'export: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"])
         writer.writerow([])
         
         # SOLDES
         writer.writerow(["=== SOLDES ==="])
-        writer.writerow(["Compte", f"Solde au {date_debut.strftime('%d/%m/%Y')}", f"Solde au {date_fin.strftime('%d/%m/%Y')}", "Variation sur la période"])
-        writer.writerow(["Argent Cash", f"{solde_cash_debut:,.0f} FCFA", f"{solde_cash_fin:,.0f} FCFA", f"{variation_cash_periode:+,.0f} FCFA"])
-        writer.writerow(["UV Touspiont", f"{solde_uv_debut:,.0f} FCFA", f"{solde_uv_fin:,.0f} FCFA", f"{variation_uv_periode:+,.0f} FCFA"])
-        writer.writerow(["UV Wave", f"{solde_wave_debut:,.0f} FCFA", f"{solde_wave_fin:,.0f} FCFA", f"{variation_wave_periode:+,.0f} FCFA"])
+        writer.writerow(["Compte", f"Solde au {date_hier.strftime('%d/%m/%Y')}", f"Solde au {date_fin.strftime('%d/%m/%Y')}", "Variation"])
+        writer.writerow(["Argent Cash", f"{solde_cash_hier:,.0f} FCFA", f"{solde_cash_fin:,.0f} FCFA", f"{variation_cash_periode:+,.0f} FCFA"])
+        writer.writerow(["UV Touspiont", f"{solde_uv_hier:,.0f} FCFA", f"{solde_uv_fin:,.0f} FCFA", f"{variation_uv_periode:+,.0f} FCFA"])
+        writer.writerow(["UV Wave", f"{solde_wave_hier:,.0f} FCFA", f"{solde_wave_fin:,.0f} FCFA", f"{variation_wave_periode:+,.0f} FCFA"])
         writer.writerow([])
         
         # TOTAUX TRANSACTIONS
@@ -1803,7 +2181,8 @@ def exporter_rapport_complet_agent(request, format_type):
     
     elif format_type == 'excel':
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="rapport_{date_debut.strftime("%Y%m%d")}_{date_fin.strftime("%Y%m%d")}_{user_name}.xlsx"'
+        # Nom du fichier avec la date du jour
+        response['Content-Disposition'] = f'attachment; filename="rapport_{today.strftime("%Y%m%d")}.xlsx"'
         
         wb = Workbook()
         
@@ -1816,55 +2195,54 @@ def exporter_rapport_complet_agent(request, format_type):
         ws_summary = wb.active
         ws_summary.title = "Récapitulatif"
         
-        ws_summary.merge_cells('A1:E1')
+        ws_summary.merge_cells('A1:D1')
         ws_summary['A1'] = f"RAPPORT COMPLET - {user_name} ({user_type})"
         ws_summary['A1'].font = title_font
         ws_summary['A1'].alignment = center_align
         
-        ws_summary['A2'] = f"Période: du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}"
-        ws_summary['A3'] = f"Date d'export: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"
+        ws_summary['A2'] = f"Date d'export: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"
         
         # Soldes
-        ws_summary['A5'] = "SOLDES"
-        ws_summary['A5'].font = header_font
-        ws_summary['A6'] = "Compte"
-        ws_summary['B6'] = f"Solde au {date_debut.strftime('%d/%m/%Y')}"
-        ws_summary['C6'] = f"Solde au {date_fin.strftime('%d/%m/%Y')}"
-        ws_summary['D6'] = "Variation"
+        ws_summary['A4'] = "SOLDES"
+        ws_summary['A4'].font = header_font
+        ws_summary['A5'] = "Compte"
+        ws_summary['B5'] = f"Solde au {date_hier.strftime('%d/%m/%Y')}"
+        ws_summary['C5'] = f"Solde au {date_fin.strftime('%d/%m/%Y')}"
+        ws_summary['D5'] = "Variation"
         
         for col in range(1, 5):
-            ws_summary.cell(row=6, column=col).font = header_font
-            ws_summary.cell(row=6, column=col).alignment = center_align
+            ws_summary.cell(row=5, column=col).font = header_font
+            ws_summary.cell(row=5, column=col).alignment = center_align
         
         soldes_data = [
-            ["Argent Cash", f"{solde_cash_debut:,.0f} FCFA", f"{solde_cash_fin:,.0f} FCFA", f"{variation_cash_periode:+,.0f} FCFA"],
-            ["UV Touspiont", f"{solde_uv_debut:,.0f} FCFA", f"{solde_uv_fin:,.0f} FCFA", f"{variation_uv_periode:+,.0f} FCFA"],
-            ["UV Wave", f"{solde_wave_debut:,.0f} FCFA", f"{solde_wave_fin:,.0f} FCFA", f"{variation_wave_periode:+,.0f} FCFA"],
+            ["Argent Cash", f"{solde_cash_hier:,.0f} FCFA", f"{solde_cash_fin:,.0f} FCFA", f"{variation_cash_periode:+,.0f} FCFA"],
+            ["UV Touspiont", f"{solde_uv_hier:,.0f} FCFA", f"{solde_uv_fin:,.0f} FCFA", f"{variation_uv_periode:+,.0f} FCFA"],
+            ["UV Wave", f"{solde_wave_hier:,.0f} FCFA", f"{solde_wave_fin:,.0f} FCFA", f"{variation_wave_periode:+,.0f} FCFA"],
         ]
         
-        for row, data in enumerate(soldes_data, 7):
+        for row, data in enumerate(soldes_data, 6):
             for col, val in enumerate(data, 1):
                 ws_summary.cell(row=row, column=col, value=val)
         
         # Totaux transactions
-        ws_summary['A11'] = "TOTAUX DES TRANSACTIONS"
-        ws_summary['A11'].font = header_font
-        ws_summary['A12'] = "Total Entrées (Dépôts)"
-        ws_summary['B12'] = f"{total_entree:,.0f} FCFA"
-        ws_summary['A13'] = "Total Sorties (Retraits)"
-        ws_summary['B13'] = f"{total_sortie:,.0f} FCFA"
-        ws_summary['A14'] = "Nombre de transactions"
-        ws_summary['B14'] = transactions.count()
+        ws_summary['A10'] = "TOTAUX DES TRANSACTIONS"
+        ws_summary['A10'].font = header_font
+        ws_summary['A11'] = "Total Entrées (Dépôts)"
+        ws_summary['B11'] = f"{total_entree:,.0f} FCFA"
+        ws_summary['A12'] = "Total Sorties (Retraits)"
+        ws_summary['B12'] = f"{total_sortie:,.0f} FCFA"
+        ws_summary['A13'] = "Nombre de transactions"
+        ws_summary['B13'] = transactions.count()
         
         # Stats des demandes
-        ws_summary['A16'] = "STATISTIQUES DES DEMANDES"
-        ws_summary['A16'].font = header_font
-        ws_summary['A17'] = "En attente"
-        ws_summary['B17'] = demandes.filter(statut='attente').count()
-        ws_summary['A18'] = "Validées"
-        ws_summary['B18'] = demandes.filter(statut='valide').count()
-        ws_summary['A19'] = "Refusées"
-        ws_summary['B19'] = demandes.filter(statut='refuse').count()
+        ws_summary['A15'] = "STATISTIQUES DES DEMANDES"
+        ws_summary['A15'].font = header_font
+        ws_summary['A16'] = "En attente"
+        ws_summary['B16'] = demandes.filter(statut='attente').count()
+        ws_summary['A17'] = "Validées"
+        ws_summary['B17'] = demandes.filter(statut='valide').count()
+        ws_summary['A18'] = "Refusées"
+        ws_summary['B18'] = demandes.filter(statut='refuse').count()
         
         ws_summary.column_dimensions['A'].width = 30
         ws_summary.column_dimensions['B'].width = 25

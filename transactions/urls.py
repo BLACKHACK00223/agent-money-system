@@ -37,6 +37,8 @@ urlpatterns = [
     path('supprimer-agent/', views.supprimer_agent, name='supprimer_agent'),
     path('activer-agent/<int:agent_id>/', views.activer_agent, name='activer_agent'),
     path('agent/<int:agent_id>/', views.detail_agent, name='detail_agent'),
+    path('exporter-historique-csv/', lambda request: views.exporter_historique_agent(request, 'csv'), name='exporter_historique_agent_csv'),
+    path('exporter-historique-excel/', lambda request: views.exporter_historique_agent(request, 'excel'), name='exporter_historique_agent_excel'),
     path('exporter-rapport-csv/', lambda request: views.exporter_rapport_complet_agent(request, 'csv'), name='exporter_rapport_complet_agent_csv'),
     path('exporter-rapport-excel/', lambda request: views.exporter_rapport_complet_agent(request, 'excel'), name='exporter_rapport_complet_agent_excel'), path('logout/', views.logout_view, name='logout'),
 ]

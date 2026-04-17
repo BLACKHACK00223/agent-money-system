@@ -101,8 +101,24 @@
             color: var(--gray-900);
         }
 
-        .header-placeholder {
-            width: 36px;
+        .btn-export-excel {
+            background: linear-gradient(135deg, #107c10 0%, #0b5e0b 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-export-excel:hover {
+            background: linear-gradient(135deg, #0b5e0b 0%, #0a4a0a 100%);
+            transform: translateY(-1px);
         }
 
         /* Container */
@@ -112,7 +128,7 @@
             margin: 0 auto;
         }
 
-        /* Filtres - Design compact et responsive */
+        /* Filtres */
         .filters-card {
             background: white;
             border-radius: 20px;
@@ -157,7 +173,6 @@
             font-weight: 500;
         }
 
-        /* Grille de filtres responsive */
         .filters-grid {
             display: flex;
             flex-direction: column;
@@ -173,10 +188,6 @@
         .filter-group {
             flex: 1;
             min-width: calc(50% - 6px);
-        }
-
-        .filter-group.full-width {
-            min-width: 100%;
         }
 
         .filter-group label {
@@ -207,12 +218,11 @@
             box-shadow: 0 0 0 3px var(--primary-light);
         }
 
-        /* Date inputs spécifiques */
         .filter-group input[type="date"] {
             color-scheme: light;
+            cursor: pointer;
         }
 
-        /* Actions des filtres */
         .filter-actions {
             display: flex;
             gap: 12px;
@@ -334,11 +344,6 @@
             display: flex;
             align-items: center;
             gap: 6px;
-        }
-
-        .transaction-type svg {
-            width: 18px;
-            height: 18px;
         }
 
         .badge-depot { 
@@ -530,7 +535,6 @@
             backdrop-filter: blur(8px);
         }
 
-        /* Responsive */
         @media (max-width: 400px) {
             .container {
                 padding: 16px 12px 32px 12px;
@@ -557,11 +561,15 @@
             .transaction-amount {
                 align-self: flex-end;
             }
+            
+            .btn-export-excel {
+                padding: 6px 12px;
+                font-size: 11px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
         <div class="header-top">
             <a href="{% url 'dashboard_agent' %}" class="back-btn">
@@ -570,12 +578,13 @@
                 </svg>
             </a>
             <div class="page-title">Transactions</div>
-            <div class="header-placeholder"></div>
+            <button class="btn-export-excel" onclick="exportToExcel()">
+                📊 Exporter Excel
+            </button>
         </div>
     </div>
 
     <div class="container">
-        <!-- Filtres améliorés -->
         <div class="filters-card">
             <div class="filters-header">
                 <div class="filters-title">
@@ -589,9 +598,8 @@
                 {% endif %}
             </div>
             
-            <form method="get" id="filterForm">
+            <form method="get" id="filterForm" action="{% url 'historique_agent' %}">
                 <div class="filters-grid">
-                    <!-- Ligne Date Début / Date Fin -->
                     <div class="filter-row">
                         <div class="filter-group">
                             <label>📅 Du</label>
@@ -605,7 +613,6 @@
                         </div>
                     </div>
                     
-                    <!-- Ligne Opérateur / Type -->
                     <div class="filter-row">
                         <div class="filter-group">
                             <label>🏢 Opérateur</label>
@@ -628,7 +635,6 @@
                         </div>
                     </div>
                     
-                    <!-- Actions -->
                     <div class="filter-actions">
                         <button type="submit" class="btn-filter">🔍 Appliquer</button>
                         <button type="button" class="btn-reset" onclick="resetFilters()">🗑️ Réinitialiser</button>
@@ -637,7 +643,6 @@
             </form>
         </div>
 
-        <!-- Stats -->
         <div class="stats-container">
             <div class="stats-grid">
                 <div class="stat-card">
@@ -655,8 +660,7 @@
             </div>
         </div>
 
-        <!-- Liste des transactions -->
-        <div class="transactions-section">
+        <div class="transactions-section" id="transactionsList">
             {% if transactions %}
                 {% for t in transactions %}
                 <div class="transaction-item">
@@ -714,7 +718,6 @@
             {% endif %}
         </div>
 
-        <!-- Pagination -->
         {% if transactions.has_other_pages %}
         <div class="pagination">
             {% if transactions.has_previous %}
@@ -743,10 +746,11 @@
     <div class="loading" id="loading">⏳ Chargement...</div>
 
     <script>
-        // Validation des dates
+        // Validation des dates (sans soumission automatique)
         const dateDebut = document.getElementById('date_debut');
         const dateFin = document.getElementById('date_fin');
         
+        // Validation des dates
         function validateDates() {
             if (dateDebut.value && dateFin.value) {
                 if (dateDebut.value > dateFin.value) {
@@ -774,7 +778,36 @@
             document.getElementById('filterForm').submit();
         }
         
-        // Afficher le loading au submit
+        // Export Excel
+        function exportToExcel() {
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            
+            const dateDebutVal = document.getElementById('date_debut').value;
+            const dateFinVal = document.getElementById('date_fin').value;
+            const operateurVal = document.getElementById('operateur').value;
+            const typeVal = document.getElementById('type').value;
+            
+            let url = "{% url 'exporter_historique_agent_excel' %}";
+            
+            let params = [];
+            if (dateDebutVal) params.push(`date_debut=${dateDebutVal}`);
+            if (dateFinVal) params.push(`date_fin=${dateFinVal}`);
+            if (operateurVal) params.push(`operateur=${operateurVal}`);
+            if (typeVal) params.push(`type=${typeVal}`);
+            
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
+            window.location.href = url;
+            
+            setTimeout(() => {
+                loading.style.display = 'none';
+            }, 1000);
+        }
+        
+        // Afficher le loading au submit du formulaire
         const filterForm = document.getElementById('filterForm');
         if (filterForm) {
             filterForm.addEventListener('submit', function() {

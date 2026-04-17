@@ -1,4 +1,6 @@
 <!-- templates/transactions/recu.html -->
+{% load humanize %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -17,13 +19,20 @@
             }
             .receipt {
                 margin: 0;
-                padding: 15px;
+                padding: 8px;
                 box-shadow: none;
                 border-radius: 0;
-                min-height: 100vh;
+                min-height: auto;
+                max-width: 100%;
             }
             .signature-line {
                 border-top: 1px solid #000;
+            }
+            .watermark {
+                display: none;
+            }
+            .footer {
+                position: static;
             }
         }
         
@@ -34,7 +43,7 @@
         }
         
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Courier New', monospace;
+            font-family: 'Courier New', 'Inter', -apple-system, BlinkMacSystemFont, monospace;
             background: #e8eaed;
             display: flex;
             justify-content: center;
@@ -44,58 +53,56 @@
         }
         
         .receipt {
-            max-width: 380px;
+            max-width: 300px;
             width: 100%;
             background: white;
-            padding: 24px;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.02);
-            border-radius: 20px;
-            transition: transform 0.2s;
+            padding: 14px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            position: relative;
         }
         
         /* Header */
         .header {
             text-align: center;
-            border-bottom: 2px solid #1a73e8;
-            padding-bottom: 16px;
-            margin-bottom: 20px;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
         }
         
         .header h2 {
-            font-size: 20px;
+            font-size: 14px;
             font-weight: 700;
             color: #1a73e8;
-            margin-bottom: 8px;
-            letter-spacing: -0.3px;
+            margin-bottom: 4px;
         }
         
         .header p {
-            font-size: 11px;
-            color: #5f6368;
+            font-size: 9px;
+            color: #666;
             margin: 2px 0;
         }
         
         .header .agent-name {
             font-weight: 600;
-            color: #202124;
-            margin-top: 8px;
-            font-size: 12px;
+            color: #333;
+            margin-top: 6px;
+            font-size: 10px;
         }
         
         /* Type de transaction */
         .transaction-badge {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         
         .badge {
             display: inline-block;
-            padding: 6px 16px;
-            border-radius: 30px;
-            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 9px;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
         
         .badge-depot {
@@ -115,151 +122,137 @@
         
         /* Informations */
         .info-section {
-            background: #f8f9fa;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         
         .info-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-            font-size: 13px;
-        }
-        
-        .info-row:last-child {
-            margin-bottom: 0;
+            margin-bottom: 6px;
+            font-size: 10px;
         }
         
         .info-row .label {
             font-weight: 600;
-            color: #5f6368;
+            color: #666;
         }
         
         .info-row .value {
-            color: #202124;
+            color: #333;
             font-weight: 500;
         }
         
         .info-row .value small {
             font-family: monospace;
-            font-size: 11px;
+            font-size: 9px;
         }
         
         /* Montant */
         .montant-section {
             text-align: center;
-            margin: 20px 0;
-            padding: 16px;
+            margin: 10px 0;
+            padding: 10px;
             background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
-            border-radius: 16px;
+            border-radius: 10px;
         }
         
         .montant-label {
-            font-size: 11px;
+            font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: rgba(255,255,255,0.8);
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
         
         .montant-value {
-            font-size: 28px;
+            font-size: 18px;
             font-weight: 800;
             color: white;
         }
         
         .montant-currency {
-            font-size: 14px;
-            font-weight: 500;
-            margin-left: 4px;
-        }
-        
-        /* Séparateur */
-        .separator {
-            border-top: 1px dashed #dadce0;
-            margin: 16px 0;
+            font-size: 10px;
+            margin-left: 2px;
         }
         
         /* Footer */
         .footer {
             text-align: center;
-            font-size: 10px;
-            color: #80868b;
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 1px solid #e8eaed;
-        }
-        
-        .footer p {
-            margin: 4px 0;
+            font-size: 8px;
+            color: #999;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed #ccc;
         }
         
         .footer .merci {
             font-weight: 600;
             color: #1a73e8;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
         
         /* Signature */
         .signature {
-            margin-top: 24px;
+            margin-top: 12px;
             text-align: center;
         }
         
         .signature-line {
-            border-top: 1.5px solid #202124;
-            width: 160px;
-            margin: 8px auto 0;
+            border-top: 1px solid #333;
+            width: 100px;
+            margin: 4px auto 0;
         }
         
         .signature p {
-            font-size: 10px;
-            color: #5f6368;
-            margin-bottom: 4px;
+            font-size: 8px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+        
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            opacity: 0.03;
+            font-size: 30px;
+            pointer-events: none;
         }
         
         /* Bouton impression */
         .btn-print {
             display: block;
             width: 100%;
-            max-width: 380px;
+            max-width: 300px;
             margin: 20px auto 0;
-            padding: 14px;
+            padding: 10px;
             background: #1a73e8;
             color: white;
             border: none;
-            border-radius: 14px;
-            font-size: 14px;
+            border-radius: 10px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
             font-family: inherit;
         }
         
         .btn-print:hover {
             background: #1557b0;
-            transform: translateY(-1px);
-        }
-        
-        .btn-print:active {
-            transform: translateY(0);
         }
         
         /* Responsive */
-        @media (max-width: 450px) {
+        @media (max-width: 400px) {
             body {
                 padding: 10px;
             }
             
             .receipt {
-                padding: 18px;
+                padding: 10px;
             }
             
             .montant-value {
-                font-size: 24px;
+                font-size: 16px;
             }
         }
     </style>
@@ -267,12 +260,15 @@
 <body>
     <div>
         <div class="receipt">
+            <!-- Filigrane -->
+            <div class="watermark">💰</div>
+            
             <!-- En-tête -->
             <div class="header">
-                <h2>🏦 {{ transaction.sous_agent.agent_principal.point_service|default:"Agent Money" }}</h2>
-                <p>{{ transaction.sous_agent.agent_principal.adresse|default:"Service de transfert d'argent" }}</p>
-                <p>📞 {{ transaction.sous_agent.agent_principal.telephone|default:"Service client" }}</p>
-                <div class="agent-name">👤 Agent: {{ transaction.sous_agent.nom }}</div>
+                <h2>🏦 {{ transaction.sous_agent.agent_principal.point_service|default:"KONE SERVICES" }}</h2>
+                <p>{{ transaction.sous_agent.agent_principal.adresse|default:"Services Transfert d'argent" }}</p>
+                <p>📞 {{ transaction.sous_agent.agent_principal.telephone|default:"76 89 77 31" }}</p>
+                <div class="agent-name">👤 {{ transaction.sous_agent.nom |default:"ABOUBACAR KONE" }}</div>
             </div>
             
             <!-- Badge type de transaction -->
@@ -289,16 +285,16 @@
             <!-- Informations client -->
             <div class="info-section">
                 <div class="info-row">
-                    <span class="label">🏢 Opérateur</span>
+                    <span class="label">TYPE</span>
                     <span class="value">{{ transaction.get_operateur_display }}</span>
                 </div>
                 <div class="info-row">
-                    <span class="label">📞 Numéro client</span>
+                    <span class="label">CLIENT</span>
                     <span class="value">{{ transaction.numero_client }}</span>
                 </div>
                 {% if transaction.nom_client %}
                 <div class="info-row">
-                    <span class="label">👤 Nom du client</span>
+                    <span class="label">NOM</span>
                     <span class="value">{{ transaction.nom_client }}</span>
                 </div>
                 {% endif %}
@@ -315,38 +311,36 @@
             <!-- Références -->
             <div class="info-section">
                 <div class="info-row">
-                    <span class="label">🔖 Référence</span>
+                    <span class="label">REFERENCE</span>
                     <span class="value"><small>{{ transaction.reference }}</small></span>
                 </div>
                 {% if transaction.reference_operateur %}
                 <div class="info-row">
-                    <span class="label">🔗 Réf opérateur</span>
+                    <span class="label">RÉF OPÉRATEUR</span>
                     <span class="value"><small>{{ transaction.reference_operateur }}</small></span>
                 </div>
                 {% endif %}
                 <div class="info-row">
-                    <span class="label">📅 Date</span>
-                    <span class="value">{{ transaction.date|date:"d/m/Y H:i:s" }}</span>
+                    <span class="label">DATE</span>
+                    <span class="value">{{ transaction.date|date:"d/m/Y H:i" }}</span>
                 </div>
             </div>
             
             <!-- Pied de page -->
             <div class="footer">
-                <p class="merci">✨ Merci pour votre confiance ✨</p>
-                <p>Ce reçu fait foi de transaction</p>
-                <p>Service client 24/7: appels gratuits</p>
-                <p>Imprimé le: {{ date_impression|date:"d/m/Y H:i:s" }}</p>
+                <p class="merci"> Merci Pour Votre Confiance </p>
+                <p>{{ date_impression|date:"d/m/Y H:i:s" }}</p>
             </div>
             
             <!-- Signature -->
             <div class="signature">
-                <p>Signature du client</p>
+                <p>Signature </p>
                 <div class="signature-line"></div>
             </div>
         </div>
         
         <button class="btn-print no-print" onclick="window.print()">
-            🖨️ Imprimer le reçu
+            🖨️ Imprimer
         </button>
     </div>
     
@@ -356,11 +350,6 @@
             setTimeout(function() {
                 window.print();
             }, 300);
-        }
-        
-        // Fermeture automatique après impression (optionnel)
-        window.onafterprint = function() {
-            // window.close(); // Décommentez si vous voulez fermer la fenêtre après impression
         }
     </script>
 </body>
