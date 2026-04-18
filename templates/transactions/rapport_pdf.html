@@ -1,0 +1,175 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport complet - {{ user_name }}</title>
+    <style>
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 12px;
+            margin: 20px;
+        }
+        h1 {
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            background: #f0f0f0;
+            padding: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        .soldes-table td {
+            text-align: right;
+        }
+        .soldes-table td:first-child {
+            text-align: left;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RAPPORT COMPLET - {{ user_name }} ({{ user_type }})</h1>
+        <p>Date d'export: {{ date_export|date:"d/m/Y H:i:s" }}</p>
+        <p>Période: du {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}</p>
+    </div>
+
+    <div class="section-title">📊 SOLDES</div>
+    <table class="soldes-table">
+        <tr>
+            <th>Compte</th>
+            <th>Solde au {{ date_hier|date:"d/m/Y" }}</th>
+            <th>Solde au {{ date_fin|date:"d/m/Y" }}</th>
+            <th>Variation</th>
+        </tr>
+        <tr>
+            <td>Argent Cash</td>
+            <td>{{ solde_cash_hier|floatformat:0|intcomma }} FCFA</td>
+            <td>{{ solde_cash_fin|floatformat:0|intcomma }} FCFA</td>
+            <td>{{ variation_cash_periode|floatformat:0|intcomma }} FCFA</td>
+        </tr>
+        <tr>
+            <td>UV Touchpiont</td>
+            <td>{{ solde_uv_hier|floatformat:0|intcomma }} FCFA</td>
+            <td>{{ solde_uv_fin|floatformat:0|intcomma }} FCFA</td>
+            <td>{{ variation_uv_periode|floatformat:0|intcomma }} FCFA</td>
+        </tr>
+        <tr>
+            <td>UV Wave</td>
+            <td>{{ solde_wave_hier|floatformat:0|intcomma }} FCFA</td>
+            <td>{{ solde_wave_fin|floatformat:0|intcomma }} FCFA</td>
+            <td>{{ variation_wave_periode|floatformat:0|intcomma }} FCFA</td>
+        </tr>
+    </table>
+
+    <div class="section-title">💰 TOTAUX DES TRANSACTIONS</div>
+    <table>
+        <tr>
+            <th>Total Entrées (Dépôts)</th>
+            <td>{{ total_entree|floatformat:0|intcomma }} FCFA</td>
+        </tr>
+        <tr>
+            <th>Total Sorties (Retraits)</th>
+            <td>{{ total_sortie|floatformat:0|intcomma }} FCFA</td>
+        </tr>
+        <tr>
+            <th>Nombre de transactions</th>
+            <td>{{ transactions.count }}</td>
+        </tr>
+    </table>
+
+    <div class="section-title">📋 DEMANDES D'APPROVISIONNEMENT</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Montant</th>
+                <th>Statut</th>
+                <th>Motif</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in demandes %}
+            <tr>
+                <td>{{ d.date_demande|date:"d/m/Y H:i" }}</td>
+                <td>{{ d.get_type_echange_display }}</td>
+                <td>{{ d.montant|floatformat:0|intcomma }} FCFA</td>
+                <td>{{ d.get_statut_display }}</td>
+                <td>{{ d.motif|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center;">Aucune demande</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="section-title">📜 DETAIL DES TRANSACTIONS</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Référence</th>
+                <th>Type</th>
+                <th>Opérateur</th>
+                <th>Client</th>
+                <th>Montant (FCFA)</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transactions %}
+            <tr>
+                <td>{{ t.reference }}</td>
+                <td>{{ t.get_type_transaction_display }}</td>
+                <td>{{ t.get_operateur_display }}</td>
+                <td>{{ t.numero_client }}</td>
+                <td>{{ t.montant|floatformat:0|intcomma }}</td>
+                <td>{{ t.date|date:"d/m/Y H:i:s" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center;">Aucune transaction</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Document généré automatiquement - Agent Money</p>
+    </div>
+</body>
+</html>

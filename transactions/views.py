@@ -958,7 +958,6 @@ def historique_agent(request):
     }
     return render(request, 'transactions/historique_agent.html', context)
 
-
 @login_required
 def exporter_historique_agent(request, format_type):
     """
@@ -1268,10 +1267,13 @@ def exporter_historique_agent(request, format_type):
         return response
     
     return None
+
 @login_required
 def historique_demandes_agent(request):
     """
     Historique des demandes d'approvisionnement pour l'AGENT
+    Avec filtres par date et statut
+    Affiche par défaut les demandes du jour
     """
     try:
         agent = Agent.objects.get(user=request.user)
@@ -1279,11 +1281,59 @@ def historique_demandes_agent(request):
         messages.error(request, 'Vous n\'êtes pas autorisé.')
         return redirect('login')
     
+    # Récupérer toutes les demandes de l'agent
     demandes = DemandeApprovisionnement.objects.filter(agent=agent).order_by('-date_demande')
     
+    # Date d'aujourd'hui
+    today = timezone.now().date()
+    
+    # ========== FILTRES ==========
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    statut = request.GET.get('statut')
+    
+    # Si aucun filtre de date n'est appliqué, afficher uniquement les demandes du jour
+    if not date_debut and not date_fin and not statut:
+        demandes = demandes.filter(date_demande__date=today)
+        date_debut_display = today.strftime('%Y-%m-%d')
+        date_fin_display = today.strftime('%Y-%m-%d')
+    else:
+        date_debut_display = date_debut
+        date_fin_display = date_fin
+        
+        # Filtre par date début
+        if date_debut:
+            try:
+                date_debut_obj = datetime.strptime(date_debut, '%Y-%m-%d').date()
+                demandes = demandes.filter(date_demande__date__gte=date_debut_obj)
+            except ValueError:
+                pass
+        
+        # Filtre par date fin
+        if date_fin:
+            try:
+                date_fin_obj = datetime.strptime(date_fin, '%Y-%m-%d').date()
+                demandes = demandes.filter(date_demande__date__lte=date_fin_obj)
+            except ValueError:
+                pass
+        
+        # Filtre par statut
+        if statut:
+            demandes = demandes.filter(statut=statut)
+    
+    # Calcul des statistiques (optionnel, si tu veux les garder)
+    stats = {
+        'attente': DemandeApprovisionnement.objects.filter(agent=agent, statut='attente').count(),
+        'valide': DemandeApprovisionnement.objects.filter(agent=agent, statut='valide').count(),
+        'refuse': DemandeApprovisionnement.objects.filter(agent=agent, statut='refuse').count(),
+    }
+    
     context = {
-        'title': 'Historique des demandes',
+        'title': 'Mes demandes',
         'demandes': demandes,
+        'stats': stats,
+        'date_debut': date_debut_display,
+        'date_fin': date_fin_display,
     }
     return render(request, 'transactions/historique_demandes.html', context)
 
@@ -1940,13 +1990,17 @@ from django.contrib import messages
 import csv
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+import io
 
 @login_required
 def exporter_rapport_complet_agent(request, format_type):
     """
     Exporte un rapport complet: soldes, transactions, demandes
     Pour agent ou admin
-    format_type: 'csv' ou 'excel'
+    format_type: 'csv', 'excel' ou 'pdf'
     Prend en compte les filtres de date pour calculer les soldes
     """
     # Récupérer les dates du filtre (si présentes)
@@ -2121,21 +2175,59 @@ def exporter_rapport_complet_agent(request, format_type):
     solde_uv_fin = solde_uv_hier + variation_uv_periode
     solde_wave_fin = solde_wave_hier + variation_wave_periode
     
-    if format_type == 'csv':
+    # ========== EXPORT PDF ==========
+    if format_type == 'pdf':
+        # Créer le contexte pour le template PDF
+        context = {
+            'user_name': user_name,
+            'user_type': user_type,
+            'date_export': timezone.now(),
+            'date_debut': date_debut,
+            'date_fin': date_fin,
+            'date_hier': date_hier,
+            'solde_cash_hier': solde_cash_hier,
+            'solde_uv_hier': solde_uv_hier,
+            'solde_wave_hier': solde_wave_hier,
+            'solde_cash_fin': solde_cash_fin,
+            'solde_uv_fin': solde_uv_fin,
+            'solde_wave_fin': solde_wave_fin,
+            'variation_cash_periode': variation_cash_periode,
+            'variation_uv_periode': variation_uv_periode,
+            'variation_wave_periode': variation_wave_periode,
+            'total_entree': total_entree,
+            'total_sortie': total_sortie,
+            'transactions': transactions,
+            'demandes': demandes,
+        }
+        
+        # Rendre le template HTML
+        template = get_template('transactions/rapport_pdf.html')
+        html = template.render(context)
+        
+        # Créer le PDF
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="rapport_{today.strftime("%Y%m%d")}.pdf"'
+        
+        # Convertir HTML en PDF
+        pisa_status = pisa.CreatePDF(io.BytesIO(html.encode('UTF-8')), dest=response)
+        
+        if pisa_status.err:
+            return HttpResponse('Erreur lors de la génération du PDF', status=400)
+        
+        return response
+    
+    # ========== EXPORT CSV ==========
+    elif format_type == 'csv':
         response = HttpResponse(content_type='text/csv; charset=utf-8')
-        # Nom du fichier avec la date du jour
         response['Content-Disposition'] = f'attachment; filename="rapport_{today.strftime("%Y%m%d")}.csv"'
         
-        # Ajouter BOM pour UTF-8
         response.write('\ufeff')
         writer = csv.writer(response)
         
-        # En-tête principal (sans la ligne Période)
         writer.writerow([f"RAPPORT COMPLET - {user_name} ({user_type})"])
         writer.writerow([f"Date d'export: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"])
         writer.writerow([])
         
-        # SOLDES
         writer.writerow(["=== SOLDES ==="])
         writer.writerow(["Compte", f"Solde au {date_hier.strftime('%d/%m/%Y')}", f"Solde au {date_fin.strftime('%d/%m/%Y')}", "Variation"])
         writer.writerow(["Argent Cash", f"{solde_cash_hier:,.0f} FCFA", f"{solde_cash_fin:,.0f} FCFA", f"{variation_cash_periode:+,.0f} FCFA"])
@@ -2143,14 +2235,12 @@ def exporter_rapport_complet_agent(request, format_type):
         writer.writerow(["UV Wave", f"{solde_wave_hier:,.0f} FCFA", f"{solde_wave_fin:,.0f} FCFA", f"{variation_wave_periode:+,.0f} FCFA"])
         writer.writerow([])
         
-        # TOTAUX TRANSACTIONS
         writer.writerow(["=== TOTAUX DES TRANSACTIONS ==="])
         writer.writerow([f"Total Entrées (Dépôts)", f"{total_entree:,.0f} FCFA"])
         writer.writerow([f"Total Sorties (Retraits)", f"{total_sortie:,.0f} FCFA"])
         writer.writerow(["Nombre de transactions", transactions.count()])
         writer.writerow([])
         
-        # DEMANDES
         writer.writerow(["=== DEMANDES D'APPROVISIONNEMENT ==="])
         writer.writerow(["Date", "Type", "Montant", "Statut", "Motif"])
         for d in demandes:
@@ -2163,7 +2253,6 @@ def exporter_rapport_complet_agent(request, format_type):
             ])
         writer.writerow([])
         
-        # DETAIL DES TRANSACTIONS
         writer.writerow(["=== DETAIL DES TRANSACTIONS ==="])
         writer.writerow(['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Date'])
         
@@ -2179,19 +2268,17 @@ def exporter_rapport_complet_agent(request, format_type):
         
         return response
     
+    # ========== EXPORT EXCEL ==========
     elif format_type == 'excel':
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        # Nom du fichier avec la date du jour
         response['Content-Disposition'] = f'attachment; filename="rapport_{today.strftime("%Y%m%d")}.xlsx"'
         
         wb = Workbook()
         
-        # Styles
         title_font = Font(bold=True, size=14)
         header_font = Font(bold=True, size=12)
         center_align = Alignment(horizontal='center')
         
-        # ========== FEUILLE 1: RÉCAPITULATIF ==========
         ws_summary = wb.active
         ws_summary.title = "Récapitulatif"
         
@@ -2202,7 +2289,6 @@ def exporter_rapport_complet_agent(request, format_type):
         
         ws_summary['A2'] = f"Date d'export: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}"
         
-        # Soldes
         ws_summary['A4'] = "SOLDES"
         ws_summary['A4'].font = header_font
         ws_summary['A5'] = "Compte"
@@ -2224,7 +2310,6 @@ def exporter_rapport_complet_agent(request, format_type):
             for col, val in enumerate(data, 1):
                 ws_summary.cell(row=row, column=col, value=val)
         
-        # Totaux transactions
         ws_summary['A10'] = "TOTAUX DES TRANSACTIONS"
         ws_summary['A10'].font = header_font
         ws_summary['A11'] = "Total Entrées (Dépôts)"
@@ -2234,7 +2319,6 @@ def exporter_rapport_complet_agent(request, format_type):
         ws_summary['A13'] = "Nombre de transactions"
         ws_summary['B13'] = transactions.count()
         
-        # Stats des demandes
         ws_summary['A15'] = "STATISTIQUES DES DEMANDES"
         ws_summary['A15'].font = header_font
         ws_summary['A16'] = "En attente"
@@ -2249,7 +2333,6 @@ def exporter_rapport_complet_agent(request, format_type):
         ws_summary.column_dimensions['C'].width = 25
         ws_summary.column_dimensions['D'].width = 20
         
-        # ========== FEUILLE 2: DEMANDES ==========
         ws_demandes = wb.create_sheet("Demandes")
         
         headers_demandes = ['Date', 'Type', 'Montant', 'Statut', 'Motif']
@@ -2268,7 +2351,6 @@ def exporter_rapport_complet_agent(request, format_type):
         for col in range(1, 6):
             ws_demandes.column_dimensions[chr(64 + col)].width = 20
         
-        # ========== FEUILLE 3: TRANSACTIONS ==========
         ws_trans = wb.create_sheet("Transactions")
         
         headers_trans = ['Référence', 'Type', 'Opérateur', 'Client', 'Montant (FCFA)', 'Date']
@@ -2285,7 +2367,6 @@ def exporter_rapport_complet_agent(request, format_type):
             ws_trans.cell(row=row, column=5, value=float(t.montant))
             ws_trans.cell(row=row, column=6, value=t.date.strftime('%d/%m/%Y %H:%M:%S'))
         
-        # Format des nombres
         for row in range(2, transactions.count() + 2):
             ws_trans.cell(row=row, column=5).number_format = '#,##0'
         
@@ -2296,3 +2377,4 @@ def exporter_rapport_complet_agent(request, format_type):
         return response
     
     return None
+

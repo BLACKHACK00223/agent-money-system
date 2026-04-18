@@ -112,47 +112,6 @@
             margin: 0 auto;
         }
 
-        /* Stats Cards */
-        .stats-container {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 20px;
-            padding: 16px;
-            flex: 1;
-            text-align: center;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--gray-200);
-        }
-
-        .stat-icon {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-
-        .stat-label {
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--gray-600);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--gray-900);
-        }
-
-        .stat-value.waiting { color: var(--warning); }
-        .stat-value.approved { color: var(--success); }
-        .stat-value.rejected { color: var(--danger); }
-
         /* Filtres */
         .filters-card {
             background: white;
@@ -198,8 +157,16 @@
             font-weight: 500;
         }
 
-        .filter-group {
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
             margin-bottom: 12px;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: calc(50% - 6px);
         }
 
         .filter-group label {
@@ -210,6 +177,7 @@
             margin-bottom: 6px;
         }
 
+        .filter-group input,
         .filter-group select {
             width: 100%;
             padding: 10px 12px;
@@ -222,10 +190,15 @@
             color: var(--gray-800);
         }
 
+        .filter-group input:focus,
         .filter-group select:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .filter-group input[type="date"] {
+            color-scheme: light;
         }
 
         .filter-actions {
@@ -435,6 +408,10 @@
                 padding: 16px 12px 32px 12px;
             }
             
+            .filter-group {
+                min-width: 100%;
+            }
+            
             .demande-header {
                 flex-direction: column;
                 align-items: flex-start;
@@ -443,14 +420,6 @@
             
             .demande-amount {
                 align-self: flex-end;
-            }
-            
-            .stats-container {
-                gap: 8px;
-            }
-            
-            .stat-value {
-                font-size: 20px;
             }
         }
     </style>
@@ -470,26 +439,7 @@
     </div>
 
     <div class="container">
-        <!-- Statistiques -->
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-icon">⏳</div>
-                <div class="stat-label">En attente</div>
-                <div class="stat-value waiting">{{ stats.attente|default:0 }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">✅</div>
-                <div class="stat-label">Validées</div>
-                <div class="stat-value approved">{{ stats.valide|default:0 }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">❌</div>
-                <div class="stat-label">Refusées</div>
-                <div class="stat-value rejected">{{ stats.refuse|default:0 }}</div>
-            </div>
-        </div>
-
-        <!-- Filtres -->
+        <!-- Filtres avec dates -->
         <div class="filters-card">
             <div class="filters-header">
                 <div class="filters-title">
@@ -498,12 +448,25 @@
                     </svg>
                     FILTRES
                 </div>
-                {% if request.GET.statut %}
-                    <span class="filter-badge">Filtré</span>
+                {% if request.GET.date_debut or request.GET.date_fin or request.GET.statut %}
+                    <span class="filter-badge">Actifs</span>
                 {% endif %}
             </div>
             
-            <form method="get" id="filterForm">
+            <form method="get" id="filterForm" action="{% url 'historique_demandes_agent' %}">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>📅 Du</label>
+                        <input type="date" name="date_debut" value="{{ request.GET.date_debut|default:date_debut }}" id="date_debut" 
+                               max="{% now 'Y-m-d' %}">
+                    </div>
+                    <div class="filter-group">
+                        <label>📅 Au</label>
+                        <input type="date" name="date_fin" value="{{ request.GET.date_fin|default:date_fin }}" id="date_fin"
+                               max="{% now 'Y-m-d' %}">
+                    </div>
+                </div>
+                
                 <div class="filter-group">
                     <label>📊 Statut</label>
                     <select name="statut" id="statut">
@@ -598,7 +561,7 @@
                 <div class="empty-state">
                     <div class="empty-state-icon">📭</div>
                     <div class="empty-state-text">Aucune demande trouvée</div>
-                    <div class="empty-state-sub">Vous n'avez effectué aucune demande pour le moment</div>
+                    <div class="empty-state-sub">Essayez de modifier vos filtres</div>
                 </div>
             {% endif %}
         </div>
@@ -607,16 +570,42 @@
     <div class="loading" id="loading">⏳ Chargement...</div>
 
     <script>
+        // Validation des dates
+        const dateDebut = document.getElementById('date_debut');
+        const dateFin = document.getElementById('date_fin');
+        
+        function validateDates() {
+            if (dateDebut.value && dateFin.value) {
+                if (dateDebut.value > dateFin.value) {
+                    alert('⚠️ La date de début ne peut pas être postérieure à la date de fin.');
+                    dateFin.value = '';
+                }
+            }
+        }
+        
+        if (dateDebut) dateDebut.addEventListener('change', validateDates);
+        if (dateFin) dateFin.addEventListener('change', validateDates);
+        
         // Réinitialisation des filtres
         function resetFilters() {
-            document.getElementById('statut').value = '';
+            const dateDebutInput = document.getElementById('date_debut');
+            const dateFinInput = document.getElementById('date_fin');
+            const statutSelect = document.getElementById('statut');
+            
+            if (dateDebutInput) dateDebutInput.value = '';
+            if (dateFinInput) dateFinInput.value = '';
+            if (statutSelect) statutSelect.value = '';
+            
             document.getElementById('filterForm').submit();
         }
         
         // Afficher le loading au submit
-        document.getElementById('filterForm').addEventListener('submit', function() {
-            document.getElementById('loading').style.display = 'block';
-        });
+        const filterForm = document.getElementById('filterForm');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function() {
+                document.getElementById('loading').style.display = 'block';
+            });
+        }
         
         // Masquer le loading au chargement
         window.addEventListener('load', function() {

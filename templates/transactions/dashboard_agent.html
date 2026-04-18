@@ -186,10 +186,11 @@
             margin: 0 auto;
         }
 
+        /* Cartes de solde compactes */
         .balance-cards {
             display: flex;
-            gap: 12px;
-            margin-bottom: 28px;
+            gap: 10px;
+            margin-bottom: 24px;
             overflow-x: auto;
             padding: 4px 0;
             scrollbar-width: thin;
@@ -197,9 +198,9 @@
 
         .balance-card {
             background: white;
-            border-radius: 20px;
-            padding: 14px 16px;
-            min-width: 130px;
+            border-radius: 16px;
+            padding: 10px 12px;
+            min-width: 110px;
             box-shadow: var(--shadow-sm);
             border: 1px solid var(--gray-200);
             cursor: pointer;
@@ -214,9 +215,9 @@
         }
 
         .balance-card .icon {
-            width: 36px;
-            height: 36px;
-            margin-bottom: 12px;
+            width: 32px;
+            height: 32px;
+            margin-bottom: 8px;
         }
 
         .balance-card .icon img {
@@ -226,22 +227,24 @@
         }
 
         .balance-card .label {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 500;
             color: var(--gray-600);
             margin-bottom: 4px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
 
         .balance-card .amount {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: 700;
             color: var(--gray-900);
+            word-break: break-word;
+            line-height: 1.3;
         }
 
         .balance-card .amount small {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 400;
             color: var(--gray-600);
         }
@@ -620,11 +623,15 @@
 
         @media (max-width: 400px) {
             .balance-card {
-                min-width: 115px;
-                padding: 12px;
+                min-width: 100px;
+                padding: 8px 10px;
             }
             .balance-card .amount {
-                font-size: 16px;
+                font-size: 12px;
+            }
+            .balance-card .icon {
+                width: 28px;
+                height: 28px;
             }
             .operator-card {
                 padding: 16px 12px;
@@ -656,10 +663,9 @@
             <span>Mes demandes</span>
         </button>
         
-        <!-- Boutons d'export - style identique aux autres items -->
-        <button class="profile-menu-item" onclick="exportRapportCSV()">
+        <button class="profile-menu-item" onclick="exportRapportPDF()">
             <span>📄</span>
-            <span>Exporter CSV</span>
+            <span>Exporter PDF</span>
         </button>
         
         <button class="profile-menu-item" onclick="exportRapportExcel()">
@@ -683,10 +689,11 @@
             {% endfor %}
         {% endif %}
 
+        <!-- Cartes de solde compactes -->
         <div class="balance-cards">
             <div class="balance-card" onclick="openArgentCashModal()">
                 <div class="icon">
-                    <img src="{% static 'image/inco_cash.webp' %}" alt="Argent Cash" 
+                    <img src="{% static 'image/inco_cash.webp' %}" alt="Espèces" 
                          onerror="this.onerror=null; this.src='{% static 'image/inco_cash1.avif' %}'; this.onerror=function(){this.src='{% static 'image/inco_cash2.webp' %}'}">
                 </div>
                 <div class="label">Espèces</div>
@@ -1007,16 +1014,17 @@
             });
         });
 
-        // Export Rapport Complet
-        function exportRapportCSV() {
+        // Export Rapport PDF
+        function exportRapportPDF() {
             const loading = document.getElementById('loading');
             loading.style.display = 'block';
-            window.location.href = "{% url 'exporter_rapport_complet_agent_csv' %}";
+            window.location.href = "{% url 'exporter_rapport_complet_agent_pdf' %}";
             setTimeout(() => {
                 loading.style.display = 'none';
             }, 1000);
         }
 
+        // Export Rapport Excel
         function exportRapportExcel() {
             const loading = document.getElementById('loading');
             loading.style.display = 'block';
