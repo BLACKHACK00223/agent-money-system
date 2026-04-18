@@ -667,11 +667,11 @@
                     <div class="transaction-header">
                         <div class="transaction-type">
                             {% if t.type_transaction == 'depot' %}
-                                <span class="badge-depot">📥 Dépôt {{ t.get_operateur_display }}</span>
+                                <span class="badge-depot"> Dépôt {{ t.get_operateur_display }}</span>
                             {% elif t.type_transaction == 'retrait' %}
-                                <span class="badge-retrait">📤 Retrait {{ t.get_operateur_display }}</span>
+                                <span class="badge-retrait"> Retrait {{ t.get_operateur_display }}</span>
                             {% else %}
-                                <span class="badge-credit">💳 Crédit {{ t.get_operateur_display }}</span>
+                                <span class="badge-credit"> Crédit {{ t.get_operateur_display }}</span>
                             {% endif %}
                         </div>
                         <div class="transaction-amount">
