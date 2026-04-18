@@ -3,81 +3,283 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Connexion - Agent Money</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --primary-light: #e8f0fe;
+            --success: #137333;
+            --gray-50: #f8f9fa;
+            --gray-100: #f1f3f4;
+            --gray-200: #e8eaed;
+            --gray-300: #dadce0;
+            --gray-400: #bdc1c6;
+            --gray-500: #9aa0a6;
+            --gray-600: #80868b;
+            --gray-700: #5f6368;
+            --gray-800: #3c4043;
+            --gray-900: #202124;
+            --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: 0;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
         }
-        
+
+        /* Background decoration */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.05"><path fill="white" d="M50,0 L61.8,38.2 L100,38.2 L70.9,61.8 L82.4,100 L50,76.4 L17.6,100 L29.1,61.8 L0,38.2 L38.2,38.2 L50,0Z"/></svg>') repeat;
+            background-size: 60px;
+            pointer-events: none;
+        }
+
         .login-container {
             background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: 28px;
+            padding: 40px 32px;
             width: 100%;
-            max-width: 400px;
+            max-width: 440px;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            z-index: 1;
+            transition: transform 0.3s ease;
         }
-        
-        .login-container h2 {
+
+        .login-container:hover {
+            transform: translateY(-4px);
+        }
+
+        /* Header */
+        .login-header {
             text-align: center;
-            color: #333;
-            margin-bottom: 30px;
+            margin-bottom: 32px;
         }
-        
+
+        .logo {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+            box-shadow: var(--shadow-md);
+        }
+
+        .logo span {
+            font-size: 32px;
+        }
+
+        .login-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        /* Form */
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
-        
+
         .form-group label {
             display: block;
-            margin-bottom: 5px;
-            color: #666;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 8px;
         }
-        
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            color: var(--gray-500);
+        }
+
         .form-group input {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
+            padding: 14px 14px 14px 46px;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 16px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.2s;
+            background: white;
+            color: var(--gray-900);
         }
-        
-        button {
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .form-group input::placeholder {
+            color: var(--gray-400);
+        }
+
+        /* Password toggle */
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 18px;
+            color: var(--gray-500);
+            transition: color 0.2s;
+            background: none;
+            border: none;
+        }
+
+        .password-toggle:hover {
+            color: var(--gray-700);
+        }
+
+        /* Button */
+        .btn-login {
             width: 100%;
-            padding: 12px;
-            background: #667eea;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 16px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: all 0.2s;
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
         }
-        
-        button:hover {
-            background: #5a67d8;
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
-        
-        .error {
-            color: red;
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        /* Error message */
+        .error-message {
+            background: #fce8e6;
+            color: #c5221f;
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #c5221f;
+        }
+
+        .error-message span:first-child {
+            font-size: 18px;
+        }
+
+        /* Footer */
+        .login-footer {
             text-align: center;
-            margin-top: 10px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .login-footer p {
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        .login-footer a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Versions */
+        .version {
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 32px 24px;
+            }
+            
+            .login-header h2 {
+                font-size: 22px;
+            }
+            
+            .form-group input {
+                padding: 12px 12px 12px 42px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <h2>🔐 Connexion Agent Money</h2>
+        <div class="login-header">
+            <div class="logo">
+                <span>💰</span>
+            </div>
+            <h2>Agent Money</h2>
+            <p>Connectez-vous à votre espace</p>
+        </div>
         
         {% if form.errors %}
-            <div class="error">
-                Nom d'utilisateur ou mot de passe incorrect
+            <div class="error-message">
+                <span>⚠️</span>
+                <span>Nom d'utilisateur ou mot de passe incorrect</span>
             </div>
         {% endif %}
         
@@ -85,14 +287,49 @@
             {% csrf_token %}
             <div class="form-group">
                 <label>Nom d'utilisateur</label>
-                <input type="text" name="username" required>
+                <div class="input-wrapper">
+                    <span class="input-icon">👤</span>
+                    <input type="text" name="username" placeholder="Entrez votre nom d'utilisateur" required autofocus>
+                </div>
             </div>
+            
             <div class="form-group">
                 <label>Mot de passe</label>
-                <input type="password" name="password" required>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔒</span>
+                    <input type="password" name="password" id="password" placeholder="Entrez votre mot de passe" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword()" tabindex="-1">
+                        👁️
+                    </button>
+                </div>
             </div>
-            <button type="submit">Se connecter</button>
+            
+            <button type="submit" class="btn-login">
+                Se connecter
+            </button>
         </form>
+        
+        <div class="login-footer">
+            <p>© 2024 Agent Money - Tous droits réservés</p>
+        </div>
+        <div class="version">
+            Version 2.0
+        </div>
     </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleBtn = document.querySelector('.password-toggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.innerHTML = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.innerHTML = '👁️';
+            }
+        }
+    </script>
 </body>
 </html>
