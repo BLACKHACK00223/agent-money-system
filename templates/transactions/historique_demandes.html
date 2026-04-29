@@ -1,4 +1,4 @@
-<!-- templates/transactions/historique_demandes_agent.html -->
+<!-- templates/transactions/historique_demandes.html -->
 {% load humanize %}
 {% load static %}
 <!DOCTYPE html>
@@ -110,6 +110,57 @@
             padding: 20px 16px 32px 16px;
             max-width: 500px;
             margin: 0 auto;
+        }
+
+        /* Stats Cards */
+        .stats-container {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+        }
+
+        .stats-grid {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .stat-card {
+            flex: 1;
+            text-align: center;
+            padding: 8px 4px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--gray-600);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .stat-value.entree {
+            color: var(--success);
+        }
+
+        .stat-value.sortie {
+            color: var(--danger);
+        }
+
+        .stat-value small {
+            font-size: 10px;
+            font-weight: 400;
+            color: var(--gray-600);
         }
 
         /* Filtres */
@@ -402,6 +453,47 @@
             backdrop-filter: blur(8px);
         }
 
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 24px;
+            padding: 16px 0;
+        }
+
+        .page-btn {
+            padding: 8px 12px;
+            background: white;
+            border: 1px solid var(--gray-300);
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--gray-700);
+            transition: all 0.2s;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .page-btn:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-400);
+        }
+
+        .page-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .page-btn.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
         /* Responsive */
         @media (max-width: 400px) {
             .container {
@@ -421,24 +513,71 @@
             .demande-amount {
                 align-self: flex-end;
             }
+            
+            .stats-grid {
+                flex-direction: column;
+                gap: 8px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
+    <!-- Header avec redirection dynamique -->
     <div class="header">
         <div class="header-top">
-            <a href="{% url 'dashboard_agent' %}" class="back-btn">
+            {% if type_utilisateur == 'assistant' %}
+                <a href="{% url 'dashboard_assistant' %}" class="back-btn">
+            {% else %}
+                <a href="{% url 'dashboard_agent' %}" class="back-btn">
+            {% endif %}
                 <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </a>
-            <div class="page-title">Mes demandes</div>
+            <div class="page-title">
+                {% if type_utilisateur == 'assistant' %}
+                    Demandes reçues
+                {% else %}
+                    Mes demandes
+                {% endif %}
+            </div>
             <div class="header-placeholder"></div>
         </div>
     </div>
 
     <div class="container">
+        <!-- Cartes de statistiques -->
+        <div class="stats-container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value">{{ stats.total|default:0 }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">En attente</div>
+                    <div class="stat-value">{{ stats.en_attente|default:0 }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Validées</div>
+                    <div class="stat-value entree">{{ stats.validees|default:0 }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Refusées</div>
+                    <div class="stat-value sortie">{{ stats.refusees|default:0 }}</div>
+                </div>
+            </div>
+            <div class="stats-grid" style="margin-top: 12px; border-top: 1px solid var(--gray-200); padding-top: 12px;">
+                <div class="stat-card">
+                    <div class="stat-label">Montant en attente</div>
+                    <div class="stat-value">{{ stats.montant_attente|default:0|floatformat:0|intcomma }}<small> F</small></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Montant validé</div>
+                    <div class="stat-value entree">{{ stats.montant_valide|default:0|floatformat:0|intcomma }}<small> F</small></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Filtres avec dates -->
         <div class="filters-card">
             <div class="filters-header">
@@ -448,7 +587,7 @@
                     </svg>
                     FILTRES
                 </div>
-                {% if request.GET.date_debut or request.GET.date_fin or request.GET.statut %}
+                {% if request.GET.date_debut or request.GET.date_fin or request.GET.statut or request.GET.type_echange %}
                     <span class="filter-badge">Actifs</span>
                 {% endif %}
             </div>
@@ -467,14 +606,26 @@
                     </div>
                 </div>
                 
-                <div class="filter-group">
-                    <label>📊 Statut</label>
-                    <select name="statut" id="statut">
-                        <option value="">Tous</option>
-                        <option value="attente" {% if request.GET.statut == 'attente' %}selected{% endif %}>⏳ En attente</option>
-                        <option value="valide" {% if request.GET.statut == 'valide' %}selected{% endif %}>✅ Validé</option>
-                        <option value="refuse" {% if request.GET.statut == 'refuse' %}selected{% endif %}>❌ Refusé</option>
-                    </select>
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>📊 Statut</label>
+                        <select name="statut" id="statut">
+                            <option value="">Tous</option>
+                            <option value="en_attente" {% if request.GET.statut == 'en_attente' %}selected{% endif %}>⏳ En attente</option>
+                            <option value="valide" {% if request.GET.statut == 'valide' %}selected{% endif %}>✅ Validé</option>
+                            <option value="refuse" {% if request.GET.statut == 'refuse' %}selected{% endif %}>❌ Refusé</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>🔄 Type d'échange</label>
+                        <select name="type_echange" id="type_echange">
+                            <option value="">Tous</option>
+                            <option value="cash_to_uv" {% if request.GET.type_echange == 'cash_to_uv' %}selected{% endif %}>💰 Cash → UV</option>
+                            <option value="cash_to_wave" {% if request.GET.type_echange == 'cash_to_wave' %}selected{% endif %}>💰 Cash → Wave</option>
+                            <option value="uv_to_cash" {% if request.GET.type_echange == 'uv_to_cash' %}selected{% endif %}>📱 UV → Cash</option>
+                            <option value="wave_to_cash" {% if request.GET.type_echange == 'wave_to_cash' %}selected{% endif %}>💳 Wave → Cash</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="filter-actions">
@@ -514,8 +665,17 @@
                                 <circle cx="12" cy="12" r="10"/>
                                 <polyline points="12 6 12 12 16 14"/>
                             </svg>
-                            Demandée le {{ d.date_demande|date:"d/m/Y à H:i" }}
+                            {% if type_utilisateur == 'assistant' %}
+                                Reçue le {{ d.date_demande|date:"d/m/Y à H:i" }}
+                            {% else %}
+                                Demandée le {{ d.date_demande|date:"d/m/Y à H:i" }}
+                            {% endif %}
                         </div>
+                        {% if d.agent and type_utilisateur == 'assistant' %}
+                        <div class="demande-date">
+                            👤 Agent: {{ d.agent.nom }}
+                        </div>
+                        {% endif %}
                         {% if d.motif %}
                         <div class="demande-motif">
                             📝 Motif : {{ d.motif }}
@@ -560,11 +720,42 @@
             {% else %}
                 <div class="empty-state">
                     <div class="empty-state-icon">📭</div>
-                    <div class="empty-state-text">Aucune demande trouvée</div>
+                    <div class="empty-state-text">
+                        {% if type_utilisateur == 'assistant' %}
+                            Aucune demande reçue
+                        {% else %}
+                            Aucune demande trouvée
+                        {% endif %}
+                    </div>
                     <div class="empty-state-sub">Essayez de modifier vos filtres</div>
                 </div>
             {% endif %}
         </div>
+
+        <!-- Pagination -->
+        {% if demandes.has_other_pages %}
+        <div class="pagination">
+            {% if demandes.has_previous %}
+                <a href="?page={{ demandes.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">←</a>
+            {% else %}
+                <span class="page-btn disabled">←</span>
+            {% endif %}
+            
+            {% for num in demandes.paginator.page_range %}
+                {% if demandes.number == num %}
+                    <span class="page-btn active">{{ num }}</span>
+                {% elif num > demandes.number|add:'-3' and num < demandes.number|add:'3' %}
+                    <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            
+            {% if demandes.has_next %}
+                <a href="?page={{ demandes.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-btn">→</a>
+            {% else %}
+                <span class="page-btn disabled">→</span>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 
     <div class="loading" id="loading">⏳ Chargement...</div>
@@ -591,10 +782,12 @@
             const dateDebutInput = document.getElementById('date_debut');
             const dateFinInput = document.getElementById('date_fin');
             const statutSelect = document.getElementById('statut');
+            const typeEchangeSelect = document.getElementById('type_echange');
             
             if (dateDebutInput) dateDebutInput.value = '';
             if (dateFinInput) dateFinInput.value = '';
             if (statutSelect) statutSelect.value = '';
+            if (typeEchangeSelect) typeEchangeSelect.value = '';
             
             document.getElementById('filterForm').submit();
         }

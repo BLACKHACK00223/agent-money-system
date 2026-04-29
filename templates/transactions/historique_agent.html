@@ -572,7 +572,14 @@
 <body>
     <div class="header">
         <div class="header-top">
-            <a href="{% url 'dashboard_agent' %}" class="back-btn">
+            <!-- Redirection dynamique selon le rôle -->
+            {% if user.agent_profile %}
+                <a href="{% url 'dashboard_agent' %}" class="back-btn">
+            {% elif user.assistant_profile %}
+                <a href="{% url 'dashboard_assistant' %}" class="back-btn">
+            {% else %}
+                <a href="{% url 'dashboard_admin' %}" class="back-btn">
+            {% endif %}
                 <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -667,11 +674,11 @@
                     <div class="transaction-header">
                         <div class="transaction-type">
                             {% if t.type_transaction == 'depot' %}
-                                <span class="badge-depot"> Dépôt {{ t.get_operateur_display }}</span>
+                                <span class="badge-depot">↓ Dépôt {{ t.get_operateur_display }}</span>
                             {% elif t.type_transaction == 'retrait' %}
-                                <span class="badge-retrait"> Retrait {{ t.get_operateur_display }}</span>
+                                <span class="badge-retrait">↑ Retrait {{ t.get_operateur_display }}</span>
                             {% else %}
-                                <span class="badge-credit"> Crédit {{ t.get_operateur_display }}</span>
+                                <span class="badge-credit">● Crédit {{ t.get_operateur_display }}</span>
                             {% endif %}
                         </div>
                         <div class="transaction-amount">

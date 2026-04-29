@@ -1,4 +1,4 @@
-<!-- templates/transactions/dashboard_agent.html -->
+<!-- templates/transactions/dashboard_assistant.html -->
 {% load humanize %}
 {% load static %}
 <!DOCTYPE html>
@@ -82,7 +82,7 @@
         .avatar {
             width: 44px;
             height: 44px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -315,46 +315,157 @@
             color: var(--gray-600);
         }
 
-        .actions-bar {
-            display: flex;
-            justify-content: space-around;
+        /* Demandes reçues */
+        .demandes-container {
             background: white;
-            border-radius: 24px;
-            padding: 8px 16px;
+            border-radius: 20px;
+            padding: 16px;
             margin-bottom: 28px;
-            box-shadow: var(--shadow-sm);
             border: 1px solid var(--gray-200);
         }
 
-        .action-btn {
-            text-align: center;
+        .demandes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .demandes-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        .demandes-header a {
+            font-size: 11px;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .demande-item {
+            background: var(--gray-50);
+            border-radius: 14px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: 1px solid var(--gray-200);
+            transition: all 0.2s;
+        }
+
+        .demande-item:hover {
+            background: var(--gray-100);
+        }
+
+        .demande-info {
+            margin-bottom: 10px;
+        }
+
+        .demande-info .agent-nom {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 4px;
+        }
+
+        .demande-info .demande-type {
+            font-size: 10px;
+            color: var(--gray-600);
+            margin-bottom: 2px;
+        }
+
+        .demande-info .demande-date {
+            font-size: 9px;
+            color: var(--gray-500);
+        }
+
+        .demande-montant {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--gray-900);
+            margin-bottom: 10px;
+        }
+
+        .demande-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .btn-validate {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
             cursor: pointer;
-            padding: 8px 12px;
-            border-radius: 40px;
             transition: all 0.2s;
             flex: 1;
         }
 
-        .action-btn:hover {
-            background: var(--gray-50);
+        .btn-validate:hover {
+            background: #0e5a2a;
+            transform: translateY(-1px);
         }
 
-        .action-btn .icon {
-            width: 28px;
-            height: 28px;
-            margin: 0 auto 6px auto;
-        }
-
-        .action-btn .icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .action-btn .label {
-            font-size: 10px;
+        .btn-reject {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
             font-weight: 500;
-            color: var(--gray-700);
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        .btn-reject:hover {
+            background: #a81e1c;
+            transform: translateY(-1px);
+        }
+
+        .badge-approved {
+            background: var(--success-light);
+            color: var(--success);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .badge-rejected {
+            background: var(--danger-light);
+            color: var(--danger);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .badge-pending {
+            background: var(--warning-light);
+            color: var(--warning);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray-600);
+            background: white;
+            border-radius: 20px;
+            border: 1px solid var(--gray-200);
         }
 
         .recent-section {
@@ -476,35 +587,6 @@
             padding: 24px;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            font-size: 13px;
-            color: var(--gray-700);
-        }
-
-        .form-select, .form-input {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1px solid var(--gray-300);
-            border-radius: 14px;
-            font-size: 14px;
-            background: white;
-            font-family: inherit;
-            transition: all 0.2s;
-        }
-
-        .form-select:focus, .form-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-light);
-        }
-
         .btn-group {
             display: flex;
             flex-direction: column;
@@ -547,24 +629,6 @@
         }
         .btn-credit:hover { 
             background: #c46200; 
-            transform: translateY(-1px);
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            padding: 14px;
-            border: none;
-            border-radius: 16px;
-            font-weight: 500;
-            font-size: 15px;
-            cursor: pointer;
-            width: 100%;
-            transition: all 0.2s;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
             transform: translateY(-1px);
         }
 
@@ -612,67 +676,6 @@
             backdrop-filter: blur(8px);
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--gray-600);
-            background: white;
-            border-radius: 20px;
-            border: 1px solid var(--gray-200);
-        }
-
-        /* Style pour le select destinataire */
-        .destinataire-group {
-            margin-bottom: 20px;
-        }
-        
-        .destinataire-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            font-size: 13px;
-            color: var(--gray-700);
-        }
-        
-        .destinataire-options {
-            display: flex;
-            gap: 12px;
-        }
-        
-        .destinataire-option {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid var(--gray-200);
-            border-radius: 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .destinataire-option.selected {
-            border-color: var(--primary);
-            background: var(--primary-light);
-        }
-        
-        .destinataire-option .emoji {
-            font-size: 24px;
-            margin-bottom: 4px;
-        }
-        
-        .destinataire-option .title {
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .assistant-select {
-            margin-top: 12px;
-            display: none;
-        }
-        
-        .assistant-select.show {
-            display: block;
-        }
-
         @media (max-width: 400px) {
             .balance-card {
                 min-width: 100px;
@@ -688,7 +691,7 @@
             .operator-card {
                 padding: 16px 12px;
             }
-            .destinataire-options {
+            .demande-actions {
                 flex-direction: column;
             }
         }
@@ -698,10 +701,10 @@
     <div class="header">
         <div class="header-top">
             <div class="profile" onclick="toggleProfileMenu()">
-                <div class="avatar">{{ agent.nom|slice:":1"|upper }}{{ agent.nom|slice:"1:2"|upper }}</div>
+                <div class="avatar">{{ assistant.nom|slice:":1"|upper }}{{ assistant.nom|slice:"1:2"|upper }}</div>
                 <div class="profile-info">
-                    <div class="profile-name">{{ agent.nom }}</div>
-                    <div class="profile-role">Agent</div>
+                    <div class="profile-name">{{ assistant.nom }}</div>
+                    <div class="profile-role">Assistant</div>
                 </div>
             </div>
             <button class="menu-btn" onclick="window.location.href='{% url "historique_agent" %}'">
@@ -746,7 +749,7 @@
 
         <!-- Cartes de solde compactes -->
         <div class="balance-cards">
-            <div class="balance-card" onclick="openArgentCashModal()">
+            <div class="balance-card">
                 <div class="icon">
                     <img src="{% static 'image/inco_cash.webp' %}" alt="Espèces" 
                          onerror="this.onerror=null; this.src='{% static 'image/inco_cash1.avif' %}'; this.onerror=function(){this.src='{% static 'image/inco_cash2.webp' %}'}">
@@ -754,14 +757,14 @@
                 <div class="label">Espèces</div>
                 <div class="amount">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }}<small> FCFA</small></div>
             </div>
-            <div class="balance-card" onclick="openDemandeModal('cash_to_uv')">
+            <div class="balance-card">
                 <div class="icon">
                     <img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpiont">
                 </div>
                 <div class="label">UV Touchpiont</div>
                 <div class="amount">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }}</div>
             </div>
-            <div class="balance-card" onclick="openDemandeModal('cash_to_wave')">
+            <div class="balance-card">
                 <div class="icon">
                     <img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave">
                 </div>
@@ -806,29 +809,51 @@
         </div>
 
         <div class="section-title">
-            <span></span> Demandes d'approvisionnement
+            <span>📋</span> Demandes des agents
         </div>
 
-        <div class="actions-bar">
-            <div class="action-btn" onclick="openArgentCashModal()">
-                <div class="icon">
-                    <img src="{% static 'image/inco_cash.webp' %}" alt="Espèces"
-                         onerror="this.onerror=null; this.src='{% static 'image/inco_cash1.avif' %}'; this.onerror=function(){this.src='{% static 'image/inco_cash2.webp' %}'}">
-                </div>
-                <div class="label">Espèces</div>
+        <!-- Demandes reçues des agents avec boutons -->
+        <div class="demandes-container">
+            <div class="demandes-header">
+                <h3>Demandes d'approvisionnement reçues</h3>
+                <a href="{% url 'historique_demandes_agent' %}">Voir tout →</a>
             </div>
-            <div class="action-btn" onclick="openDemandeModal('cash_to_uv')">
-                <div class="icon">
-                    <img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpiont">
+            {% if demandes_recues %}
+                {% for demande in demandes_recues|slice:":5" %}
+                <div class="demande-item">
+                    <div class="demande-info">
+                        <div class="agent-nom">👤 {{ demande.agent.nom }}</div>
+                        <div class="demande-type">{{ demande.get_type_echange_display }}</div>
+                        <div class="demande-date">{{ demande.date_demande|date:"d/m/Y à H:i" }}</div>
+                        {% if demande.motif %}
+                            <div class="demande-date">📝 {{ demande.motif|truncatechars:30 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="demande-montant">
+                        {{ demande.montant|floatformat:0|intcomma }} F
+                    </div>
+                    <div class="demande-status">
+                        {% if demande.statut == 'en_attente' %}
+                            <span class="badge-pending">⏳ En attente</span>
+                        {% elif demande.statut == 'valide' %}
+                            <span class="badge-approved">✅ Validé</span>
+                        {% else %}
+                            <span class="badge-rejected">❌ Refusé</span>
+                        {% endif %}
+                    </div>
+                    {% if demande.statut == 'en_attente' %}
+                    <div class="demande-actions">
+                        <button class="btn-validate" onclick="traiterDemande({{ demande.id }}, 'valider')">✅ Valider</button>
+                        <button class="btn-reject" onclick="traiterDemande({{ demande.id }}, 'refuser')">❌ Refuser</button>
+                    </div>
+                    {% endif %}
                 </div>
-                <div class="label">UV Touchpiont</div>
-            </div>
-            <div class="action-btn" onclick="openDemandeModal('cash_to_wave')">
-                <div class="icon">
-                    <img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave">
+                {% endfor %}
+            {% else %}
+                <div class="empty-state" style="padding: 30px;">
+                    📭 Aucune demande reçue
                 </div>
-                <div class="label">UV Wave</div>
-            </div>
+            {% endif %}
         </div>
 
         <div class="recent-section">
@@ -879,114 +904,6 @@
                     <a href="#" id="btnCredit" class="btn-credit">● Crédit</a>
                 </div>
                 <button class="btn-secondary" onclick="closeModal()">Fermer</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL ARGENT CASH - SANS MOTIF -->
-    <div id="argentCashModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>💰 Échange espèces</h3>
-                <p>Convertir des UV en espèces</p>
-            </div>
-            <div class="modal-body">
-                {% csrf_token %}
-                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" id="csrfToken">
-                
-                <div class="form-group">
-                    <label class="form-label">Type d'échange</label>
-                    <select id="argentCashType" class="form-select">
-                        <option value="uv_to_cash">📱 UV Touchpiont → Espèces</option>
-                        <option value="wave_to_cash">💳 UV Wave → Espèces</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Montant (FCFA)</label>
-                    <input type="number" id="argentCashMontant" class="form-input" placeholder="Ex: 50000" min="1000" step="1000">
-                </div>
-                
-                <!-- MOTIF SUPPRIMÉ -->
-                
-                <div class="destinataire-group">
-                    <label class="form-label">📨 Envoyer à</label>
-                    <div class="destinataire-options">
-                        <div class="destinataire-option" data-destinataire="admin" onclick="selectDestinataire('admin')">
-                            <div class="emoji">🏦</div>
-                            <div class="title">Administrateur</div>
-                        </div>
-                        <div class="destinataire-option" data-destinataire="assistant" onclick="selectDestinataire('assistant')">
-                            <div class="emoji">🤝</div>
-                            <div class="title">Assistant</div>
-                        </div>
-                    </div>
-                    <input type="hidden" id="argentCashDestinataire" value="admin">
-                </div>
-                
-                <div id="argentCashAssistantSelect" class="assistant-select">
-                    <label class="form-label">🤝 Choisir l'assistant</label>
-                    <select id="argentCashAssistantId" class="form-select">
-                        <option value="">Sélectionnez un assistant</option>
-                        {% for assistant in assistants %}
-                            <option value="{{ assistant.id }}">{{ assistant.nom }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <button class="btn-primary" onclick="submitArgentCash()">Envoyer la demande</button>
-                <button class="btn-secondary" onclick="closeArgentCashModal()">Annuler</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DEMANDE - SANS MOTIF -->
-    <div id="demandeModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🔄 Demande d'approvisionnement</h3>
-                <p>Formulaire à soumettre</p>
-            </div>
-            <div class="modal-body">
-                <form method="post" action="{% url 'demander_approvisionnement' %}" id="demandeForm">
-                    {% csrf_token %}
-                    <input type="hidden" name="type_echange" id="demandeType" value="">
-                    
-                    <div class="form-group">
-                        <label class="form-label">Montant (FCFA)</label>
-                        <input type="number" name="montant" class="form-input" required min="1000" step="1000" placeholder="Ex: 50000">
-                    </div>
-                    
-                    <!-- MOTIF SUPPRIMÉ -->
-                    
-                    <div class="destinataire-group">
-                        <label class="form-label">📨 Envoyer à</label>
-                        <div class="destinataire-options">
-                            <div class="destinataire-option" data-destinataire="admin" onclick="selectDestinataireForm('admin')">
-                                <div class="emoji">🏦</div>
-                                <div class="title">Administrateur</div>
-                            </div>
-                            <div class="destinataire-option" data-destinataire="assistant" onclick="selectDestinataireForm('assistant')">
-                                <div class="emoji">🤝</div>
-                                <div class="title">Assistant</div>
-                            </div>
-                        </div>
-                        <input type="hidden" name="destinataire_type" id="formDestinataireType" value="admin">
-                    </div>
-                    
-                    <div id="formAssistantSelect" class="assistant-select">
-                        <label class="form-label">🤝 Choisir l'assistant</label>
-                        <select name="assistant_id" class="form-select" id="formAssistantId">
-                            <option value="">Sélectionnez un assistant</option>
-                            {% for assistant in assistants %}
-                                <option value="{{ assistant.id }}">{{ assistant.nom }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <button type="submit" class="btn-primary">Envoyer la demande</button>
-                    <button type="button" class="btn-secondary" onclick="closeDemandeModal()">Annuler</button>
-                </form>
             </div>
         </div>
     </div>
@@ -1046,153 +963,55 @@
             document.getElementById('transactionModal').style.display = 'none';
         }
 
-        // ==================== GESTION DESTINATAIRE ====================
-        let currentDestinataire = 'admin';
-
-        function selectDestinataire(type) {
-            currentDestinataire = type;
-            document.getElementById('argentCashDestinataire').value = type;
+        // Traitement des demandes par l'assistant
+        function traiterDemande(demandeId, action) {
+            const csrftoken = getCookie('csrftoken');
             
-            // Mettre à jour l'affichage des options
-            document.querySelectorAll('#argentCashModal .destinataire-option').forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.getAttribute('data-destinataire') === type) {
-                    opt.classList.add('selected');
-                }
-            });
-            
-            // Afficher/masquer la sélection de l'assistant
-            const assistantSelect = document.getElementById('argentCashAssistantSelect');
-            if (type === 'assistant') {
-                assistantSelect.classList.add('show');
-            } else {
-                assistantSelect.classList.remove('show');
+            if (confirm(`Êtes-vous sûr de vouloir ${action === 'valider' ? 'valider' : 'refuser'} cette demande ?`)) {
+                fetch(`/traiter-demande-assistant/${demandeId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrftoken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({
+                        'action': action
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        window.location.reload();
+                    } else {
+                        alert('Erreur: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur de connexion');
+                });
             }
         }
 
-        function selectDestinataireForm(type) {
-            document.getElementById('formDestinataireType').value = type;
-            
-            // Mettre à jour l'affichage des options
-            document.querySelectorAll('#demandeModal .destinataire-option').forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.getAttribute('data-destinataire') === type) {
-                    opt.classList.add('selected');
+        function getCookie(name) {
+            let value = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        value = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
                 }
-            });
-            
-            // Afficher/masquer la sélection de l'assistant
-            const assistantSelect = document.getElementById('formAssistantSelect');
-            if (type === 'assistant') {
-                assistantSelect.classList.add('show');
-            } else {
-                assistantSelect.classList.remove('show');
             }
-        }
-
-        function openArgentCashModal() {
-            // Réinitialiser la sélection
-            currentDestinataire = 'admin';
-            document.getElementById('argentCashDestinataire').value = 'admin';
-            document.getElementById('argentCashType').value = 'uv_to_cash';
-            document.getElementById('argentCashMontant').value = '';
-            document.getElementById('argentCashAssistantId').value = '';
-            
-            // Mettre à jour l'affichage des options
-            document.querySelectorAll('#argentCashModal .destinataire-option').forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.getAttribute('data-destinataire') === 'admin') {
-                    opt.classList.add('selected');
-                }
-            });
-            
-            document.getElementById('argentCashAssistantSelect').classList.remove('show');
-            document.getElementById('argentCashModal').style.display = 'flex';
-        }
-
-        function closeArgentCashModal() {
-            document.getElementById('argentCashModal').style.display = 'none';
-        }
-
-        function submitArgentCash() {
-            const type = document.getElementById('argentCashType').value;
-            const montant = document.getElementById('argentCashMontant').value;
-            const destinataire = document.getElementById('argentCashDestinataire').value;
-            const assistantId = document.getElementById('argentCashAssistantId').value;
-            const csrftoken = document.getElementById('csrfToken').value;
-
-            if (!montant || montant < 1000) {
-                alert('Veuillez saisir un montant valide (minimum 1000 FCFA)');
-                return;
-            }
-
-            if (destinataire === 'assistant' && !assistantId) {
-                alert('Veuillez sélectionner un assistant');
-                return;
-            }
-
-            const formData = new URLSearchParams({
-                'type_echange': type,
-                'montant': montant,
-                'destinataire_type': destinataire
-            });
-            
-            if (assistantId) {
-                formData.append('assistant_id', assistantId);
-            }
-
-            fetch("{% url 'demander_approvisionnement_api' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': csrftoken,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    closeArgentCashModal();
-                    alert('✅ ' + data.message);
-                    window.location.reload();
-                } else {
-                    alert('❌ Erreur: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Erreur:', error);
-                alert('Erreur de connexion: ' + error.message);
-            });
-        }
-
-        function openDemandeModal(type) {
-            document.getElementById('demandeType').value = type;
-            
-            // Réinitialiser la sélection
-            document.getElementById('formDestinataireType').value = 'admin';
-            document.getElementById('formAssistantId').value = '';
-            
-            // Mettre à jour l'affichage des options
-            document.querySelectorAll('#demandeModal .destinataire-option').forEach(opt => {
-                opt.classList.remove('selected');
-                if (opt.getAttribute('data-destinataire') === 'admin') {
-                    opt.classList.add('selected');
-                }
-            });
-            
-            document.getElementById('formAssistantSelect').classList.remove('show');
-            document.getElementById('demandeModal').style.display = 'flex';
-        }
-
-        function closeDemandeModal() {
-            document.getElementById('demandeModal').style.display = 'none';
+            return value;
         }
 
         window.onclick = function(event) {
             if (event.target === document.getElementById('transactionModal')) closeModal();
-            if (event.target === document.getElementById('demandeModal')) closeDemandeModal();
-            if (event.target === document.getElementById('argentCashModal')) closeArgentCashModal();
         }
 
         document.querySelectorAll('form').forEach(form => {

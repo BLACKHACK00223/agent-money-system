@@ -1,12 +1,12 @@
-<!-- templates/transactions/detail_agent.html -->
+<!-- templates/transactions/detail_assistant.html -->
 {% extends "transactions/dashboard_admin.html" %}
 {% load humanize %}
 
 {% block extra_css %}
 <style>
-    /* En-tête agent - HAUTEUR RÉDUITE ET ALIGNEMENT PROPRE */
-    .agent-header-card {
-        background: linear-gradient(135deg, var(--primary), #8b5cf6);
+    /* En-tête assistant */
+    .assistant-header-card {
+        background: linear-gradient(135deg, #9333ea, #7c3aed);
         border-radius: 20px;
         padding: 16px 24px;
         margin-bottom: 28px;
@@ -18,25 +18,25 @@
         gap: 20px;
     }
 
-    .agent-info {
+    .assistant-info {
         flex: 1;
     }
 
-    .agent-info h1 {
+    .assistant-info h1 {
         font-size: 22px;
         font-weight: 700;
         margin-bottom: 6px;
         color: white;
     }
 
-    .agent-info .agent-details {
+    .assistant-info .assistant-details {
         display: flex;
         flex-wrap: wrap;
         gap: 20px;
         margin-top: 2px;
     }
 
-    .agent-info .detail-item {
+    .assistant-info .detail-item {
         display: flex;
         align-items: center;
         gap: 6px;
@@ -44,29 +44,14 @@
         color: rgba(255,255,255,0.85);
     }
 
-    .agent-info .detail-item svg {
+    .assistant-info .detail-item svg {
         width: 14px;
         height: 14px;
         stroke: rgba(255,255,255,0.7);
     }
 
-    .agent-info .email-item {
-        color: rgba(255,255,255,0.75);
-    }
-
-    .agent-right {
+    .assistant-right {
         text-align: right;
-    }
-
-    .agent-status-badge {
-        background: rgba(255,255,255,0.2);
-        padding: 5px 16px;
-        border-radius: 40px;
-        font-size: 12px;
-        font-weight: 600;
-        display: inline-block;
-        margin-bottom: 10px;
-        color: white;
     }
 
     .btn-back {
@@ -126,6 +111,7 @@
     .stat-card .icon.success { background: var(--success-light); color: var(--success); }
     .stat-card .icon.danger { background: var(--danger-light); color: var(--danger); }
     .stat-card .icon.warning { background: var(--warning-light); color: var(--warning); }
+    .stat-card .icon.purple { background: #f3e8ff; color: #9333ea; }
 
     .stat-card .info .value {
         font-size: 22px;
@@ -148,11 +134,17 @@
         border: 1px solid var(--gray-200);
     }
 
-    .soldes-card h3 {
-        font-size: 16px;
-        font-weight: 600;
+    .shared-caisse-note {
+        background: #fef3c7;
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        padding: 8px 16px;
         margin-bottom: 16px;
-        color: var(--gray-800);
+        font-size: 12px;
+        color: #92400e;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .soldes-grid {
@@ -198,7 +190,7 @@
     .evolution-up { color: var(--success); }
     .evolution-down { color: var(--danger); }
 
-    /* Demandes */
+    /* Demandes reçues */
     .demandes-card {
         background: white;
         border-radius: 20px;
@@ -248,31 +240,23 @@
         color: var(--gray-900);
     }
 
-    /* Transactions */
-    .transactions-card {
-        background: white;
+    /* Badges */
+    .badge-depot, .badge-retrait, .badge-credit {
+        padding: 4px 10px;
         border-radius: 20px;
-        padding: 20px;
-        border: 1px solid var(--gray-200);
-        overflow-x: auto;
-    }
-
-    .transactions-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 16px;
-        margin-bottom: 20px;
-    }
-
-    .transactions-header h3 {
-        font-size: 16px;
+        font-size: 10px;
         font-weight: 600;
-        color: var(--gray-800);
+        display: inline-block;
     }
+    .badge-depot { background: var(--success-light); color: var(--success); }
+    .badge-retrait { background: var(--danger-light); color: var(--danger); }
+    .badge-credit { background: var(--warning-light); color: var(--warning); }
 
-    /* Filtres alignés sur une ligne */
+    .badge-attente { background: var(--warning-light); color: var(--warning); padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; display: inline-block; }
+    .badge-valide { background: var(--success-light); color: var(--success); padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; display: inline-block; }
+    .badge-refuse { background: var(--danger-light); color: var(--danger); padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; display: inline-block; }
+
+    /* Filtres */
     .filters-form {
         display: flex;
         flex-wrap: nowrap;
@@ -306,13 +290,6 @@
         font-size: 12px;
         background: white;
         width: 100%;
-        transition: all 0.2s;
-    }
-
-    .filter-group input:focus, .filter-group select:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px var(--primary-light);
     }
 
     .btn-filter, .btn-reset {
@@ -333,7 +310,6 @@
 
     .btn-filter:hover {
         background: var(--primary-dark);
-        transform: translateY(-1px);
     }
 
     .btn-reset {
@@ -342,11 +318,6 @@
         text-decoration: none;
         display: inline-block;
         text-align: center;
-    }
-
-    .btn-reset:hover {
-        background: var(--gray-300);
-        transform: translateY(-1px);
     }
 
     .filter-stats {
@@ -369,30 +340,92 @@
         color: var(--gray-900);
     }
 
-    /* Badges */
-    .badge-depot, .badge-retrait, .badge-credit {
-        padding: 4px 10px;
+    /* Transactions */
+    .transactions-card {
+        background: white;
         border-radius: 20px;
-        font-size: 10px;
+        padding: 20px;
+        border: 1px solid var(--gray-200);
+        overflow-x: auto;
+    }
+
+    .transactions-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .transactions-header h3 {
+        font-size: 16px;
         font-weight: 600;
+        color: var(--gray-800);
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th {
+        text-align: left;
+        padding: 12px 16px;
+        background: var(--gray-50);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--gray-600);
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .data-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--gray-100);
+        font-size: 13px;
+    }
+
+    .data-table tr:hover {
+        background: var(--gray-50);
+    }
+
+    .btn-print {
+        background: var(--primary-light);
+        color: var(--primary);
+        padding: 5px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 11px;
+        transition: all 0.2s;
         display: inline-block;
     }
-    .badge-depot { background: var(--success-light); color: var(--success); }
-    .badge-retrait { background: var(--danger-light); color: var(--danger); }
-    .badge-credit { background: var(--warning-light); color: var(--warning); }
 
-    .badge-attente, .badge-valide, .badge-refuse {
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 10px;
-        font-weight: 600;
-        display: inline-block;
+    .btn-print:hover {
+        background: var(--primary);
+        color: white;
     }
-    .badge-attente { background: var(--warning-light); color: var(--warning); }
-    .badge-valide { background: var(--success-light); color: var(--success); }
-    .badge-refuse { background: var(--danger-light); color: var(--danger); }
 
-    /* Pagination */
+    .export-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-export {
+        background: var(--gray-100);
+        color: var(--gray-700);
+        border: none;
+        padding: 6px 16px;
+        border-radius: 30px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .btn-export:hover {
+        background: var(--gray-200);
+    }
+
     .pagination {
         display: flex;
         justify-content: center;
@@ -430,55 +463,6 @@
         color: var(--gray-500);
     }
 
-    .btn-print {
-        background: var(--primary-light);
-        color: var(--primary);
-        padding: 5px 12px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 11px;
-        transition: all 0.2s;
-        display: inline-block;
-    }
-
-    .btn-print:hover {
-        background: var(--primary);
-        color: white;
-    }
-
-    /* Export buttons */
-    .export-buttons {
-        display: flex;
-        gap: 8px;
-    }
-
-    .btn-export {
-        background: var(--gray-100);
-        color: var(--gray-700);
-        border: none;
-        padding: 6px 16px;
-        border-radius: 30px;
-        cursor: pointer;
-        font-size: 11px;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-
-    .btn-export:hover {
-        background: var(--gray-200);
-        transform: translateY(-1px);
-    }
-
-    /* Responsive */
-    @media (max-width: 1100px) {
-        .filters-form {
-            flex-wrap: wrap;
-        }
-        .filter-group {
-            min-width: 150px;
-        }
-    }
-
     @media (max-width: 768px) {
         .stats-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -487,14 +471,14 @@
         .soldes-grid {
             grid-template-columns: 1fr;
         }
-        .agent-header-card {
+        .assistant-header-card {
             flex-direction: column;
             text-align: center;
         }
-        .agent-right {
+        .assistant-right {
             text-align: center;
         }
-        .agent-info .agent-details {
+        .assistant-info .assistant-details {
             justify-content: center;
         }
         .filters-form {
@@ -502,10 +486,6 @@
         }
         .filter-group {
             width: 100%;
-        }
-        .filter-stats {
-            flex-direction: column;
-            gap: 6px;
         }
         .btn-filter, .btn-reset {
             width: 100%;
@@ -522,21 +502,26 @@
             flex: 1;
             text-align: center;
         }
+        .demande-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- En-tête agent - alignement propre -->
-<div class="agent-header-card">
-    <div class="agent-info">
-        <h1>{{ agent.nom }}</h1>
-        <div class="agent-details">
+<!-- En-tête assistant -->
+<div class="assistant-header-card">
+    <div class="assistant-info">
+        <h1>🤝 {{ assistant.nom }}</h1>
+        <div class="assistant-details">
             <div class="detail-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
                 </svg>
-                <span>{{ agent.telephone|slice:":2" }} {{ agent.telephone|slice:"2:4" }} {{ agent.telephone|slice:"4:6" }} {{ agent.telephone|slice:"6:8" }}</span>
+                <span>{{ assistant.telephone }}</span>
             </div>
             <div class="detail-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -545,18 +530,25 @@
                     <line x1="8" y1="2" x2="8" y2="6"/>
                     <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <span>Inscrit le {{ agent.created_at|date:"d/m/Y" }}</span>
+                <span>Inscrit le {{ assistant.created_at|date:"d/m/Y" }}</span>
             </div>
-            <div class="detail-item email-item">
+            <div class="detail-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span>Admin: {{ assistant.admin.nom }}</span>
+            </div>
+            <div class="detail-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                     <polyline points="22,6 12,13 2,6"/>
                 </svg>
-                <span>{{ agent.email|default:"Email non renseigné" }}</span>
+                <span>{{ assistant.email|default:"Email non renseigné" }}</span>
             </div>
         </div>
     </div>
-    <div class="agent-right">
+    <div class="assistant-right">
         <button class="btn-back" onclick="window.location.href='{% url 'gestion_agents' %}'">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
@@ -569,13 +561,13 @@
 <!-- Stats -->
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="icon primary">
+        <div class="icon purple">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83"/>
             </svg>
         </div>
         <div class="info">
-            <div class="value">{{ transactions.paginator.count|default:0 }}</div>
+            <div class="value">{{ nombre_transactions|default:0 }}</div>
             <div class="label">Transactions</div>
         </div>
     </div>
@@ -616,8 +608,15 @@
     </div>
 </div>
 
-<!-- Soldes -->
+<!-- Soldes (caisse partagée) -->
 <div class="soldes-card">
+    <div class="shared-caisse-note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        <span>Cette caisse est partagée avec l'administrateur {{ assistant.admin.nom }}</span>
+    </div>
     <div class="soldes-grid">
         <div class="solde-item">
             <div class="label">💵 ARGENT CASH</div>
@@ -658,10 +657,15 @@
     </div>
 </div>
 
-<!-- Demandes -->
+<!-- Demandes reçues -->
 <div class="demandes-card">
-        <h3>Demandes d'approvisionnement</h3>
-    
+    <div class="transactions-header">
+        <h3>📋 Demandes d'approvisionnement reçues</h3>
+        <div class="export-buttons">
+            <button class="btn-export" onclick="exportDemandesCSV()">📄 CSV</button>
+            <button class="btn-export" onclick="exportDemandesExcel()">📊 Excel</button>
+        </div>
+    </div>
 
     <form method="get" class="filters-form">
         <div class="filter-group">
@@ -676,7 +680,7 @@
             <label>📊 Statut</label>
             <select name="demande_statut">
                 <option value="">Tous</option>
-                <option value="attente" {% if demande_statut == 'attente' %}selected{% endif %}>⏳ En attente</option>
+                <option value="en_attente" {% if demande_statut == 'en_attente' %}selected{% endif %}>⏳ En attente</option>
                 <option value="valide" {% if demande_statut == 'valide' %}selected{% endif %}>✅ Validé</option>
                 <option value="refuse" {% if demande_statut == 'refuse' %}selected{% endif %}>❌ Refusé</option>
             </select>
@@ -695,23 +699,34 @@
             <button type="submit" class="btn-filter">🔍 VALIDER</button>
         </div>
         <div class="filter-group">
-            <a href="?agent_id={{ agent.id }}" class="btn-reset">🗑️ RÉINITIALISER</a>
+            <a href="?assistant_id={{ assistant.id }}" class="btn-reset">🗑️ RÉINITIALISER</a>
         </div>
     </form>
 
+    <div class="filter-stats">
+        <div class="filter-stat"><strong>📊 {{ demande_stats.total|default:0 }}</strong> demandes</div>
+        <div class="filter-stat"><strong>💰 {{ demande_stats.montant_total|floatformat:0|intcomma }}</strong> F total</div>
+        <div class="filter-stat"><strong>⏳ {{ demande_stats.en_attente|default:0 }}</strong> en attente</div>
+        <div class="filter-stat"><strong>✅ {{ demande_stats.validees|default:0 }}</strong> validées</div>
+        <div class="filter-stat"><strong>❌ {{ demande_stats.refusees|default:0 }}</strong> refusées</div>
+    </div>
+
     {% if demandes %}
-        {% for demande in demandes|slice:":10" %}
+        {% for demande in demandes %}
         <div class="demande-item">
             <div class="demande-info">
                 <strong>{{ demande.get_type_echange_display }}</strong>
+                <small>Agent: {{ demande.agent.nom }}</small>
                 <small>{{ demande.date_demande|date:"d/m/Y H:i" }}</small>
                 {% if demande.motif %}
                     <small>📝 {{ demande.motif|truncatechars:30 }}</small>
                 {% endif %}
             </div>
-            <div class="demande-montant">{{ demande.montant|floatformat:0|intcomma }} F</div>
+            <div class="demande-montant">
+                {{ demande.montant|floatformat:0|intcomma }} F
+            </div>
             <div>
-                {% if demande.statut == 'attente' %}
+                {% if demande.statut == 'en_attente' %}
                     <span class="badge-attente">⏳ En attente</span>
                 {% elif demande.statut == 'valide' %}
                     <span class="badge-valide">✅ Validé</span>
@@ -721,13 +736,8 @@
             </div>
         </div>
         {% endfor %}
-        {% if demandes|length > 10 %}
-            <div style="text-align: center; margin-top: 12px;">
-                <small style="color: var(--gray-500);">+{{ demandes|length|add:"-10" }} autres demandes</small>
-            </div>
-        {% endif %}
     {% else %}
-        <div class="empty-state" style="padding: 30px;">📭 Aucune demande trouvée</div>
+        <div class="empty-state">📭 Aucune demande reçue</div>
     {% endif %}
 </div>
 
@@ -773,15 +783,15 @@
             <button type="submit" class="btn-filter">🔍 VALIDER</button>
         </div>
         <div class="filter-group">
-            <a href="?agent_id={{ agent.id }}" class="btn-reset">🗑️ RÉINITIALISER</a>
+            <a href="?assistant_id={{ assistant.id }}" class="btn-reset">🗑️ RÉINITIALISER</a>
         </div>
     </form>
 
     <div class="filter-stats">
         <div class="filter-stat"><strong>📊 {{ nombre_transactions }}</strong> transactions</div>
-        <div class="filter-stat"><strong>💰 {{ total_entree_filtre|floatformat:0|intcomma }}</strong> F (entrées)</div>
-        <div class="filter-stat"><strong>💸 {{ total_sortie_filtre|floatformat:0|intcomma }}</strong> F (sorties)</div>
-        <div class="filter-stat"><strong>⭐ {{ total_commission_filtre|floatformat:0|intcomma }}</strong> F (commission)</div>
+        <div class="filter-stat"><strong>💰 {{ total_entree|floatformat:0|intcomma }}</strong> F (entrées)</div>
+        <div class="filter-stat"><strong>💸 {{ total_sortie|floatformat:0|intcomma }}</strong> F (sorties)</div>
+        <div class="filter-stat"><strong>⭐ {{ total_commission|floatformat:0|intcomma }}</strong> F (commission)</div>
     </div>
 
     {% if transactions %}
@@ -802,9 +812,9 @@
                 {% for t in transactions %}
                 <tr>
                     <td><small>{{ t.reference|slice:":12" }}</small></td>
-                    <td><span class="badge badge-{{ t.type_transaction }}">{{ t.get_type_transaction_display }}</span></td>
+                    <td><span class="badge-{{ t.type_transaction }}">{{ t.get_type_transaction_display }}</span></td>
                     <td>{{ t.get_operateur_display }}</td>
-                    <td>{{ t.numero_client }}</td>
+                    <td>{{ t.numero_client }}</span></td>
                     <td><strong>{{ t.montant|floatformat:0|intcomma }} F</strong></td>
                     <td>{{ t.commission|floatformat:0|intcomma }} F</span></td>
                     <td><small>{{ t.date|date:"d/m/Y H:i" }}</small></td>
@@ -834,29 +844,27 @@
 {% block extra_js %}
 <script>
     function exportCSV() {
-        const loading = document.getElementById('loading');
-        if (loading) loading.style.display = 'block';
-        
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('export', 'csv');
-        window.location.href = currentUrl.toString();
-        
-        setTimeout(() => {
-            if (loading) loading.style.display = 'none';
-        }, 1000);
+        const url = new URL(window.location.href);
+        url.searchParams.set('export', 'csv');
+        window.location.href = url.toString();
     }
     
     function exportExcel() {
-        const loading = document.getElementById('loading');
-        if (loading) loading.style.display = 'block';
-        
-        const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('export', 'excel');
-        window.location.href = currentUrl.toString();
-        
-        setTimeout(() => {
-            if (loading) loading.style.display = 'none';
-        }, 1000);
+        const url = new URL(window.location.href);
+        url.searchParams.set('export', 'excel');
+        window.location.href = url.toString();
+    }
+    
+    function exportDemandesCSV() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('export_demandes', 'csv');
+        window.location.href = url.toString();
+    }
+    
+    function exportDemandesExcel() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('export_demandes', 'excel');
+        window.location.href = url.toString();
     }
 </script>
 {% endblock %}
