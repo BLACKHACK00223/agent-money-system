@@ -745,6 +745,17 @@ function initQZ() {
         setTimeout(initQZ, 2000);
         return;
     }
+    qz.security.setCertificatePromise(function(resolve) {
+        fetch("/static/certs/digital-certificate.txt", {cache: 'no-store'})
+            .then(function(r) { r.ok ? resolve(r.text()) : resolve(""); });
+    });
+    qz.security.setSignatureAlgorithm("SHA512");
+    qz.security.setSignaturePromise(function(toSign) {
+        return function(resolve) {
+            fetch("/sign-message?request=" + encodeURIComponent(toSign), {cache: 'no-store'})
+                .then(function(r) { r.ok ? resolve(r.text()) : resolve(""); });
+        };
+    });
     qz.websocket.connect().then(function() {
         qzReady = true;
         return qz.printers.find();

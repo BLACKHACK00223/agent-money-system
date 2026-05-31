@@ -109,4 +109,7 @@ urlpatterns = [
     
     # ==================== ANNULATION ====================
     path('api/annuler-transaction/', views.api_annuler_transaction, name='api_annuler_transaction'),
+
+    # ==================== SIGNATURE QZ TRAY ====================
+    path('sign-message/', views.sign_message, name='sign_message'),
     ]

@@ -1,4 +1,6 @@
 # transactions/views.py
+import base64
+from pathlib import Path
 import django
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -7096,3 +7098,37 @@ def api_annuler_transaction(request):
     from django.utils import timezone
     transaction.annuler(user=request.user, motif=motif)
     return JsonResponse({'success': True, 'message': f'Transaction {reference} annulée avec succès.'})
+
+
+@login_required
+def sign_message(request):
+    """
+    Signe un message pour QZ Tray (signature HTTPS sans popup)
+    Utilise cryptography si disponible, sinon openssl CLI
+    """
+    msg = request.GET.get('request', '')
+    if not msg:
+        return HttpResponse('', content_type='text/plain')
+
+    key_path = Path(__file__).resolve().parent.parent / 'certs' / 'private-key.pem'
+    if not key_path.exists():
+        return HttpResponse('', content_type='text/plain')
+
+    try:
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import padding
+        from cryptography.hazmat.backends import default_backend
+        with open(key_path, 'rb') as f:
+            key = serialization.load_pem_private_key(f.read(), password=None, backend=default_backend())
+        sig = key.sign(msg.encode('utf-8'), padding.PKCS1v15(), hashes.SHA512())
+        return HttpResponse(base64.b64encode(sig), content_type='text/plain')
+    except ImportError:
+        import subprocess
+        result = subprocess.run(
+            ['openssl', 'dgst', '-sha512', '-sign', str(key_path)],
+            input=msg.encode('utf-8'),
+            capture_output=True
+        )
+        if result.returncode == 0:
+            return HttpResponse(base64.b64encode(result.stdout), content_type='text/plain')
+        return HttpResponse('', content_type='text/plain')
