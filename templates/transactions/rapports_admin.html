@@ -1,5 +1,6 @@
 {% extends "transactions/dashboard_admin.html" %}
 {% load humanize %}
+{% load static %}
 
 {% block extra_css %}
 <style>
@@ -371,9 +372,9 @@
 
     <div id="tab-comptes" class="report-section">
         <div class="summary-cards">
-            <div class="summary-card"><div class="icon primary">💵</div><h4>Espèces</h4><div class="value">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</div></div>
-            <div class="summary-card"><div class="icon success">📱</div><h4>UV Touchpoint</h4><div class="value">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</div></div>
-            <div class="summary-card"><div class="icon warning">💳</div><h4>UV Wave</h4><div class="value">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</div></div>
+            <div class="summary-card"><div class="icon primary"><img src="{% static 'image/inco_cash.webp' %}" alt="Espèces" style="width:32px;height:32px;" onerror="this.style.display='none'"></div><h4>Espèces</h4><div class="value">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</div></div>
+            <div class="summary-card"><div class="icon success"><img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpoint" style="width:32px;height:32px;" onerror="this.style.display='none'"></div><h4>UV Touchpoint</h4><div class="value">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</div></div>
+            <div class="summary-card"><div class="icon warning"><img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave" style="width:32px;height:32px;" onerror="this.style.display='none'"></div><h4>UV Wave</h4><div class="value">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</div></div>
             <div class="summary-card"><div class="icon info">📊</div><h4>Total général</h4><div class="value">{{ total_general|default:0|floatformat:0|intcomma }} F</div></div>
         </div>
         <div class="operations-container">
@@ -633,9 +634,9 @@
         <!-- PAGE COMPTES -->
         <div id="mobile-page-comptes" class="mobile-page">
             <div class="stats-grid-mobile">
-                <div class="stat-card-mobile"><div class="stat-emoji">💵</div><div class="stat-label-mobile">Espèces</div><div class="stat-value-mobile">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</div></div>
-                <div class="stat-card-mobile"><div class="stat-emoji">📱</div><div class="stat-label-mobile">UV Touchpoint</div><div class="stat-value-mobile">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</div></div>
-                <div class="stat-card-mobile"><div class="stat-emoji">💳</div><div class="stat-label-mobile">UV Wave</div><div class="stat-value-mobile">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</div></div>
+                <div class="stat-card-mobile"><div class="stat-emoji"><img src="{% static 'image/inco_cash.webp' %}" alt="Espèces" style="width:28px;height:28px;" onerror="this.style.display='none'"></div><div class="stat-label-mobile">Espèces</div><div class="stat-value-mobile">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</div></div>
+                <div class="stat-card-mobile"><div class="stat-emoji"><img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpoint" style="width:28px;height:28px;" onerror="this.style.display='none'"></div><div class="stat-label-mobile">UV Touchpoint</div><div class="stat-value-mobile">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</div></div>
+                <div class="stat-card-mobile"><div class="stat-emoji"><img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave" style="width:28px;height:28px;" onerror="this.style.display='none'"></div><div class="stat-label-mobile">UV Wave</div><div class="stat-value-mobile">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</div></div>
                 <div class="stat-card-mobile"><div class="stat-emoji">🏦</div><div class="stat-label-mobile">Épargne</div><div class="stat-value-mobile">{{ compte_epargne.solde|default:0|floatformat:0|intcomma }} F</div></div>
             </div>
             

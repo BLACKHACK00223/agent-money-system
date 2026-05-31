@@ -493,10 +493,19 @@
             justify-content: center;
         }
         .filters-form {
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
         }
-        .filter-group {
+        .filters-form .filter-group {
             width: 100%;
+        }
+        .filter-group label {
+            font-size: 10px;
+        }
+        .filter-group input, .filter-group select {
+            font-size: 11px;
+            padding: 4px 6px;
         }
         .filter-stats {
             flex-direction: column;
@@ -505,6 +514,8 @@
         .btn-filter, .btn-reset {
             width: 100%;
             text-align: center;
+            font-size: 11px;
+            padding: 6px 10px;
         }
         .transactions-header {
             flex-direction: column;
