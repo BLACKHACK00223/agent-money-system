@@ -5887,6 +5887,7 @@ def enregistrer_remboursement_dette(request, dette_id):
     dette = get_object_or_404(Dette, id=dette_id)
     
     if request.method == 'POST':
+        from django.urls import reverse
         try:
             montant = request.POST.get('montant', 0)
             try:
@@ -5940,11 +5941,11 @@ def enregistrer_remboursement_dette(request, dette_id):
                     except Exception as e:
                         message += f" (⚠️ erreur caisse: {str(e)})"
                 
-                messages.success(request, message)
-                
-                # Générer le reçu si demandé
+                # Générer le reçu si demandé (toujours rediriger, téléchargement auto via JS)
                 if generer_recu:
-                    return download_recu(request, remboursement.id)
+                    return redirect(f"{reverse('rapports_admin')}?recu={remboursement.id}")
+                
+                messages.success(request, message)
                     
         except Exception as e:
             messages.error(request, f'Erreur: {str(e)}')
@@ -5955,65 +5956,86 @@ def enregistrer_remboursement_dette(request, dette_id):
 def generer_recu_pdf(remboursement):
     """Génère un PDF de reçu pour un paiement (format ticket 80mm)"""
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=(200, 400), topMargin=10, bottomMargin=10, leftMargin=10, rightMargin=10)
+    avail = 184
+    doc = SimpleDocTemplate(buffer, pagesize=(200, 380), topMargin=8, bottomMargin=8, leftMargin=8, rightMargin=8)
     
-    styles = getSampleStyleSheet()
+    c_gray = colors.HexColor('#6b7280')
+    c_dark = colors.HexColor('#111827')
+    c_green = colors.HexColor('#059669')
+    c_red = colors.HexColor('#dc2626')
     
-    title_style = ParagraphStyle('TicketTitle', parent=styles['Heading1'], fontSize=12, textColor=colors.HexColor('#2c3e50'), alignment=1, spaceAfter=6, fontName='Helvetica-Bold')
-    header_style = ParagraphStyle('TicketHeader', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#7f8c8d'), alignment=1, spaceAfter=4)
-    normal_style = ParagraphStyle('TicketNormal', parent=styles['Normal'], fontSize=8, alignment=0, spaceAfter=2)
-    bold_style = ParagraphStyle('TicketBold', parent=styles['Normal'], fontSize=9, fontName='Helvetica-Bold', alignment=0, spaceAfter=2)
-    center_bold = ParagraphStyle('TicketCenterBold', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', alignment=1, spaceAfter=4)
-    big_amount = ParagraphStyle('BigAmount', parent=styles['Normal'], fontSize=14, fontName='Helvetica-Bold', alignment=1, textColor=colors.HexColor('#27ae60'), spaceAfter=4)
+    s_title = ParagraphStyle('T', fontSize=12, fontName='Helvetica-Bold', textColor=c_dark, alignment=TA_CENTER, spaceAfter=2)
+    s_subtitle = ParagraphStyle('ST', fontSize=7, textColor=c_gray, alignment=TA_CENTER, spaceAfter=6)
+    s_label = ParagraphStyle('L', fontSize=7, fontName='Helvetica-Bold', textColor=c_gray, spaceAfter=0)
+    s_value = ParagraphStyle('V', fontSize=8, textColor=c_dark, spaceAfter=4)
+    s_amount = ParagraphStyle('A', fontSize=18, fontName='Helvetica-Bold', textColor=c_green, alignment=TA_CENTER, spaceAfter=2)
+    s_rest = ParagraphStyle('R', fontSize=12, fontName='Helvetica-Bold', textColor=c_red, alignment=TA_CENTER, spaceAfter=4)
+    s_footer = ParagraphStyle('F', fontSize=6, textColor=c_gray, alignment=TA_CENTER, spaceAfter=0)
     
     story = []
+    def hr(c='#d1d5db'): story.append(Table([['']], colWidths=[avail], rowHeights=[1], style=TableStyle([('LINEBELOW',(0,0),(-1,-1),0.5,c)])))
     
-    story.append(Paragraph("=" * 28, normal_style))
-    story.append(Paragraph("U V   S E R V I C E S", title_style))
-    story.append(Paragraph("Service Financier", header_style))
-    story.append(Paragraph("=" * 28, normal_style))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("REÇU DE PAIEMENT", center_bold))
-    story.append(Paragraph("-" * 28, normal_style))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph(f"N° RECU: REC-{remboursement.id:06d}", normal_style))
-    story.append(Paragraph(f"DATE: {remboursement.date_remboursement.strftime('%d/%m/%Y %H:%M')}", normal_style))
-    story.append(Paragraph(f"ENREG. PAR: {remboursement.cree_par.username[:15]}", normal_style))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("-" * 28, normal_style))
-    story.append(Paragraph("DEBITEUR:", bold_style))
-    story.append(Paragraph(f"{remboursement.dette.debiteur.nom[:25]}", normal_style))
+    story.append(Paragraph("<b>KONE SERVICES</b>", s_title))
+    story.append(Paragraph("Tél : 76 89 77 31", ParagraphStyle('Tel', fontSize=8, fontName='Helvetica-Bold', textColor=c_dark, alignment=TA_CENTER, spaceAfter=2)))
+    story.append(Paragraph("Reçu de paiement", s_subtitle))
+    hr()
+    story.append(Spacer(1, 3))
+    
+    info = [
+        [Paragraph("N° reçu", s_label), Paragraph(f"REC-{remboursement.id:06d}", s_value)],
+        [Paragraph("Date", s_label), Paragraph(f"{remboursement.date_remboursement.strftime('%d/%m/%Y %H:%M')}", s_value)],
+        [Paragraph("Agent", s_label), Paragraph(f"{remboursement.cree_par.username[:18]}", s_value)],
+        [Paragraph("Débiteur", s_label), Paragraph(f"{remboursement.dette.debiteur.nom[:22]}", s_value)],
+    ]
     if remboursement.dette.debiteur.telephone:
-        story.append(Paragraph(f"TEL: {remboursement.dette.debiteur.telephone}", normal_style))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("-" * 28, normal_style))
+        info.append([Paragraph("Tél", s_label), Paragraph(f"{remboursement.dette.debiteur.telephone}", s_value)])
     motif = remboursement.dette.motif or "Prêt"
-    story.append(Paragraph(f"MOTIF: {motif[:25]}", normal_style))
+    info.append([Paragraph("Motif", s_label), Paragraph(f"{motif[:22]}", s_value)])
+    
+    t = Table(info, colWidths=[50, avail-50])
+    t.setStyle(TableStyle([
+        ('ALIGN', (0,0), (0,-1), 'LEFT'), ('ALIGN', (1,0), (1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('TOPPADDING', (0,0), (-1,-1), 0), ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+        ('LEFTPADDING', (0,0), (-1,-1), 0), ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(t)
     story.append(Spacer(1, 4))
-    story.append(Paragraph("-" * 28, normal_style))
-    story.append(Paragraph("MONTANT PAYE", center_bold))
-    story.append(Paragraph(f"{remboursement.montant:,.0f} FCFA", big_amount))
-    story.append(Paragraph(f"MODE: {remboursement.get_mode_paiement_display()}", normal_style))
+    hr()
     story.append(Spacer(1, 4))
-    story.append(Paragraph("-" * 28, normal_style))
-    story.append(Paragraph("RECAPITULATIF:", bold_style))
-    story.append(Paragraph(f"Total dette: {remboursement.dette.montant:,.0f} FCFA", normal_style))
-    story.append(Paragraph(f"Deja rembourse: {(remboursement.dette.montant_rembourse - remboursement.montant):,.0f} FCFA", normal_style))
-    story.append(Paragraph(f"Ce paiement: {remboursement.montant:,.0f} FCFA", normal_style))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("-" * 28, normal_style))
-    story.append(Paragraph("RESTE A PAYER", bold_style))
-    story.append(Paragraph(f"{remboursement.dette.reste_a_payer:,.0f} FCFA", ParagraphStyle('RestAmount', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', alignment=0, textColor=colors.HexColor('#e74c3c'))))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("-" * 28, normal_style))
-    statut = "PAYEE" if remboursement.dette.statut == 'payee' else "EN COURS"
-    story.append(Paragraph(f"STATUT: {statut}", normal_style))
+    
+    def sf(v): return f"{v:,.0f}".replace(",", " ")
+    story.append(Paragraph(f"{sf(remboursement.montant)} FCFA", s_amount))
+    story.append(Spacer(1, 10))
+    paye_label = remboursement.get_mode_paiement_display()
+    story.append(Paragraph(f"Payé par {paye_label}", s_subtitle))
     story.append(Spacer(1, 8))
-    story.append(Paragraph("~" * 28, normal_style))
-    story.append(Paragraph("Merci de votre confiance", header_style))
-    story.append(Paragraph("Ce ticket fait office de reçu", ParagraphStyle('Footer', parent=styles['Normal'], fontSize=7, alignment=1, textColor=colors.HexColor('#95a5a6'))))
-    story.append(Paragraph(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", header_style))
-    story.append(Paragraph("=" * 28, normal_style))
+    hr()
+    story.append(Spacer(1, 4))
+    
+    recap = [
+        [Paragraph("Total dette", s_label), Paragraph(f"{sf(remboursement.dette.montant)} FCFA", s_value)],
+        [Paragraph("Déjà remboursé", s_label), Paragraph(f"{sf(remboursement.dette.montant_rembourse - remboursement.montant)} FCFA", s_value)],
+        [Paragraph("Ce paiement", s_label), Paragraph(f"{sf(remboursement.montant)} FCFA", s_value)],
+    ]
+    tr = Table(recap, colWidths=[75, avail-75])
+    tr.setStyle(TableStyle([
+        ('ALIGN', (0,0), (0,-1), 'LEFT'), ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('TOPPADDING', (0,0), (-1,-1), 0), ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+        ('LEFTPADDING', (0,0), (-1,-1), 0), ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(tr)
+    story.append(Spacer(1, 4))
+    
+    story.append(Paragraph("RESTE À PAYER", s_label))
+    story.append(Paragraph(f"{sf(remboursement.dette.reste_a_payer)} FCFA", s_rest))
+    story.append(Spacer(1, 3))
+    hr()
+    story.append(Spacer(1, 4))
+    
+    story.append(Paragraph("Merci de votre confiance", ParagraphStyle('Thanks', fontSize=7, textColor=c_gray, alignment=TA_CENTER, spaceAfter=0)))
+    story.append(Paragraph(f"Édité le {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", s_footer))
     
     doc.build(story)
     buffer.seek(0)

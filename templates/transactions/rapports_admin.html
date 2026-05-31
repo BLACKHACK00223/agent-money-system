@@ -407,7 +407,7 @@
                             <td style="white-space: nowrap;">{{ op.date }}</td>
                             <td>{{ op.compte_icon }} {{ op.compte_nom }}</td>
                             <td>{{ op.type }}</td>
-                            <td style="text-align: right; {{ op.couleur }}; font-weight: 600;">{{ op.signe }} {{ op.montant|floatformat:0|intcomma }} F</td>
+                            <td style="text-align: right; {{ op.couleur }}; font-weight: 600;">{{ op.signe }} {{ op.montant }} F</td>
                             <td>{{ op.description }}</td>
                         </tr>
                         {% empty %}
@@ -658,7 +658,7 @@
                 {% for op in operations %}
                 <div class="data-card" data-type="{{ op.type }}">
                     <div class="card-row"><span class="card-label">{{ op.date }}</span><span class="card-value">{{ op.compte_nom }}</span></div>
-                    <div class="card-row"><span class="card-label">Montant</span><span class="card-value-large {% if op.type == 'Encaissement' %}text-success{% else %}text-danger{% endif %}">{{ op.signe }} {{ op.montant|floatformat:0|intcomma }} F</span></div>
+                    <div class="card-row"><span class="card-label">Montant</span><span class="card-value-large {% if op.type == 'Encaissement' %}text-success{% else %}text-danger{% endif %}">{{ op.signe }} {{ op.montant }} F</span></div>
                     <div class="card-row"><span class="card-label">Description</span><span class="card-value">{{ op.description|default:"-" }}</span></div>
                 </div>
                 {% empty %}
@@ -1456,12 +1456,7 @@ const loadMobileDettes = () => {
 };
 
 window.openMobileRemboursement = (id, nom, reste) => {
-    document.getElementById('remboursement_dette_id').value = id;
-    document.getElementById('remboursement_debiteur_nom').value = nom;
-    document.getElementById('remboursement_reste').value = reste.toLocaleString() + ' FCFA';
-    document.getElementById('remboursement_montant').value = reste;
-    document.getElementById('remboursementForm').action = `/enregistrer-remboursement-dette/${id}/`;
-    document.getElementById('modalRemboursement').style.display = 'flex';
+    openRemboursementModal(id, nom, reste);
 };
 
 // ========== MOBILE ANALYSE ==========
@@ -1518,42 +1513,18 @@ const loadMobileAnalyse = () => {
 };
 
 // ========== MOBILE OPERATIONS ==========
-let currentMobileOpType = 'encaissement';
 document.getElementById('mobile-encaissement')?.addEventListener('click', () => {
-    currentMobileOpType = 'encaissement';
     document.getElementById('modalOperationTitle').innerHTML = '💰 Encaissement';
     document.getElementById('operationSubmitBtn').innerHTML = 'Valider';
     document.getElementById('modalOperation').style.display = 'flex';
 });
 document.getElementById('mobile-decaissement')?.addEventListener('click', () => {
-    currentMobileOpType = 'decaissement';
     document.getElementById('modalOperationTitle').innerHTML = '💸 Décaissement';
     document.getElementById('operationSubmitBtn').innerHTML = 'Valider';
     document.getElementById('modalOperation').style.display = 'flex';
 });
 
-document.getElementById('operationForm')?.addEventListener('submit', function(e) {
-    const inputType = document.createElement('input');
-    inputType.type = 'hidden';
-    inputType.name = currentMobileOpType;
-    inputType.value = '1';
-    this.appendChild(inputType);
-    const inputCompte = document.createElement('input');
-    inputCompte.type = 'hidden';
-    inputCompte.name = 'compte_concerne';
-    inputCompte.value = 'cash';
-    this.appendChild(inputCompte);
-    const inputMontant = document.createElement('input');
-    inputMontant.type = 'hidden';
-    inputMontant.name = currentMobileOpType === 'encaissement' ? 'montant_encaissement' : 'montant_decaissement';
-    inputMontant.value = document.getElementById('operationMontant').value;
-    this.appendChild(inputMontant);
-    const inputDesc = document.createElement('input');
-    inputDesc.type = 'hidden';
-    inputDesc.name = currentMobileOpType === 'encaissement' ? 'description_encaissement' : 'description_decaissement';
-    inputDesc.value = document.getElementById('operationDescription').value;
-    this.appendChild(inputDesc);
-});
+
 
 // ========== MOBILE FILTRES ==========
 document.getElementById('mobile-appliquer-filtres')?.addEventListener('click', () => {
@@ -1623,6 +1594,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     document.getElementById('dette-statut')?.addEventListener('change', () => loadDettes());
+    
+    // Auto-téléchargement + bannière du reçu après remboursement
+    const params = new URLSearchParams(window.location.search);
+    const recuId = params.get('recu');
+    if (recuId) {
+        const recuUrl = `/recu/${recuId}/download/`;
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = recuUrl;
+        document.body.appendChild(iframe);
+        setTimeout(() => { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 10000);
+        const banner = document.createElement('div');
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#059669;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.15);';
+        banner.innerHTML = '✅ Paiement enregistré ! <a href="'+recuUrl+'" target="_blank" style="color:#fff;font-weight:700;text-decoration:underline;">Télécharger le reçu</a>';
+        document.body.prepend(banner);
+        setTimeout(() => { banner.style.transition = 'opacity 0.5s'; banner.style.opacity = '0'; setTimeout(() => { if (banner.parentNode) banner.parentNode.removeChild(banner); }, 500); }, 8000);
+        window.history.replaceState({}, '', window.location.pathname);
+    }
 });
 
 window.onclick = (event) => {
