@@ -504,18 +504,19 @@
         }
         .filters-form {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+            gap: 6px;
         }
         .filters-form .filter-group {
             width: 100%;
+            min-width: 0;
         }
         .filter-group label {
-            font-size: 10px;
+            font-size: 9px;
         }
         .filter-group input, .filter-group select {
-            font-size: 11px;
-            padding: 4px 6px;
+            font-size: 10px;
+            padding: 4px 5px;
             min-width: 0;
             width: 100%;
             box-sizing: border-box;
