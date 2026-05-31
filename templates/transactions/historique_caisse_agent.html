@@ -1,0 +1,193 @@
+{% extends 'base.html' %}{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- En-tête agent -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="mb-0">📋 Historique — {{ agent.nom }}</h4>
+      <small class="text-muted">{{ agent.user.email }}</small>
+    </div>
+    <a href="{% url 'gestion_agents' %}" class="btn btn-outline-secondary btn-sm">
+      ← Retour
+    </a>
+  </div>
+
+  <!-- Soldes actuels -->
+  {% if caisse_agent %}
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm text-center">
+        <div class="card-body">
+          <div class="text-muted small">💰 Solde Cash actuel</div>
+          <div class="fw-bold fs-5">{{ caisse_agent.solde_cash|floatformat:0|intcomma }} FCFA</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm text-center">
+        <div class="card-body">
+          <div class="text-muted small">📱 Solde UV actuel</div>
+          <div class="fw-bold fs-5">{{ caisse_agent.solde_uv|floatformat:0|intcomma }} FCFA</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm text-center">
+        <div class="card-body">
+          <div class="text-muted small">💳 Solde Wave actuel</div>
+          <div class="fw-bold fs-5">{{ caisse_agent.solde_wave|floatformat:0|intcomma }} FCFA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Totaux filtrés -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card bg-success bg-opacity-10 border-0 text-center">
+        <div class="card-body py-2">
+          <div class="small text-muted">Total Cash reçu</div>
+          <div class="fw-bold text-success">{{ total_cash|floatformat:0|intcomma }} FCFA</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-primary bg-opacity-10 border-0 text-center">
+        <div class="card-body py-2">
+          <div class="small text-muted">Total UV reçu</div>
+          <div class="fw-bold text-primary">{{ total_uv|floatformat:0|intcomma }} FCFA</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-warning bg-opacity-10 border-0 text-center">
+        <div class="card-body py-2">
+          <div class="small text-muted">Total Wave reçu</div>
+          <div class="fw-bold text-warning">{{ total_wave|floatformat:0|intcomma }} FCFA</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card bg-dark bg-opacity-10 border-0 text-center">
+        <div class="card-body py-2">
+          <div class="small text-muted">Total Global</div>
+          <div class="fw-bold">{{ total_global|floatformat:0|intcomma }} FCFA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <form method="GET" class="card border-0 shadow-sm p-3 mb-4">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small">Type</label>
+        <select name="type" class="form-select form-select-sm">
+          <option value="">Tous</option>
+          <option value="cash"  {% if type_filtre == 'cash' %}selected{% endif %}>💰 Cash</option>
+          <option value="uv"    {% if type_filtre == 'uv' %}selected{% endif %}>📱 UV</option>
+          <option value="wave"  {% if type_filtre == 'wave' %}selected{% endif %}>💳 Wave</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Source</label>
+        <select name="source" class="form-select form-select-sm">
+          <option value="">Tous</option>
+          <option value="admin"     {% if source_filtre == 'admin' %}selected{% endif %}>Administrateur</option>
+          <option value="assistant" {% if source_filtre == 'assistant' %}selected{% endif %}>Assistant</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Date début</label>
+        <input type="date" name="date_debut" class="form-control form-control-sm" value="{{ date_debut }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small">Date fin</label>
+        <input type="date" name="date_fin" class="form-control form-control-sm" value="{{ date_fin }}">
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">🔍 Filtrer</button>
+        <a href="?" class="btn btn-outline-secondary btn-sm">✕</a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Tableau -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Source</th>
+            <th>Type</th>
+            <th class="text-end">Montant</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for op in page_obj %}
+          <tr>
+            <td class="text-nowrap">
+              {{ op.date|date:"d/m/Y H:i" }}
+            </td>
+            <td>
+              {% if op.source_type == 'admin' %}
+                <span class="badge bg-danger">👤 Admin</span>
+              {% else %}
+                <span class="badge bg-info text-dark">🧑‍💼 Assistant</span>
+              {% endif %}
+              <span class="ms-1 small">{{ op.source_nom }}</span>
+            </td>
+            <td>
+              {% if op.type_approvisionnement == 'cash' %}
+                <span class="badge bg-success">💰 Cash</span>
+              {% elif op.type_approvisionnement == 'uv' %}
+                <span class="badge bg-primary">📱 UV</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">💳 Wave</span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-bold text-success">
+              +{{ op.montant|floatformat:0|intcomma }} FCFA
+            </td>
+            <td class="text-muted small">{{ op.notes|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">
+              Aucune opération trouvée
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center">
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&type={{ type_filtre }}&source={{ source_filtre }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">←</a>
+        </li>
+      {% endif %}
+      <li class="page-item disabled">
+        <span class="page-link">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      </li>
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&type={{ type_filtre }}&source={{ source_filtre }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">→</a>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+</div>
+{% endblock %}

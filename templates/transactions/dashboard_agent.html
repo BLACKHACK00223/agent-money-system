@@ -8,6 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>{{ title }} - Agent Money</title>
     <style>
+        /* TOUS TES STYLES RESTENT IDENTIQUES */
         * {
             margin: 0;
             padding: 0;
@@ -186,7 +187,6 @@
             margin: 0 auto;
         }
 
-        /* Cartes de solde compactes */
         .balance-cards {
             display: flex;
             gap: 10px;
@@ -621,7 +621,6 @@
             border: 1px solid var(--gray-200);
         }
 
-        /* Style pour le select destinataire */
         .destinataire-group {
             margin-bottom: 20px;
         }
@@ -744,7 +743,6 @@
             {% endfor %}
         {% endif %}
 
-        <!-- Cartes de solde compactes -->
         <div class="balance-cards">
             <div class="balance-card" onclick="openArgentCashModal()">
                 <div class="icon">
@@ -847,7 +845,7 @@
                                 <span class="badge-retrait">↑ Retrait {{ t.get_operateur_display }}</span>
                             {% else %}
                                 <span class="badge-credit">● Crédit {{ t.get_operateur_display }}</span>
-                            {% endif %}
+                            {% endif %}{% if t.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}
                         </div>
                         <div class="transaction-date">{{ t.date|date:"d/m/Y à H:i" }}</div>
                         <div class="transaction-date">📞 {{ t.numero_client }}</div>
@@ -883,7 +881,6 @@
         </div>
     </div>
 
-    <!-- MODAL ARGENT CASH - SANS MOTIF -->
     <div id="argentCashModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -906,8 +903,6 @@
                     <label class="form-label">Montant (FCFA)</label>
                     <input type="number" id="argentCashMontant" class="form-input" placeholder="Ex: 50000" min="1000" step="1000">
                 </div>
-                
-                <!-- MOTIF SUPPRIMÉ -->
                 
                 <div class="destinataire-group">
                     <label class="form-label">📨 Envoyer à</label>
@@ -940,7 +935,6 @@
         </div>
     </div>
 
-    <!-- MODAL DEMANDE - SANS MOTIF -->
     <div id="demandeModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -956,8 +950,6 @@
                         <label class="form-label">Montant (FCFA)</label>
                         <input type="number" name="montant" class="form-input" required min="1000" step="1000" placeholder="Ex: 50000">
                     </div>
-                    
-                    <!-- MOTIF SUPPRIMÉ -->
                     
                     <div class="destinataire-group">
                         <label class="form-label">📨 Envoyer à</label>
@@ -1046,14 +1038,12 @@
             document.getElementById('transactionModal').style.display = 'none';
         }
 
-        // ==================== GESTION DESTINATAIRE ====================
         let currentDestinataire = 'admin';
 
         function selectDestinataire(type) {
             currentDestinataire = type;
             document.getElementById('argentCashDestinataire').value = type;
             
-            // Mettre à jour l'affichage des options
             document.querySelectorAll('#argentCashModal .destinataire-option').forEach(opt => {
                 opt.classList.remove('selected');
                 if (opt.getAttribute('data-destinataire') === type) {
@@ -1061,7 +1051,6 @@
                 }
             });
             
-            // Afficher/masquer la sélection de l'assistant
             const assistantSelect = document.getElementById('argentCashAssistantSelect');
             if (type === 'assistant') {
                 assistantSelect.classList.add('show');
@@ -1073,7 +1062,6 @@
         function selectDestinataireForm(type) {
             document.getElementById('formDestinataireType').value = type;
             
-            // Mettre à jour l'affichage des options
             document.querySelectorAll('#demandeModal .destinataire-option').forEach(opt => {
                 opt.classList.remove('selected');
                 if (opt.getAttribute('data-destinataire') === type) {
@@ -1081,7 +1069,6 @@
                 }
             });
             
-            // Afficher/masquer la sélection de l'assistant
             const assistantSelect = document.getElementById('formAssistantSelect');
             if (type === 'assistant') {
                 assistantSelect.classList.add('show');
@@ -1091,14 +1078,12 @@
         }
 
         function openArgentCashModal() {
-            // Réinitialiser la sélection
             currentDestinataire = 'admin';
             document.getElementById('argentCashDestinataire').value = 'admin';
             document.getElementById('argentCashType').value = 'uv_to_cash';
             document.getElementById('argentCashMontant').value = '';
             document.getElementById('argentCashAssistantId').value = '';
             
-            // Mettre à jour l'affichage des options
             document.querySelectorAll('#argentCashModal .destinataire-option').forEach(opt => {
                 opt.classList.remove('selected');
                 if (opt.getAttribute('data-destinataire') === 'admin') {
@@ -1169,11 +1154,9 @@
         function openDemandeModal(type) {
             document.getElementById('demandeType').value = type;
             
-            // Réinitialiser la sélection
             document.getElementById('formDestinataireType').value = 'admin';
             document.getElementById('formAssistantId').value = '';
             
-            // Mettre à jour l'affichage des options
             document.querySelectorAll('#demandeModal .destinataire-option').forEach(opt => {
                 opt.classList.remove('selected');
                 if (opt.getAttribute('data-destinataire') === 'admin') {
@@ -1201,7 +1184,6 @@
             });
         });
 
-        // Export Rapport PDF
         function exportRapportPDF() {
             const loading = document.getElementById('loading');
             loading.style.display = 'block';
@@ -1211,7 +1193,6 @@
             }, 1000);
         }
 
-        // Export Rapport Excel
         function exportRapportExcel() {
             const loading = document.getElementById('loading');
             loading.style.display = 'block';

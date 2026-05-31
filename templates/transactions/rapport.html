@@ -1,3 +1,4 @@
+{% load humanize %}
 <!-- templates/transactions/rapport.html -->
 <!DOCTYPE html>
 <html lang="fr">
@@ -200,11 +201,11 @@
                 </div>
                 <div class="stat-card">
                     <h3>💰 Montant total</h3>
-                    <div class="number">{{ total_montant|floatformat:0 }} FCFA</div>
+                    <div class="number">{{ total_montant|floatformat:0|intcomma }} FCFA</div>
                 </div>
                 <div class="stat-card">
                     <h3>⭐ Commission totale</h3>
-                    <div class="number">{{ total_commission|floatformat:0 }} FCFA</div>
+                    <div class="number">{{ total_commission|floatformat:0|intcomma }} FCFA</div>
                 </div>
             </div>
             
@@ -231,8 +232,8 @@
                                 {% else %}📱 Telecel{% endif %}
                             </td>
                             <td>{{ stats.nombre }}</td>
-                            <td>{{ stats.montant|floatformat:0 }} FCFA</td>
-                            <td>{{ stats.commission|floatformat:0 }} FCFA</td>
+<td>{{ stats.montant|floatformat:0|intcomma }} FCFA</td>
+                            <td>{{ stats.commission|floatformat:0|intcomma }} FCFA</td>
                             <td>
                                 <div class="progress-bar">
                                     <div class="progress-fill" style="width: {% widthratio stats.montant total_montant 100 %}%"></div>
@@ -247,7 +248,7 @@
             
             <!-- Statistiques par type -->
             <div class="type-stats">
-                <h3>💸 Statistiques par type de transaction</h3>
+                <h3> Statistiques par type de transaction</h3>
                 <table class="stats-table">
                     <thead>
                         <tr>
@@ -262,13 +263,13 @@
                         {% for type, stats in stats_par_type.items %}
                         <tr>
                             <td>
-                                {% if type == 'depot' %}💰 Dépôt
-                                {% elif type == 'retrait' %}💸 Retrait
-                                {% else %}📱 Crédit{% endif %}
+                                {% if type == 'depot' %} Dépôt
+                                {% elif type == 'retrait' %} Retrait
+                                {% else %} Crédit{% endif %}
                             </td>
                             <td>{{ stats.nombre }}</td>
-                            <td>{{ stats.montant|floatformat:0 }} FCFA</td>
-                            <td>{{ stats.commission|floatformat:0 }} FCFA</td>
+                            <td>{{ stats.montant|floatformat:0|intcomma }} FCFA</td>
+                            <td>{{ stats.commission|floatformat:0|intcomma }} FCFA</td>
                             <td>
                                 <div class="progress-bar">
                                     <div class="progress-fill" style="width: {% widthratio stats.montant total_montant 100 %}%"></div>
@@ -299,10 +300,10 @@
                     <tr>
                         <td><small>{{ trans.date|date:"d/m/Y H:i" }}</small></td>
                         <td><small>{{ trans.reference }}</small></td>
-                        <td>{{ trans.get_type_transaction_display }}</td>
+                        <td>{{ trans.get_type_transaction_display }}{% if trans.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}</td>
                         <td>{{ trans.get_operateur_display }}</td>
                         <td>{{ trans.numero_client }}</td>
-                        <td>{{ trans.montant|floatformat:0 }} FCFA</td>
+                        <td>{{ trans.montant|floatformat:0|intcomma }} FCFA</td>
                     </tr>
                     {% endfor %}
                 </tbody>

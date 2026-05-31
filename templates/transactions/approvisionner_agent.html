@@ -1,3 +1,4 @@
+{% load humanize %}
 <!-- templates/transactions/approvisionner_agent.html -->
 <!DOCTYPE html>
 <html lang="fr">
@@ -150,9 +151,9 @@
                             <option value="">-- Sélectionner un agent --</option>
                             {% for agent in sous_agents %}
                             <option value="{{ agent.id }}">
-                                {{ agent.nom }} - Cash: {{ agent.caisse.solde_cash|floatformat:0 }} | 
-                                UV: {{ agent.caisse.solde_uv|floatformat:0 }} | 
-                                Wave: {{ agent.caisse.solde_wave|floatformat:0 }}
+{{ agent.nom }} - Cash: {{ agent.caisse.solde_cash|floatformat:0|intcomma }} |
+UV: {{ agent.caisse.solde_uv|floatformat:0|intcomma }} |
+Wave: {{ agent.caisse.solde_wave|floatformat:0|intcomma }}
                             </option>
                             {% endfor %}
                         </select>
@@ -180,9 +181,9 @@
                     
                     <div class="info-box">
                         <p>📊 Mon solde ADMIN:</p>
-                        <p>💰 Cash: {{ caisse_admin.solde_cash|floatformat:0 }} FCFA</p>
-                        <p>📱 UV: {{ caisse_admin.solde_uv|floatformat:0 }} FCFA</p>
-                        <p>💳 Wave: {{ caisse_admin.solde_wave|floatformat:0 }} FCFA</p>
+                        <p>💰 Cash: {{ caisse_admin.solde_cash|floatformat:0|intcomma }} FCFA</p>
+                        <p>📱 UV: {{ caisse_admin.solde_uv|floatformat:0|intcomma }} FCFA</p>
+                        <p>💳 Wave: {{ caisse_admin.solde_wave|floatformat:0|intcomma }} FCFA</p>
                     </div>
                     
                     <button type="submit" class="btn-submit">✅ Approvisionner</button>

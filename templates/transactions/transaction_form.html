@@ -97,7 +97,6 @@
             box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
         }
 
-        /* Message d'erreur */
         .error-message {
             color: #dc3545;
             font-size: 12px;
@@ -119,7 +118,6 @@
             background: #f0fff4;
         }
 
-        /* Info client trouvé */
         .client-info-card {
             background: #d4edda;
             border: 1px solid #c3e6cb;
@@ -139,7 +137,6 @@
             gap: 10px;
         }
 
-        /* Boutons montants prédéfinis */
         .amount-buttons {
             margin-top: 12px;
         }
@@ -183,7 +180,6 @@
             color: #667eea;
         }
 
-        /* Bouton continuer */
         .btn-continue {
             width: 100%;
             padding: 18px;
@@ -226,7 +222,6 @@
             transform: scale(0.98);
         }
 
-        /* Modal de confirmation */
         .modal {
             display: none;
             position: fixed;
@@ -400,7 +395,6 @@
         .btn-confirm:active { transform: scale(0.97); }
         .btn-cancel:active { transform: scale(0.97); background: #e4e8ed; }
 
-        /* Modal de succès */
         .success-modal {
             display: none;
             position: fixed;
@@ -543,7 +537,6 @@
                 <form method="post" id="transactionForm">
                     {% csrf_token %}
                     
-                    <!-- Numéro client (entre 8 et 12 chiffres) -->
                     <div class="form-group">
                         <label>📞 Numéro client <span class="required">*</span></label>
                         <input type="tel" name="numero_client" id="id_numero_client" 
@@ -558,7 +551,6 @@
                         </div>
                     </div>
 
-                    <!-- Montant -->
                     <div class="form-group">
                         <label>💰 Montant (FCFA) <span class="required">*</span></label>
                         <input type="number" id="id_montant" 
@@ -610,7 +602,6 @@
         </div>
     </div>
 
-    <!-- Modal de confirmation -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -667,7 +658,6 @@
         </div>
     </div>
 
-    <!-- Modal de succès -->
     <div id="successModal" class="success-modal">
         <div class="success-content">
             <div class="success-header">
@@ -689,6 +679,7 @@
 
     <div class="loading" id="loading">⏳ Traitement en cours...</div>
 
+    <script src="/static/js/qz-tray.js"></script>
     <script>
         function getCookie(name) {
             let cookieValue = null;
@@ -716,8 +707,36 @@
         const montantError = document.getElementById('montantError');
 
         let lastReference = '';
+        let qzReady = false;
 
-        // ==================== VALIDATION (8 à 12 chiffres) ====================
+        // Récupérer le dashboard de l'utilisateur connecté
+        let redirectUrl = '';
+        {% if is_admin %}
+            redirectUrl = "{% url 'dashboard_admin' %}";
+        {% elif is_assistant %}
+            redirectUrl = "{% url 'dashboard_assistant' %}";
+        {% else %}
+            redirectUrl = "{% url 'dashboard_agent' %}";
+        {% endif %}
+
+        // Initialisation QZ
+        function initQZ() {
+            if (typeof qz === "undefined") {
+                setTimeout(initQZ, 2000);
+                return;
+            }
+            qz.websocket.connect()
+                .then(() => {
+                    qzReady = true;
+                    console.log("QZ Tray connecté");
+                })
+                .catch(() => {
+                    qzReady = false;
+                    console.log("QZ Tray non disponible");
+                });
+        }
+        setTimeout(initQZ, 1000);
+
         function getRawPhoneNumber() {
             return numeroInput.value.replace(/\s/g, '');
         }
@@ -736,7 +755,6 @@
             const phoneValid = isPhoneValid();
             const montantValid = isMontantValid();
             
-            // Validation numéro
             if (numeroInput.value.length > 0 && !phoneValid) {
                 phoneError.classList.add('show');
                 numeroInput.classList.add('invalid');
@@ -750,7 +768,6 @@
                 numeroInput.classList.remove('invalid', 'valid');
             }
             
-            // Validation montant
             if (montantInput.value.length > 0 && !montantValid) {
                 montantError.classList.add('show');
                 montantInput.classList.add('invalid');
@@ -764,11 +781,9 @@
                 montantInput.classList.remove('invalid', 'valid');
             }
             
-            // Activer/désactiver bouton
             continueBtn.disabled = !(phoneValid && montantValid);
         }
 
-        // ==================== FORMATAGE DES NUMÉROS ====================
         function formatPhoneNumber(value) {
             let numbers = value.replace(/\D/g, '');
             let formatted = '';
@@ -792,14 +807,10 @@
         }
 
         numeroInput.addEventListener('input', formatPhoneNumberOnInput);
-
-        // ==================== VALIDATION MONTANT ====================
         montantInput.addEventListener('input', updateValidationUI);
         montantInput.addEventListener('change', updateValidationUI);
 
-        // ==================== RECHERCHE CLIENT ====================
         let rechercheTimeout;
-        
         function rechercherClient() {
             clearTimeout(rechercheTimeout);
             rechercheTimeout = setTimeout(() => {
@@ -828,7 +839,6 @@
 
         numeroInput.addEventListener('keyup', rechercherClient);
 
-        // ==================== BOUTONS MONTANTS ====================
         function setAmount(amount) {
             montantInput.value = amount;
             updateValidationUI();
@@ -842,7 +852,6 @@
             });
         });
 
-        // ==================== MODAL ====================
         function openModal() {
             const client = numeroInput.value.trim();
             if (!client || !isPhoneValid()) {
@@ -870,9 +879,9 @@
             }
 
             document.getElementById('recapClient').textContent = client;
-            document.getElementById('recapMontant').innerHTML = `${montant.toLocaleString('fr-FR')} FCFA`;
+            document.getElementById('recapMontant').innerHTML = `${formatNumber(montant)} FCFA`;
             document.getElementById('recapType').innerHTML = `${typeIcon} ${typeText}`;
-            document.getElementById('recapTotal').innerHTML = `${montant.toLocaleString('fr-FR')} FCFA`;
+            document.getElementById('recapTotal').innerHTML = `${formatNumber(montant)} FCFA`;
 
             document.getElementById('confirmModal').style.display = 'flex';
         }
@@ -881,7 +890,6 @@
             document.getElementById('confirmModal').style.display = 'none';
         }
 
-        // ==================== SUCCÈS ====================
         function showSuccessModal(reference) {
             lastReference = reference;
             document.getElementById('successRef').textContent = `Référence: ${reference}`;
@@ -890,22 +898,98 @@
 
         function closeSuccessModal() {
             document.getElementById('successModal').style.display = 'none';
-            if ('{{ is_admin }}' === 'True') {
-                window.location.href = "{% url 'dashboard_admin' %}";
-            } else if ('{{ is_assistant }}' === 'True') {
-                window.location.href = "{% url 'dashboard_assistant' %}";
-            } else {
-                window.location.href = "{% url 'dashboard_agent' %}";
-            }
+            // Rediriger vers le dashboard de l'utilisateur connecté
+            window.location.href = redirectUrl;
         }
+
+        // ==================== IMPRESSION DIRECTE SANS APERCU ====================
+        function formatNumber(n) { return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
 
         function printReceipt() {
-            if (lastReference) {
-                window.open(`/impression/${lastReference}/`, '_blank');
-            }
+            if (!lastReference) return;
+            
+            const loading = document.getElementById('loading');
+            loading.style.display = 'block';
+            
+            fetch(`/impression-recu/${lastReference}/?format=json`)
+                .then(response => response.json())
+                .then(data => {
+                    if (qzReady && data) {
+                        return qz.printers.find().then(printers => {
+                            if (!printers || printers.length === 0) throw new Error('Aucune imprimante');
+                            let printer = printers[0];
+                            let config = qz.configs.create(printer);
+                            
+                            let montant = parseInt(data.montant) || 0;
+                            let montantFormatted = formatNumber(montant);
+                            let pw = parseInt(localStorage.getItem('printer_width')) || 58;
+                            let cols = pw === 80 ? 48 : 32;
+                            let line = '='.repeat(cols);
+                            let sep = '-'.repeat(cols);
+                            
+                            let ticket = "";
+                            ticket += line + "\n";
+                            ticket += "       KONE SERVICES       \n";
+                            ticket += "    Services Transfert     \n";
+                            ticket += "     Tel: 76 89 77 31      \n";
+                            ticket += line + "\n";
+                            ticket += "AGENT : " + (data.operateur || '-') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "TYPE : " + (data.type || '-').toUpperCase() + "\n";
+                            ticket += "OPERATEUR : " + (data.operateur_money || '-') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "CLIENT : " + (data.client || '-') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "MONTANT : " + montantFormatted + " FCFA\n";
+                            ticket += sep + "\n";
+                            ticket += "REF : " + (data.reference || '-') + "\n";
+                            ticket += "DATE : " + (data.date || '-') + " " + (data.heure || '') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "         MERCI POUR VOTRE CONFIANCE            \n";
+                            ticket += line + "\n";
+                            
+                            let printData = [{
+                                type: 'raw',
+                                format: 'plain',
+                                data: "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00"
+                            }];
+                            return qz.print(config, printData);
+                        });
+                    } else {
+                        // Fallback impression navigateur avec fermeture auto
+                        let printWindow = window.open(`/impression-recu/${lastReference}/`, '_blank');
+                        if (printWindow) {
+                            printWindow.onload = function() {
+                                printWindow.print();
+                                setTimeout(() => printWindow.close(), 1000);
+                            };
+                        }
+                        return Promise.resolve();
+                    }
+                })
+                .then(() => {
+                    loading.style.display = 'none';
+                    document.getElementById('successModal').style.display = 'none';
+                    // Rediriger vers le dashboard de l'utilisateur connecté
+                    window.location.href = redirectUrl;
+                })
+                .catch(err => {
+                    console.error(err);
+                    loading.style.display = 'none';
+                    let printWindow = window.open(`/impression-recu/${lastReference}/`, '_blank');
+                    if (printWindow) {
+                        printWindow.onload = function() {
+                            printWindow.print();
+                            setTimeout(() => printWindow.close(), 1000);
+                        };
+                    }
+                    setTimeout(() => {
+                        document.getElementById('successModal').style.display = 'none';
+                        window.location.href = redirectUrl;
+                    }, 2000);
+                });
         }
 
-        // ==================== SOUMISSION ====================
         function submitTransaction() {
             const cleanNumber = getRawPhoneNumber();
             const montant = montantInput.value;
@@ -955,17 +1039,14 @@
             });
         }
 
-        // ==================== ÉVÉNEMENTS ====================
         continueBtn.addEventListener('click', openModal);
         document.getElementById('confirmBtn').addEventListener('click', submitTransaction);
         document.getElementById('printBtn').addEventListener('click', printReceipt);
         document.getElementById('closeSuccessBtn').addEventListener('click', closeSuccessModal);
 
-        // Initialisation
         numeroInput.focus();
         updateValidationUI();
 
-        // Fermer modals
         window.onclick = function(event) {
             if (event.target === document.getElementById('confirmModal')) closeModal();
             if (event.target === document.getElementById('successModal')) closeSuccessModal();

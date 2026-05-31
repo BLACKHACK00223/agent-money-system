@@ -154,7 +154,7 @@
             {% for t in transactions %}
             <tr>
                 <td>{{ t.reference }}</td>
-                <td>{{ t.get_type_transaction_display }}</td>
+                <td>{{ t.get_type_transaction_display }}{% if t.est_annule %} <span class="badge badge-cancelled">(Annulée)</span>{% endif %}</td>
                 <td>{{ t.get_operateur_display }}</td>
                 <td>{{ t.numero_client }}</td>
                 <td>{{ t.montant|floatformat:0|intcomma }}</td>

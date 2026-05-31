@@ -644,9 +644,9 @@
             <div class="yesterday">
                 📉 Hier: {{ solde_cash_hier|floatformat:0|default:"0"|intcomma }} F
                 {% if evolution_cash > 0 %}
-                    <span class="evolution-up">▲ +{{ evolution_cash|floatformat:0 }}</span>
+                    <span class="evolution-up">▲ +{{ evolution_cash|floatformat:0|intcomma }}</span>
                 {% elif evolution_cash < 0 %}
-                    <span class="evolution-down">▼ {{ evolution_cash|floatformat:0 }}</span>
+                    <span class="evolution-down">▼ {{ evolution_cash|floatformat:0|intcomma }}</span>
                 {% endif %}
             </div>
         </div>
@@ -656,9 +656,9 @@
             <div class="yesterday">
                 📉 Hier: {{ solde_uv_hier|floatformat:0|default:"0"|intcomma }} F
                 {% if evolution_uv > 0 %}
-                    <span class="evolution-up">▲ +{{ evolution_uv|floatformat:0 }}</span>
+                    <span class="evolution-up">▲ +{{ evolution_uv|floatformat:0|intcomma }}</span>
                 {% elif evolution_uv < 0 %}
-                    <span class="evolution-down">▼ {{ evolution_uv|floatformat:0 }}</span>
+                    <span class="evolution-down">▼ {{ evolution_uv|floatformat:0|intcomma }}</span>
                 {% endif %}
             </div>
         </div>
@@ -668,9 +668,9 @@
             <div class="yesterday">
                 📉 Hier: {{ solde_wave_hier|floatformat:0|default:"0"|intcomma }} F
                 {% if evolution_wave > 0 %}
-                    <span class="evolution-up">▲ +{{ evolution_wave|floatformat:0 }}</span>
+                    <span class="evolution-up">▲ +{{ evolution_wave|floatformat:0|intcomma }}</span>
                 {% elif evolution_wave < 0 %}
-                    <span class="evolution-down">▼ {{ evolution_wave|floatformat:0 }}</span>
+                    <span class="evolution-down">▼ {{ evolution_wave|floatformat:0|intcomma }}</span>
                 {% endif %}
             </div>
         </div>
@@ -679,14 +679,6 @@
 
 <!-- Demandes reçues par l'assistant -->
 <div class="demandes-card">
-    <div class="transactions-header">
-        <h3>📋 Demandes d'approvisionnement reçues</h3>
-        <div class="export-buttons">
-            <button class="btn-export" onclick="exportDemandesCSV()">📄 CSV</button>
-            <button class="btn-export" onclick="exportDemandesExcel()">📊 Excel</button>
-        </div>
-    </div>
-
     <form method="get" class="filters-form">
         <div class="filter-group">
             <label>📅 Début</label>
@@ -822,7 +814,7 @@
                 {% for t in transactions %}
                 <tr>
                     <td><small>{{ t.reference|slice:":12" }}</small></span></td>
-                    <td><span class="badge badge-{{ t.type_transaction }}">{{ t.get_type_transaction_display }}</span></td>
+                    <td><span class="badge badge-{{ t.type_transaction }}">{{ t.get_type_transaction_display }}</span>{% if t.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}</td>
                     <td>{{ t.get_operateur_display }}</span></td>
                     <td>{{ t.numero_client }}</span></td>
                     <td><strong>{{ t.montant|floatformat:0|intcomma }} F</strong></td>

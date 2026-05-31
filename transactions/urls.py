@@ -1,11 +1,11 @@
 # transactions/urls.py
 from django.urls import path
 from . import views
-
+from django.urls import reverse
 urlpatterns = [
     # ==================== REDIRECTION ====================
     path('', views.dashboard_redirect, name='dashboard_redirect'),
-    
+  
     # ==================== TABLEAUX DE BORD ====================
     path('dashboard/admin/', views.dashboard_admin, name='dashboard_admin'),
     path('dashboard/agent/', views.dashboard_agent, name='dashboard_agent'),
@@ -13,12 +13,13 @@ urlpatterns = [
     
     # ==================== TRANSACTIONS ====================
     path('transaction/<str:operateur>/<str:type_transaction>/', views.transaction_user, name='transaction_user'),
-    path('impression/<str:transaction_id>/', views.impression_recu, name='impression_recu'),
+    path('impression-recu/<str:transaction_id>/', views.impression_recu, name='impression_recu'),
     
     # ==================== DEMANDES D'APPROVISIONNEMENT ====================
     path('demander-approvisionnement/', views.demander_approvisionnement, name='demander_approvisionnement'),
     path('api/demander-approvisionnement/', views.demander_approvisionnement_api, name='demander_approvisionnement_api'),
     path('valider-demande/<int:demande_id>/', views.valider_demande, name='valider_demande'),
+
     
     # ==================== HISTORIQUES ====================
     path('historique/', views.historique_admin, name='historique_admin'),
@@ -57,20 +58,25 @@ urlpatterns = [
     path('detail-facture/<int:facture_id>/', views.detail_facture, name='detail_facture'),
     path('gestion/ajouter-facture/', views.creer_facture, name='creer_facture'),
     path('gestion/modifier-facture/<int:facture_id>/', views.modifier_facture, name='modifier_facture'),
-    path('gestion/supprimer-facture/<int:facture_id>/', views.supprimer_facture, name='supprimer_facture'),
     path('gestion/enregistrer-paiement/<int:facture_id>/', views.enregistrer_paiement_facture, name='enregistrer_paiement_facture'),
     path('generer-facture-pdf/<int:facture_id>/', views.generer_facture_pdf, name='generer_facture_pdf'),
     path('generer-facture-80mm/<int:facture_id>/', views.generer_facture_80mm, name='generer_facture_80mm'),
     # ==================== API DETTES ====================
     path('api/dettes/', views.api_dettes, name='api_dettes'),
     path('api/dettes/<int:dette_id>/', views.api_dette_detail, name='api_dette_detail'),
-    
+   
+    path('recu/<int:remboursement_id>/download/', views.download_recu, name='download_recu'),
+   
+    path('api/debiteurs/chercher/', views.api_chercher_debiteurs, name='api_chercher_debiteurs'),
+        
     # ==================== GESTION DETTES (nouveau préfixe 'gestion/') ====================
     path('gestion/ajouter-dette/', views.ajouter_dette, name='ajouter_dette'),
     path('gestion/modifier-dette/<int:dette_id>/', views.modifier_dette, name='modifier_dette'),
     path('gestion/supprimer-dette/<int:dette_id>/', views.supprimer_dette, name='supprimer_dette'),
+    path('api/debiteurs/chercher/', views.api_chercher_debiteurs, name='api_chercher_debiteurs'),
+    path('recu/<int:remboursement_id>/download/', views.download_recu, name='download_recu'),
     path('gestion/enregistrer-remboursement/<int:dette_id>/', views.enregistrer_remboursement_dette, name='enregistrer_remboursement_dette'),
-     
+    
     # ==================== API COMPTES ÉPARGNE ====================
     path('api/comptes-epargne/', views.api_comptes_epargne, name='api_comptes_epargne'),
     path('gestion/operation-compte/<int:compte_id>/', views.operation_compte, name='operation_compte'),
@@ -83,7 +89,24 @@ urlpatterns = [
     path('modifier-mot-de-passe-assistant/<int:assistant_id>/', views.modifier_mot_de_passe_assistant, name='modifier_mot_de_passe_assistant'),
     # ==================== API ANALYSE ====================
     path('api/analyse-stats/', views.api_analyse_stats, name='api_analyse_stats'),
-    
+
     # ==================== AUTHENTIFICATION ====================
     path('logout/', views.logout_view, name='logout'),
-]
+    path('modifier-mot-de-passe-agent/<int:user_id>/', views.modifier_mot_de_passe_agent, name='modifier_mot_de_passe_agent'),
+    path('api/assistant/<int:assistant_id>/infos/', views.api_assistant_infos, name='api_assistant_infos'),
+    path('api/analyse-stats/', views.api_analyse_stats, name='api_analyse_stats'),
+    path('api/user-password/<int:user_id>/', views.api_user_password, name='api_user_password'),
+
+    path('historique-operations/', views.historique_operations, name='historique_operations'),
+    path('api/historique-agent/page/', views.api_historique_agent_page, name='api_historique_agent_page'),
+    path('operation-agent/', views.operation_agent, name='operation_agent'),
+    path('api/historique-agent/', views.api_historique_agent, name='api_historique_agent'),
+    path('api/factures/<int:facture_id>/supprimer/', views.supprimer_facture, name='supprimer_facture'),
+    path('api/analyse-stats/', views.api_analyse_stats, name='api_analyse_stats'),
+
+    path('api/demandes-attente/count/', views.api_demandes_attente_count, name='api_demandes_count'),
+    path('api/demandes-attente/list/', views.api_demandes_attente_list, name='api_demandes_list'),
+    
+    # ==================== ANNULATION ====================
+    path('api/annuler-transaction/', views.api_annuler_transaction, name='api_annuler_transaction'),
+    ]

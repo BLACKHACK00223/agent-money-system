@@ -47,7 +47,6 @@
             line-height: 1.5;
         }
 
-        /* Header */
         .header {
             background: white;
             padding: 16px 20px;
@@ -121,14 +120,12 @@
             transform: translateY(-1px);
         }
 
-        /* Container */
         .container {
             padding: 20px 16px 32px 16px;
             max-width: 500px;
             margin: 0 auto;
         }
 
-        /* Filtres */
         .filters-card {
             background: white;
             border-radius: 20px;
@@ -264,7 +261,6 @@
             background: var(--gray-200);
         }
 
-        /* Stats */
         .stats-container {
             background: white;
             border-radius: 20px;
@@ -315,7 +311,6 @@
             color: var(--gray-600);
         }
 
-        /* Transaction items */
         .transaction-item {
             background: white;
             border-radius: 16px;
@@ -450,7 +445,6 @@
             stroke: currentColor;
         }
 
-        /* Pagination */
         .pagination {
             display: flex;
             justify-content: center;
@@ -491,7 +485,6 @@
             pointer-events: none;
         }
 
-        /* Empty state */
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -519,7 +512,6 @@
             color: var(--gray-600);
         }
 
-        /* Loading */
         .loading {
             display: none;
             position: fixed;
@@ -572,7 +564,6 @@
 <body>
     <div class="header">
         <div class="header-top">
-            <!-- Redirection dynamique selon le rôle -->
             {% if user.agent_profile %}
                 <a href="{% url 'dashboard_agent' %}" class="back-btn">
             {% elif user.assistant_profile %}
@@ -679,7 +670,7 @@
                                 <span class="badge-retrait">↑ Retrait {{ t.get_operateur_display }}</span>
                             {% else %}
                                 <span class="badge-credit">● Crédit {{ t.get_operateur_display }}</span>
-                            {% endif %}
+                            {% endif %}{% if t.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}
                         </div>
                         <div class="transaction-amount">
                             {{ t.montant|floatformat:0|intcomma }} F
@@ -705,14 +696,7 @@
                             </svg>
                             {{ t.numero_client|slice:":2" }} {{ t.numero_client|slice:"2:4" }} {{ t.numero_client|slice:"4:6" }} {{ t.numero_client|slice:"6:8" }}
                         </div>
-                        <button class="btn-print" onclick="window.open('/impression/{{ t.reference }}/', '_blank')">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M6 9V3h12v6"/>
-                                <rect x="4" y="9" width="16" height="10" rx="1"/>
-                                <path d="M8 15h8"/>
-                            </svg>
-                            Imprimer
-                        </button>
+                        <button class="btn-print" onclick="printReceipt('{{ t.reference }}', this)">🖨️ Imprimer</button>
                     </div>
                 </div>
                 {% endfor %}
@@ -750,14 +734,118 @@
         {% endif %}
     </div>
 
-    <div class="loading" id="loading">⏳ Chargement...</div>
+    <div class="loading" id="loading">⏳ Impression en cours...</div>
 
+    <script src="/static/js/qz-tray.js"></script>
     <script>
-        // Validation des dates (sans soumission automatique)
+        let qzReady = false;
+
+        function initQZ() {
+            if (typeof qz === "undefined") {
+                setTimeout(initQZ, 2000);
+                return;
+            }
+            qz.websocket.connect()
+                .then(() => {
+                    qzReady = true;
+                    console.log("QZ Tray connecté");
+                })
+                .catch(() => {
+                    qzReady = false;
+                    console.log("QZ Tray non disponible");
+                });
+        }
+        setTimeout(initQZ, 1000);
+
+        function printReceipt(reference, btn) {
+            if (!reference) return;
+            
+            const loading = document.getElementById('loading');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "⏳";
+            btn.disabled = true;
+            loading.style.display = 'block';
+            
+            fetch(`/impression-recu/${reference}/?format=json`)
+                .then(response => response.json())
+                .then(data => {
+                    if (qzReady && data) {
+                        return qz.printers.find().then(printers => {
+                            if (!printers || printers.length === 0) throw new Error('Aucune imprimante');
+                            let printer = printers[0];
+                            let config = qz.configs.create(printer);
+                            
+                            let montant = parseInt(data.montant) || 0;
+                            function formatNumber(n) { return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+                            let montantFormatted = formatNumber(montant);
+                            let pw = parseInt(localStorage.getItem('printer_width')) || 58;
+                            let cols = pw === 80 ? 48 : 32;
+                            let line = '='.repeat(cols);
+                            let sep = '-'.repeat(cols);
+                            
+                            let ticket = "";
+                            ticket += line + "\n";
+                            ticket += "       KONE SERVICES       \n";
+                            ticket += "    Services Transfert     \n";
+                            ticket += "     Tel: 76 89 77 31      \n";
+                            ticket += line + "\n";
+                            ticket += "AGENT : " + (data.operateur || '-') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "TYPE : " + (data.type || '-').toUpperCase() + "\n";
+                            ticket += "OPERATEUR : " + (data.operateur_money || '-') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "CLIENT : " + (data.client || '-') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "MONTANT : " + montantFormatted + " FCFA\n";
+                            ticket += sep + "\n";
+                            ticket += "REF : " + (data.reference || '-') + "\n";
+                            ticket += "DATE : " + (data.date || '-') + " " + (data.heure || '') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "         MERCI POUR VOTRE CONFIANCE           \n";
+                            ticket += line + "\n";
+                            
+                            let printData = [{
+                                type: 'raw',
+                                format: 'plain',
+                                data: "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00"
+                            }];
+                            return qz.print(config, printData);
+                        });
+                    } else {
+                        let printWindow = window.open(`/impression-recu/${reference}/`, '_blank');
+                        if (printWindow) {
+                            printWindow.onload = function() {
+                                printWindow.print();
+                                setTimeout(() => printWindow.close(), 1000);
+                            };
+                        }
+                        return Promise.resolve();
+                    }
+                })
+                .then(() => {
+                    loading.style.display = 'none';
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                })
+                .catch(err => {
+                    console.error(err);
+                    loading.style.display = 'none';
+                    let printWindow = window.open(`/impression-recu/${reference}/`, '_blank');
+                    if (printWindow) {
+                        printWindow.onload = function() {
+                            printWindow.print();
+                            setTimeout(() => printWindow.close(), 1000);
+                        };
+                    }
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                });
+        }
+
+        // Validation des dates
         const dateDebut = document.getElementById('date_debut');
         const dateFin = document.getElementById('date_fin');
         
-        // Validation des dates
         function validateDates() {
             if (dateDebut.value && dateFin.value) {
                 if (dateDebut.value > dateFin.value) {
@@ -770,7 +858,6 @@
         if (dateDebut) dateDebut.addEventListener('change', validateDates);
         if (dateFin) dateFin.addEventListener('change', validateDates);
         
-        // Réinitialisation des filtres
         function resetFilters() {
             const dateDebutInput = document.getElementById('date_debut');
             const dateFinInput = document.getElementById('date_fin');
@@ -785,7 +872,6 @@
             document.getElementById('filterForm').submit();
         }
         
-        // Export Excel
         function exportToExcel() {
             const loading = document.getElementById('loading');
             loading.style.display = 'block';
@@ -814,7 +900,6 @@
             }, 1000);
         }
         
-        // Afficher le loading au submit du formulaire
         const filterForm = document.getElementById('filterForm');
         if (filterForm) {
             filterForm.addEventListener('submit', function() {
@@ -822,7 +907,6 @@
             });
         }
         
-        // Masquer le loading au chargement
         window.addEventListener('load', function() {
             document.getElementById('loading').style.display = 'none';
         });

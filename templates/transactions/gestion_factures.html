@@ -136,7 +136,7 @@
                 <td>{{ f.client_nom }}</td>
                 <td>{{ f.montant_total|floatformat:0|intcomma }} F</td>
                 <td>{{ f.montant_paye|floatformat:0|intcomma }} F</td>
-                <td>{{ f.reste_a_payer|floatformat:0|intcomma }} F</td>
+                <td>{{ f.reste_a_payer|floatformat:0|intcomma|intcomma }} F</td>
                 <td>
                     <span class="badge 
                         {% if f.statut == 'en_attente' %}badge-pending
@@ -152,7 +152,7 @@
                 </td>
                 <td class="actions">
                     <button class="btn-edit" onclick="editFacture({{ f.id }})">✏️</button>
-                    <button class="btn-payment" onclick="openPaiementModal({{ f.id }}, {{ f.reste_a_payer|floatformat:0 }})">💰</button>
+                    <button class="btn-payment" onclick="openPaiementModal({{ f.id }}, {{ f.reste_a_payer|floatformat:0|intcomma }})">💰</button>
                     <button class="btn-delete" onclick="supprimerFacture({{ f.id }})">🗑️</button>
                 </td>
             </tr>

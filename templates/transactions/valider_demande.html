@@ -1,4 +1,5 @@
 <!-- templates/transactions/valider_demande.html -->
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -29,7 +30,7 @@
                 {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}
                 <div class="info-row"><span class="label">Agent:</span><span>{{ demande.agent.nom }}</span></div>
                 <div class="info-row"><span class="label">Type d'échange:</span><span>{{ demande.get_type_echange_display }}</span></div>
-                <div class="info-row"><span class="label">Montant:</span><span><strong>{{ demande.montant|floatformat:0 }} FCFA</strong></span></div>
+                <div class="info-row"><span class="label">Montant:</span><span><strong>{{ demande.montant|floatformat:0|intcomma }} FCFA</strong></span></div>
                 {% if demande.motif %}<div class="info-row"><span class="label">Motif:</span><span>{{ demande.motif }}</span></div>{% endif %}
                 <div class="info-row"><span class="label">Date demande:</span><span>{{ demande.date_demande|date:"d/m/Y H:i" }}</span></div>
                 <div style="margin-top: 30px; text-align: center;">

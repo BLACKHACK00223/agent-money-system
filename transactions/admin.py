@@ -1,7 +1,7 @@
 # transactions/admin.py
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Admin, Agent, Assistant, Caisse, Transaction, DemandeApprovisionnement, ApprovisionnementDirect
+from .models import Admin, Agent, Assistant, Caisse, CommissionRate, Transaction, DemandeApprovisionnement, ApprovisionnementDirect
 
 
 @admin.register(Admin)
@@ -200,10 +200,10 @@ class CaisseAdmin(admin.ModelAdmin):
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('reference', 'utilisateur', 'role_affichage', 'type_transaction', 'operateur', 'montant', 'numero_client', 'date', 'statut')
-    list_filter = ('type_transaction', 'operateur', 'statut', 'date', 'role')
+    list_display = ('reference', 'utilisateur', 'role_affichage', 'type_transaction', 'operateur', 'montant', 'numero_client', 'date', 'statut', 'est_annule')
+    list_filter = ('type_transaction', 'operateur', 'statut', 'date', 'role', 'est_annule')
     search_fields = ('reference', 'numero_client', 'reference_operateur', 'user__username')
-    readonly_fields = ('reference', 'commission', 'frais_operateur', 'date', 'updated_at')
+    readonly_fields = ('reference', 'commission', 'frais_operateur', 'date', 'updated_at', 'est_annule', 'date_annulation', 'annule_par', 'motif_annulation')
     
     fieldsets = (
         ('Informations', {
@@ -220,6 +220,10 @@ class TransactionAdmin(admin.ModelAdmin):
         }),
         ('Statut', {
             'fields': ('statut', 'notes')
+        }),
+        ('Annulation', {
+            'fields': ('est_annule', 'date_annulation', 'annule_par', 'motif_annulation'),
+            'classes': ('collapse',),
         }),
         ('Horodatage', {
             'fields': ('date', 'updated_at'),
@@ -358,6 +362,20 @@ class ApprovisionnementDirectAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('admin_source', 'assistant_source', 'agent_destinataire')
+
+
+@admin.register(CommissionRate)
+class CommissionRateAdmin(admin.ModelAdmin):
+    list_display = ('operateur', 'type_transaction', 'taux_percent')
+    list_filter = ('operateur', 'type_transaction')
+    search_fields = ('operateur',)
+
+    def taux_percent(self, obj):
+        return f"{float(obj.taux) * 100:.2f}%"
+    taux_percent.short_description = "Taux"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).order_by('operateur', 'type_transaction')
 
 
 # Configuration du titre de l'admin

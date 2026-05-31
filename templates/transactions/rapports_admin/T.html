@@ -1,0 +1,932 @@
+{% extends "transactions/dashboard_admin.html" %}
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary: #0f766e;
+        --primary-dark: #0d5c56;
+        --primary-light: #ccfbf1;
+        --success: #10b981;
+        --success-light: #d1fae5;
+        --danger: #ef4444;
+        --danger-light: #fee2e2;
+        --warning: #f59e0b;
+        --warning-light: #fed7aa;
+        --info: #3b82f6;
+        --info-light: #dbeafe;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-400: #9ca3af;
+        --gray-500: #6b7280;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
+        --radius-sm: 6px;
+        --radius-md: 8px;
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+        --radius-2xl: 20px;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+        --transition-base: all 0.2s ease;
+        --transition-fast: all 0.15s ease;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    .reports-nav { background: white; border-radius: var(--radius-xl); margin-bottom: 28px; border: 1px solid var(--gray-200); padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; box-shadow: var(--shadow-sm); }
+    .reports-tab { flex: 1; padding: 14px 20px; background: none; border: none; border-radius: var(--radius-lg); font-size: 14px; font-weight: 600; color: var(--gray-600); cursor: pointer; transition: var(--transition-base); display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .reports-tab:hover { background: var(--gray-100); color: var(--gray-800); }
+    .reports-tab.active { background: var(--primary); color: white; box-shadow: var(--shadow-md); }
+    .report-section { display: none; }
+    .report-section.active-section { display: block; }
+
+    .summary-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px; }
+    .summary-card { background: white; border-radius: var(--radius-xl); padding: 24px 20px; border: 1px solid var(--gray-200); transition: var(--transition-base); text-align: center; }
+    .summary-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .summary-card .icon { width: 56px; height: 56px; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 28px; }
+    .summary-card .icon.primary { background: var(--primary-light); color: var(--primary); }
+    .summary-card .icon.success { background: var(--success-light); color: var(--success); }
+    .summary-card .icon.warning { background: var(--warning-light); color: var(--warning); }
+    .summary-card .icon.danger { background: var(--danger-light); color: var(--danger); }
+    .summary-card .icon.info { background: var(--info-light); color: var(--info); }
+    .summary-card h4 { font-size: 14px; font-weight: 600; color: var(--gray-500); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .summary-card .value { font-size: 28px; font-weight: 800; color: var(--gray-900); letter-spacing: -0.5px; }
+
+    .filters-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; background: white; border-radius: var(--radius-xl); padding: 16px 20px; margin-bottom: 24px; border: 1px solid var(--gray-200); }
+    .filter-group { flex: 1; min-width: 130px; }
+    .filter-group label { display: block; font-size: 11px; font-weight: 700; color: var(--gray-500); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .filter-group input, .filter-group select { width: 100%; padding: 8px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius-md); font-size: 13px; font-weight: 500; transition: var(--transition-fast); background: white; }
+    .filter-group input:focus, .filter-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+
+    .btn-filter { background: var(--primary); color: white; border: none; padding: 8px 20px; border-radius: var(--radius-md); cursor: pointer; font-weight: 600; font-size: 13px; height: 40px; display: inline-flex; align-items: center; gap: 8px; transition: var(--transition-fast); }
+    .btn-filter:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-cash-in { background: var(--success); color: white; border: none; padding: 12px 28px; border-radius: var(--radius-md); cursor: pointer; font-size: 14px; font-weight: 600; transition: var(--transition-fast); }
+    .btn-cash-in:hover { background: #0d9488; transform: translateY(-2px); }
+    .btn-cash-out { background: var(--danger); color: white; border: none; padding: 12px 28px; border-radius: var(--radius-md); cursor: pointer; font-size: 14px; font-weight: 600; transition: var(--transition-fast); }
+    .btn-cash-out:hover { background: #dc2626; transform: translateY(-2px); }
+    .btn-pdf { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: var(--radius-md); cursor: pointer; font-size: 12px; font-weight: 500; }
+    .btn-thermal { background: var(--warning); color: white; border: none; padding: 6px 12px; border-radius: var(--radius-md); cursor: pointer; font-size: 12px; font-weight: 500; }
+    .btn-submit { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; margin-top: 10px; transition: var(--transition-fast); }
+    .btn-submit:hover { background: var(--primary-dark); }
+    .btn-close-modal { background: var(--gray-100); color: var(--gray-700); border: none; padding: 10px; border-radius: var(--radius-md); cursor: pointer; width: 100%; margin-top: 10px; font-weight: 600; transition: var(--transition-fast); }
+    .btn-close-modal:hover { background: var(--gray-200); }
+    .btn-payment { background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: var(--radius-md); cursor: pointer; font-size: 12px; font-weight: 600; transition: var(--transition-fast); }
+    .btn-payment:hover { background: #0d9488; transform: translateY(-1px); }
+    .btn-history { background: var(--info); color: white; border: none; padding: 6px 10px; border-radius: var(--radius-md); cursor: pointer; font-size: 11px; font-weight: 500; transition: var(--transition-fast); }
+    .btn-history:hover { background: #2563eb; }
+
+    .table-container { background: white; border-radius: var(--radius-xl); border: 1px solid var(--gray-200); overflow: hidden; margin-top: 20px; }
+    .table-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-200); background: var(--gray-50); }
+    .table-header h3 { font-size: 16px; font-weight: 700; color: var(--gray-800); margin: 0; }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { text-align: left; padding: 14px 16px; background: var(--gray-50); font-size: 12px; font-weight: 700; color: var(--gray-600); border-bottom: 1px solid var(--gray-200); text-transform: uppercase; letter-spacing: 0.5px; }
+    .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); font-size: 13px; font-weight: 500; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover { background: var(--gray-50); }
+    .actions-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .badge-paid { background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+    .badge-active { background: #fed7aa; color: #9a3412; padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+    .badge-partial { background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+
+    /* MODAL OPTIMISÉ - Plus d'animation pour être plus rapide */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: white; border-radius: var(--radius-2xl); width: 90%; max-width: 520px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-xl); }
+    .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { font-size: 20px; font-weight: 700; color: var(--gray-900); margin: 0; }
+    .modal-close { background: none; border: none; font-size: 28px; cursor: pointer; color: var(--gray-500); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: var(--transition-fast); }
+    .modal-close:hover { background: var(--gray-100); color: var(--gray-700); }
+    .modal-body { padding: 24px; }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 700; color: var(--gray-700); margin-bottom: 8px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--gray-300); border-radius: var(--radius-md); font-size: 14px; transition: var(--transition-fast); }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    
+    .autocomplete-suggestions { position: absolute; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; background: white; border: 1px solid var(--gray-300); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 1001; display: none; }
+    .autocomplete-suggestion { padding: 10px 14px; cursor: pointer; transition: var(--transition-fast); border-bottom: 1px solid var(--gray-100); }
+    .autocomplete-suggestion:hover { background: var(--primary-light); }
+    .autocomplete-suggestion:last-child { border-bottom: none; }
+    .suggestion-name { font-weight: 600; color: var(--gray-800); }
+    .suggestion-phone { font-size: 11px; color: var(--gray-500); margin-left: 8px; }
+
+    .operations-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+    .operation-card { background: white; border-radius: var(--radius-xl); padding: 24px; border: 1px solid var(--gray-200); text-align: center; transition: var(--transition-base); }
+    .operation-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .operation-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 16px; color: var(--gray-800); }
+
+    .historique-wrapper { display: flex; gap: 20px; margin-top: 20px; }
+    .historique-table-container { flex: 3; background: white; border-radius: var(--radius-xl); border: 1px solid var(--gray-200); overflow-x: auto; }
+    .totaux-sidebar { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    .totaux-card { background: white; border-radius: var(--radius-xl); border: 1px solid var(--gray-200); padding: 24px; text-align: center; transition: var(--transition-base); }
+    .totaux-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .totaux-card .icon { width: 56px; height: 56px; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 28px; }
+    .totaux-card .icon.success { background: var(--success-light); color: var(--success); }
+    .totaux-card .icon.danger { background: var(--danger-light); color: var(--danger); }
+    .totaux-card h4 { font-size: 14px; font-weight: 600; color: var(--gray-500); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .totaux-card .value { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    .totaux-card .value.success { color: var(--success); }
+    .totaux-card .value.danger { color: var(--danger); }
+
+    .compte-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .compte-card { border: 2px solid var(--gray-200); border-radius: var(--radius-lg); padding: 16px; text-align: center; cursor: pointer; transition: var(--transition-fast); }
+    .compte-card:hover { border-color: var(--gray-300); background: var(--gray-50); }
+    .compte-card.selected { border-color: var(--primary); background: var(--primary-light); }
+    .compte-card .compte-icon { font-size: 32px; margin-bottom: 8px; }
+    .compte-card .compte-name { font-weight: 700; margin-bottom: 4px; }
+    .compte-card .compte-solde { font-size: 12px; color: var(--gray-500); }
+
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 20px; background: white; border-top: 1px solid var(--gray-200); flex-wrap: wrap; }
+    .pagination a, .pagination span { padding: 8px 14px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; transition: var(--transition-fast); text-decoration: none; cursor: pointer; }
+    .pagination a { background: var(--gray-100); color: var(--gray-700); }
+    .pagination a:hover { background: var(--primary); color: white; }
+    .pagination .current { background: var(--primary); color: white; }
+    .pagination .disabled { color: var(--gray-400); background: var(--gray-100); cursor: not-allowed; }
+
+    .performer-card { background: white; border-radius: 16px; padding: 16px; border: 1px solid var(--gray-200); margin-bottom: 12px; transition: var(--transition-base); }
+    .performer-card:hover { transform: translateX(4px); border-color: var(--primary); box-shadow: var(--shadow-md); }
+    .role-badge { font-size: 10px; padding: 3px 8px; border-radius: 20px; display: inline-block; }
+    .role-badge.admin { background: #e0e7ff; color: #4f46e5; }
+    .role-badge.agent { background: #d1fae5; color: #059669; }
+    .role-badge.assistant { background: #fef3c7; color: #d97706; }
+
+    .complementary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 20px; }
+    .comp-stat { background: white; border-radius: 16px; padding: 16px; border: 1px solid var(--gray-200); display: flex; align-items: center; gap: 14px; transition: var(--transition-base); }
+    .comp-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .comp-icon { width: 48px; height: 48px; background: var(--primary-light); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--primary); }
+    .comp-info { flex: 1; }
+    .comp-value { font-size: 20px; font-weight: 700; color: var(--gray-800); }
+    .comp-label { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+    .comp-trend { font-size: 10px; margin-top: 4px; font-weight: 500; }
+    .trend-up { color: var(--success); }
+    .trend-down { color: var(--danger); }
+
+    @media (max-width: 1024px) { .summary-cards { grid-template-columns: repeat(2, 1fr); } .historique-wrapper { flex-direction: column; } .totaux-sidebar { flex-direction: row; } .complementary-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 768px) { .summary-cards { grid-template-columns: 1fr; } .operations-container { grid-template-columns: 1fr; } .reports-nav { flex-direction: column; } .filters-bar { flex-direction: column; } .historique-wrapper { flex-direction: column; } .totaux-sidebar { flex-direction: column; } .actions-group { flex-direction: column; } .complementary-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Centre d'analyse financière</h1>
+    <p>Gestion des rapports, factures, comptes et dettes</p>
+</div>
+
+<div class="reports-nav">
+    <button class="reports-tab active" data-tab="rapports">📊 Rapports</button>
+    <button class="reports-tab" data-tab="factures">📄 Factures</button>
+    <button class="reports-tab" data-tab="comptes">💰 Comptes</button>
+    <button class="reports-tab" data-tab="dettes">⚠️ Dettes</button>
+    <button class="reports-tab" data-tab="analyse">📈 Analyse</button>
+</div>
+
+<!-- SECTION RAPPORTS -->
+<div id="tab-rapports" class="report-section active-section">
+    <div class="filters-bar">
+        <div class="filter-group"><label>Début</label><input type="date" id="report-date-debut" value="{{ date_debut|default:'' }}"></div>
+        <div class="filter-group"><label>Fin</label><input type="date" id="report-date-fin" value="{{ date_fin|default:'' }}"></div>
+        <div class="filter-group"><label>Utilisateur</label><select id="report-agent"><option value="">Tous</option><optgroup label="Administrateurs">{% for admin in admins %}<option value="{{ admin.user.id }}">{{ admin.nom }}</option>{% endfor %}</optgroup><optgroup label="Agents">{% for agent in agents %}<option value="{{ agent.user.id }}">{{ agent.nom }}</option>{% endfor %}</optgroup><optgroup label="Assistants">{% for assistant in assistants %}<option value="{{ assistant.user.id }}">{{ assistant.nom }}</option>{% endfor %}</optgroup></select></div>
+        <div class="filter-group"><button class="btn-filter" id="generer-rapport">📊 Générer</button></div>
+    </div>
+    <div class="summary-cards">
+        <div class="summary-card"><div class="icon primary">📊</div><h4>Transactions</h4><div class="value">{{ total_transactions|default:0|intcomma }}</div></div>
+        <div class="summary-card"><div class="icon success">💰</div><h4>Volume total</h4><div class="value">{{ total_volume|default:0|floatformat:0|intcomma }} F</div></div>
+        <div class="summary-card"><div class="icon warning">⭐</div><h4>Commission</h4><div class="value">{{ total_commission|default:0|floatformat:0|intcomma }} F</div></div>
+        <div class="summary-card"><div class="icon danger">👥</div><h4>Utilisateurs actifs</h4><div class="value">{{ total_users|default:0 }}</div></div>
+    </div>
+    <div class="table-container">
+        <div class="table-header"><h3>🏆 Top Performers</h3><p style="margin-top:4px; font-size:12px; color:var(--gray-500);">Classement par volume de transactions</p></div>
+        <div style="padding:20px;">
+            {% if top_agents_performance %}
+                {% for performer in top_agents_performance %}
+                <div class="performer-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+                        <div style="font-size:18px; font-weight:700;">{% if forloop.counter == 1 %}🥇 1er{% elif forloop.counter == 2 %}🥈 2e{% elif forloop.counter == 3 %}🥉 3e{% else %}#{{ forloop.counter }}{% endif %}</div>
+                        <div style="display:flex; gap:24px;"><div><span style="font-size:10px; color:var(--gray-500);">Volume</span><br><span style="font-weight:700;">{{ performer.montant|floatformat:0|intcomma }} F</span></div><div><span style="font-size:10px; color:var(--gray-500);">Part</span><br><span style="font-weight:700;">{{ performer.percentage|floatformat:0 }}%</span></div></div>
+                    </div>
+                    <div style="font-weight:600;">{{ performer.nom }}</div>
+                    <span class="role-badge {{ performer.type }}">{{ performer.type|title }}</span>
+                    <div style="height:6px; background:var(--gray-200); border-radius:10px; overflow:hidden; margin-top:12px;"><div style="height:100%; background:linear-gradient(90deg, var(--primary), #8b5cf6); width:{{ performer.percentage }}%;"></div></div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align:center; padding:50px 20px;"><div style="font-size:48px; margin-bottom:16px; opacity:0.5;">📊</div><h4 style="font-size:16px; font-weight:600;">Aucune donnée de performance</h4><p style="font-size:13px; color:var(--gray-500);">Effectuez des transactions pour voir apparaître le classement</p></div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="complementary-grid">
+        <div class="comp-stat"><div class="comp-icon">📈</div><div class="comp-info"><div class="comp-value">{{ stats_today.nombre|default:0 }}</div><div class="comp-label">Transactions aujourd'hui</div><div class="comp-trend {% if evolution_transactions > 0 %}trend-up{% else %}trend-down{% endif %}">{% if evolution_transactions > 0 %}▲{% else %}▼{% endif %} {{ evolution_transactions|floatformat:1 }}%</div></div></div>
+        <div class="comp-stat"><div class="comp-icon">💰</div><div class="comp-info"><div class="comp-value">{{ stats_today.depots|default:0|floatformat:0|intcomma }} F</div><div class="comp-label">Dépôts aujourd'hui</div></div></div>
+        <div class="comp-stat"><div class="comp-icon">💸</div><div class="comp-info"><div class="comp-value">{{ stats_today.retraits|default:0|floatformat:0|intcomma }} F</div><div class="comp-label">Retraits aujourd'hui</div></div></div>
+        <div class="comp-stat"><div class="comp-icon">📱</div><div class="comp-info"><div class="comp-value">{{ stats_today.credits|default:0|floatformat:0|intcomma }} F</div><div class="comp-label">Crédits aujourd'hui</div></div></div>
+    </div>
+</div>
+
+<!-- SECTION FACTURES -->
+<div id="tab-factures" class="report-section">
+    <div class="filters-bar">
+        <div class="filter-group"><label>Statut</label><select id="facture-statut"><option value="all">Toutes</option><option value="en_attente">En attente</option><option value="payee">Payées</option></select></div>
+        <div class="filter-group"><label>Client</label><input type="text" id="facture-client" placeholder="Nom"></div>
+        <div class="filter-group"><label>Du</label><input type="date" id="facture-date-debut"></div>
+        <div class="filter-group"><label>Au</label><input type="date" id="facture-date-fin"></div>
+        <div class="filter-group"><button class="btn-filter" onclick="openModalFacture()">➕ Nouvelle</button></div>
+        <div class="filter-group"><button class="btn-filter" onclick="filtrerFactures()">🔍 Filtrer</button></div>
+    </div>
+    <div class="table-container">
+        <div class="table-header"><h3>Liste des factures</h3></div>
+        <table class="data-table">
+            <thead><tr><th>N° Facture</th><th>Client</th><th>Type</th><th>Date émission</th><th>Échéance</th><th>Montant</th><th>Actions</th></tr></thead>
+            <tbody id="factures-table-body"><tr><td colspan="7" style="text-align:center;">Chargement...</td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SECTION COMPTES -->
+<div id="tab-comptes" class="report-section">
+    <div class="summary-cards">
+        <div class="summary-card"><div class="icon primary">💵</div><h4>Espèces</h4><div class="value">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</div></div>
+        <div class="summary-card"><div class="icon success">📱</div><h4>UV Touchpoint</h4><div class="value">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</div></div>
+        <div class="summary-card"><div class="icon warning">💳</div><h4>UV Wave</h4><div class="value">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</div></div>
+        <div class="summary-card"><div class="icon info">📊</div><h4>Total général</h4><div class="value">{{ total_general|default:0|floatformat:0|intcomma }} F</div></div>
+    </div>
+    <div class="operations-container">
+        <div class="operation-card"><h3>➕ Encaissement</h3><button class="btn-cash-in" onclick="openModalOperation('encaissement')">Effectuer un encaissement</button></div>
+        <div class="operation-card"><h3>➖ Décaissement</h3><button class="btn-cash-out" onclick="openModalOperation('decaissement')">Effectuer un décaissement</button></div>
+    </div>
+    <div class="filters-bar">
+        <div class="filter-group"><label>Type</label><select id="filtre-type"><option value="toutes" {% if filtre_type == 'toutes' %}selected{% endif %}>Toutes</option><option value="encaissements" {% if filtre_type == 'encaissements' %}selected{% endif %}>Encaissements</option><option value="decaissements" {% if filtre_type == 'decaissements' %}selected{% endif %}>Décaissements</option></select></div>
+        <div class="filter-group"><label>Compte</label><select id="filtre-compte"><option value="tous" {% if filtre_compte == 'tous' %}selected{% endif %}>Tous</option><option value="cash">Espèces</option><option value="uv">UV Touchpoint</option><option value="wave">UV Wave</option><option value="epargne">Epargne</option></select></div>
+        <div class="filter-group"><label>Du</label><input type="date" id="filtre-date-debut" value="{{ filtre_date_debut|default:'' }}"></div>
+        <div class="filter-group"><label>Au</label><input type="date" id="filtre-date-fin" value="{{ filtre_date_fin|default:'' }}"></div>
+        <div class="filter-group"><button class="btn-filter" id="appliquer-filtres">Appliquer</button></div>
+        <div class="filter-group"><button class="btn-filter" id="reset-filtres" style="background:var(--gray-500);">Réinitialiser</button></div>
+    </div>
+    <div class="historique-wrapper">
+        <div class="historique-table-container">
+            <div class="table-header"><h3>Historique des opérations</h3></div>
+            <table class="data-table">
+                <thead><tr><th>Date</th><th>Compte</th><th>Type</th><th>Montant</th><th>Description</th></tr></thead>
+                <tbody id="historique-table-body"><tr><td colspan="5" style="text-align:center;">Chargement...</td></tr></tbody>
+            </table>
+            <div id="pagination-container"></div>
+        </div>
+        <div class="totaux-sidebar">
+            <div class="totaux-card"><div class="icon success">📈</div><h4>Total Encaissements</h4><div class="value success">{{ total_encaissements|default:0|intcomma }} F</div></div>
+            <div class="totaux-card"><div class="icon danger">📉</div><h4>Total Décaissements</h4><div class="value danger">{{ total_decaissements|default:0|intcomma }} F</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION DETTES -->
+<div id="tab-dettes" class="report-section">
+    <div class="filters-bar">
+        <div class="filter-group"><label>Statut</label><select id="dette-statut"><option value="all">Toutes</option><option value="active">Actives</option><option value="payee">Payées</option></select></div>
+        <div class="filter-group"><label>Débiteur</label><input type="text" id="dette-recherche" placeholder="Rechercher par nom..."></div>
+        <div class="filter-group"><button class="btn-filter" onclick="openModalDette()">➕ Nouvelle dette</button></div>
+        <div class="filter-group"><button class="btn-filter" onclick="loadDettes()">🔍 Filtrer</button></div>
+    </div>
+    <div class="summary-cards">
+        <div class="summary-card"><div class="icon danger">⚠️</div><h4>Dettes totales</h4><div class="value" id="dette-total">0 F</div></div>
+        <div class="summary-card"><div class="icon warning">⏳</div><h4>En attente</h4><div class="value" id="dette-attente">0 F</div></div>
+        <div class="summary-card"><div class="icon success">✅</div><h4>Remboursées</h4><div class="value" id="dette-payees">0 F</div></div>
+        <div class="summary-card"><div class="icon primary">📊</div><h4>Nombre dettes</h4><div class="value" id="dette-nombre">0</div></div>
+    </div>
+    <div class="table-container">
+        <div class="table-header"><h3>Liste des dettes</h3></div>
+        <table class="data-table">
+            <thead><tr><th>Débiteur</th><th>Montant</th><th>Remboursé</th><th>Échéance</th><th>Statut</th><th>Reste</th><th>Actions</th></tr></thead>
+            <tbody id="dettes-table-body"><tr><td colspan="7" style="text-align:center;">Chargement...<\/td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SECTION ANALYSE -->
+<div id="tab-analyse" class="report-section">
+    <div class="summary-cards">
+        <div class="summary-card"><div class="icon primary">📈</div><h4>Performance</h4><div class="value" id="perf-journaliere">-</div></div>
+        <div class="summary-card"><div class="icon success">🏆</div><h4>Meilleur utilisateur</h4><div class="value" id="meilleur-agent">-</div></div>
+        <div class="summary-card"><div class="icon warning">📱</div><h4>Opérateur préféré</h4><div class="value" id="operateur-prefere">-</div></div>
+        <div class="summary-card"><div class="icon info">📊</div><h4>Prévision</h4><div class="value" id="prevision">-</div></div>
+    </div>
+    <div class="table-container">
+        <div class="table-header"><h3>Évolution des transactions (12 mois)</h3></div>
+        <div style="padding:20px;"><canvas id="evolutionChart" height="200" style="max-height:300px;"></canvas></div>
+    </div>
+</div>
+
+<!-- MODAL FACTURE -->
+<div id="modalFacture" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3>Nouvelle facture</h3><button type="button" class="modal-close" onclick="closeModal('modalFacture')">&times;</button></div>
+        <div class="modal-body">
+            <form method="post" action="{% url 'creer_facture' %}" id="factureForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Type de transaction *</label>
+                    <input type="text" name="type_facture" id="type_facture" class="form-control" placeholder="Ex: Client nous doit, Fournisseur, Partenaire, etc..." required>
+                    <small style="display:block; margin-top:4px; font-size:11px; color:var(--gray-500);">Décrivez la nature de la transaction</small>
+                </div>
+                <div class="form-group"><label>Nom du client / tiers *</label><input type="text" name="personne_nom" id="personne_nom" required class="form-control" placeholder="Saisir le nom..."></div>
+                <div class="form-group"><label>Téléphone</label><input type="text" name="personne_telephone" id="personne_telephone" placeholder="76 12 34 56" class="form-control"></div>
+                <div class="form-group"><label>Montant (FCFA) *</label><input type="number" name="montant_total" id="montant_total" required min="1" class="form-control"></div>
+                <div class="form-group"><label>Date d'échéance *</label><input type="date" name="date_echeance" id="date_echeance" required class="form-control"></div>
+                <div class="form-group"><label>Description</label><textarea name="description" id="description" rows="3" class="form-control" placeholder="Détails supplémentaires..."></textarea></div>
+                <div id="recapFacture" style="background:var(--gray-100); padding:10px; border-radius:8px; text-align:center; margin-top:10px;">Remplissez les champs ci-dessus</div>
+                <button type="submit" class="btn-submit">Créer la facture</button>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modalFacture')">Annuler</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL OPERATION -->
+<div id="modalOperation" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 id="modalOperationTitle">Opération</h3><button type="button" class="modal-close" onclick="closeModal('modalOperation')">&times;</button></div>
+        <div class="modal-body">
+            <form method="post" action="{% url 'rapports_admin' %}" id="operationForm">
+                {% csrf_token %}
+                <div class="form-group"><label>Compte concerné</label>
+                    <div class="compte-selector">
+                        <div class="compte-card" data-compte="cash"><div class="compte-icon">💰</div><div class="compte-name">Espèces</div><div class="compte-solde">Solde: {{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</div></div>
+                        <div class="compte-card" data-compte="uv_touchpoint"><div class="compte-icon">📱</div><div class="compte-name">UV Touchpoint</div><div class="compte-solde">Solde: {{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</div></div>
+                        <div class="compte-card" data-compte="uv_wave"><div class="compte-icon">💳</div><div class="compte-name">UV Wave</div><div class="compte-solde">Solde: {{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</div></div>
+                        <div class="compte-card" data-compte="epargne"><div class="compte-icon">🏦</div><div class="compte-name">Epargne</div><div class="compte-solde">Solde: {{ compte_epargne.solde|default:0|floatformat:0|intcomma }} F</div></div>
+                    </div>
+                </div>
+                <div class="form-group"><label>Montant (FCFA)</label><input type="number" name="montant" id="operationMontant" required min="1" class="form-control"></div>
+                <div class="form-group"><label>Description</label><input type="text" name="description" id="operationDescription" placeholder="Motif de l'opération" class="form-control"></div>
+                <button type="submit" class="btn-submit" id="operationSubmitBtn">Valider</button>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modalOperation')">Annuler</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DETTE -->
+<div id="modalDette" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3>➕ Nouvelle dette</h3><button type="button" class="modal-close" onclick="closeModal('modalDette')">&times;</button></div>
+        <div class="modal-body">
+            <form method="post" action="{% url 'ajouter_dette' %}" id="detteForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Nom du débiteur *</label>
+                    <div style="position:relative;">
+                        <input type="text" name="nom_debiteur" id="nom_debiteur" class="form-control" placeholder="Saisir le nom..." autocomplete="off" required>
+                        <div id="debiteur-suggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                    <small style="display:block; margin-top:4px; font-size:11px; color:var(--gray-500);">Si le nom n'existe pas, il sera créé automatiquement</small>
+                </div>
+                <div class="form-group"><label>Téléphone (optionnel)</label><input type="tel" name="telephone" id="debiteur_telephone" class="form-control"></div>
+                <div class="form-group"><label>Email (optionnel)</label><input type="email" name="email" id="debiteur_email" class="form-control"></div>
+                <div class="form-group"><label>Montant (FCFA) *</label><input type="number" name="montant" id="dette_montant" required min="1" class="form-control"></div>
+                <div class="form-group"><label>Date échéance *</label><input type="date" name="date_echeance" id="dette_echeance" required class="form-control"></div>
+                <div class="form-group"><label>Motif</label><textarea name="motif" rows="3" class="form-control"></textarea></div>
+                <button type="submit" class="btn-submit">Enregistrer</button>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modalDette')">Annuler</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL REMBOURSEMENT -->
+<div id="modalRemboursement" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3>💰 Enregistrer un remboursement</h3><button type="button" class="modal-close" onclick="closeModal('modalRemboursement')">&times;</button></div>
+        <div class="modal-body">
+            <form method="post" id="remboursementForm">
+                {% csrf_token %}
+                <input type="hidden" name="dette_id" id="remboursement_dette_id">
+                <div class="form-group"><label>Débiteur</label><input type="text" id="remboursement_debiteur_nom" class="form-control" readonly disabled style="background:var(--gray-100);"></div>
+                <div class="form-group"><label>Reste à payer</label><input type="text" id="remboursement_reste" class="form-control" readonly disabled style="background:var(--gray-100); font-weight:bold; color:var(--danger);"></div>
+                <div class="form-group"><label>Montant à rembourser (FCFA) *</label><input type="number" name="montant" id="remboursement_montant" class="form-control" required min="1"></div>
+                <div class="form-group">
+                    <label>Mode de paiement</label>
+                    <select name="mode_paiement" id="remboursement_mode" class="form-control">
+                        <option value="cash">💰 Espèces</option>
+                        <option value="uv">📱 UV Touchpoint</option>
+                        <option value="wave">🌊 UV Wave</option>
+                    </select>
+                </div>
+                <div class="form-group"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" name="generer_recu" id="generer_recu" checked style="width:18px; height:18px;"> 📄 Générer et télécharger le reçu PDF</label></div>
+                <div class="form-group"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" name="ajouter_caisse" id="ajouter_caisse" checked style="width:18px; height:18px;"> 💰 Ajouter ce montant à la caisse</label></div>
+                <button type="submit" class="btn-submit">Enregistrer le paiement</button>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modalRemboursement')">Annuler</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== FONCTIONS UTILITAIRES ====================
+const getCSRFToken = () => {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === ('csrftoken' + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(10));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+};
+
+const closeModal = (modalId) => {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+};
+
+const escapeHtml = (text) => {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+};
+
+// ==================== ONGLETS ====================
+const saveActiveTab = (tabId) => sessionStorage.setItem('activeTab', tabId);
+const restoreActiveTab = () => {
+    const savedTab = sessionStorage.getItem('activeTab');
+    if (savedTab && savedTab !== 'rapports') {
+        const tabBtn = document.querySelector(`.reports-tab[data-tab="${savedTab}"]`);
+        if (tabBtn) {
+            document.querySelectorAll('.reports-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.report-section').forEach(s => s.classList.remove('active-section'));
+            tabBtn.classList.add('active');
+            document.getElementById(`tab-${savedTab}`).classList.add('active-section');
+            if (savedTab === 'dettes') loadDettes();
+            if (savedTab === 'factures') chargerFactures();
+            if (savedTab === 'comptes') chargerHistorique();
+            if (savedTab === 'analyse') chargerAnalyse();
+        }
+    }
+};
+
+document.querySelectorAll('.reports-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+        const tabId = this.dataset.tab;
+        saveActiveTab(tabId);
+        document.querySelectorAll('.reports-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.report-section').forEach(s => s.classList.remove('active-section'));
+        this.classList.add('active');
+        document.getElementById(`tab-${tabId}`).classList.add('active-section');
+        if (tabId === 'dettes') loadDettes();
+        if (tabId === 'factures') chargerFactures();
+        if (tabId === 'comptes') chargerHistorique();
+        if (tabId === 'analyse') chargerAnalyse();
+    });
+});
+
+// ==================== FACTURES ====================
+const updateRecapFacture = () => {
+    const typeText = document.getElementById('type_facture')?.value;
+    const nom = document.getElementById('personne_nom')?.value;
+    const montant = document.getElementById('montant_total')?.value;
+    const recapDiv = document.getElementById('recapFacture');
+    
+    if (typeText && typeText.trim() !== '' && nom && montant && parseInt(montant) > 0) {
+        const mt = parseInt(montant).toLocaleString();
+        recapDiv.innerHTML = `${typeText} - ${nom} : ${mt} FCFA`;
+        recapDiv.style.background = '#d1fae5';
+        recapDiv.style.color = '#065f46';
+    } else {
+        recapDiv.innerHTML = 'Remplissez tous les champs obligatoires (*)';
+        recapDiv.style.background = '#f3f4f6';
+        recapDiv.style.color = '#374151';
+    }
+};
+
+window.openModalFacture = () => {
+    const modal = document.getElementById('modalFacture');
+    if (modal) {
+        modal.style.display = 'flex';
+        const d = new Date();
+        d.setDate(d.getDate() + 30);
+        const echeance = document.getElementById('date_echeance');
+        if (echeance) echeance.valueAsDate = d;
+        const form = document.getElementById('factureForm');
+        if (form) form.reset();
+        updateRecapFacture();
+    }
+};
+
+const chargerFactures = () => {
+    fetch('/api/factures/')
+        .then(r => r.json())
+        .then(data => {
+            const tbody = document.getElementById('factures-table-body');
+            if (data.factures && data.factures.length) {
+                tbody.innerHTML = data.factures.map(f => `
+                    <tr>
+                        <td style="font-weight:600;">${f.numero}<\/td>
+                        <td>${f.personne_nom || '-'}<\/td>
+                        <td>${f.type_facture}<\/td>
+                        <td>${f.date_emission}<\/td>
+                        <td>${f.date_echeance}<\/td>
+                        <td style="text-align:right; font-weight:600;">${f.montant_total.toLocaleString()} F<\/td>
+                        <td><div class="actions-group"><button class="btn-pdf" onclick="window.open('/generer-facture-pdf/${f.id}/', '_blank')">📄 PDF<\/button><button class="btn-thermal" onclick="window.open('/generer-facture-80mm/${f.id}/', '_blank')">🧾 Ticket<\/button><\/div><\/td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Aucune facture<\/td></tr>';
+            }
+        })
+        .catch(() => { document.getElementById('factures-table-body').innerHTML = '<tr><td colspan="7" style="text-align:center;color:red;">Erreur de chargement<\/td><tr>'; });
+};
+
+window.filtrerFactures = () => chargerFactures();
+
+// ==================== DETTES ====================
+const setupAutocomplete = () => {
+    const input = document.getElementById('nom_debiteur');
+    const suggestions = document.getElementById('debiteur-suggestions');
+    if (!input) return;
+    let timer;
+    input.addEventListener('input', function() {
+        clearTimeout(timer);
+        const terme = this.value.trim();
+        if (terme.length < 2) { suggestions.style.display = 'none'; return; }
+        timer = setTimeout(() => {
+            fetch(`/api/debiteurs/chercher/?q=${encodeURIComponent(terme)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.debiteurs && data.debiteurs.length) {
+                        suggestions.innerHTML = data.debiteurs.map(d => `<div class="autocomplete-suggestion" onclick="selectDebiteur('${d.nom.replace(/'/g, "\\'")}', '${d.telephone || ''}', '${d.email || ''}')"><span class="suggestion-name">${d.nom}</span>${d.telephone ? `<span class="suggestion-phone">📞 ${d.telephone}</span>` : ''}</div>`).join('');
+                        suggestions.style.display = 'block';
+                    } else {
+                        suggestions.innerHTML = '<div class="autocomplete-suggestion">Aucun résultat - sera créé</div>';
+                        suggestions.style.display = 'block';
+                    }
+                });
+        }, 300);
+    });
+    document.addEventListener('click', function(e) {
+        if (e.target !== input && !suggestions.contains(e.target)) suggestions.style.display = 'none';
+    });
+};
+
+window.selectDebiteur = (nom, telephone, email) => {
+    document.getElementById('nom_debiteur').value = nom;
+    if (telephone) document.getElementById('debiteur_telephone').value = telephone;
+    if (email) document.getElementById('debiteur_email').value = email;
+    document.getElementById('debiteur-suggestions').style.display = 'none';
+};
+
+window.openModalDette = () => {
+    const modal = document.getElementById('modalDette');
+    if (modal) {
+        document.getElementById('detteForm').reset();
+        const echeance = new Date();
+        echeance.setDate(echeance.getDate() + 30);
+        document.getElementById('dette_echeance').value = echeance.toISOString().split('T')[0];
+        modal.style.display = 'flex';
+        setTimeout(() => document.getElementById('nom_debiteur')?.focus(), 100);
+    }
+};
+
+const loadDettes = () => {
+    const statut = document.getElementById('dette-statut')?.value || 'all';
+    const recherche = document.getElementById('dette-recherche')?.value || '';
+    let url = '/api/dettes/';
+    const params = new URLSearchParams();
+    if (statut !== 'all') params.append('statut', statut);
+    if (recherche) params.append('debiteur_nom', recherche);
+    if (params.toString()) url += '?' + params.toString();
+    
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('dette-total').innerText = (data.total || 0).toLocaleString() + ' F';
+            document.getElementById('dette-attente').innerText = (data.attente || 0).toLocaleString() + ' F';
+            document.getElementById('dette-payees').innerText = (data.payees || 0).toLocaleString() + ' F';
+            document.getElementById('dette-nombre').innerText = data.nombre || 0;
+            
+            const tbody = document.getElementById('dettes-table-body');
+            if (data.dettes && data.dettes.length) {
+                tbody.innerHTML = data.dettes.map(d => `
+                    <tr>
+                        <td style="font-weight:600;">${escapeHtml(d.debiteur_nom)}<\/td>
+                        <td style="text-align:right;">${d.montant.toLocaleString()} F<\/td>
+                        <td style="text-align:right;">${d.montant_rembourse.toLocaleString()} F<\/td>
+                        <td>${d.date_echeance}<\/td>
+                        <td><span class="badge-${d.statut === 'payee' ? 'paid' : 'active'}">${d.statut === 'payee' ? 'Payée' : 'Active'}</span><\/td>
+                        <td style="text-align:right;"><strong>${d.reste.toLocaleString()} F<\/strong><\/td>
+                        <td><div class="actions-group">${d.reste > 0 ? `<button class="btn-payment" onclick="openRemboursementModal(${d.id}, '${escapeHtml(d.debiteur_nom)}', ${d.reste})">💰 Payer<\/button>` : ''}<button class="btn-history" onclick="showHistory(${d.id})">📜 Historique<\/button><\/div><\/td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<td><td colspan="7" style="text-align:center;">Aucune dette<\/td></tr>';
+            }
+        })
+        .catch(() => { document.getElementById('dettes-table-body').innerHTML = '</tr><td colspan="7" style="text-align:center;color:red;">Erreur de chargement<\/td></tr>'; });
+};
+
+window.openRemboursementModal = (detteId, debiteurNom, reste) => {
+    const modal = document.getElementById('modalRemboursement');
+    if (modal) {
+        document.getElementById('remboursement_dette_id').value = detteId;
+        document.getElementById('remboursement_debiteur_nom').value = debiteurNom;
+        document.getElementById('remboursement_reste').value = reste.toLocaleString() + ' FCFA';
+        document.getElementById('remboursement_montant').value = reste;
+        document.getElementById('remboursement_montant').max = reste;
+        document.getElementById('generer_recu').checked = true;
+        document.getElementById('ajouter_caisse').checked = true;
+        
+        const form = document.getElementById('remboursementForm');
+        form.action = `/gestion/enregistrer-remboursement/${detteId}/`;
+        
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            const montant = parseInt(document.getElementById('remboursement_montant').value);
+            const mode = document.getElementById('remboursement_mode').value;
+            const genererRecu = document.getElementById('generer_recu').checked;
+            const ajouterCaisse = document.getElementById('ajouter_caisse').checked;
+            
+            if (isNaN(montant) || montant <= 0) {
+                alert('Veuillez entrer un montant valide');
+                return false;
+            }
+            if (montant > reste) {
+                alert(`Le montant (${montant.toLocaleString()} FCFA) dépasse le reste à payer (${reste.toLocaleString()} FCFA)`);
+                return false;
+            }
+            
+            closeModal('modalRemboursement');
+            
+            const submitForm = document.createElement('form');
+            submitForm.method = 'POST';
+            submitForm.action = form.action;
+            submitForm.style.display = 'none';
+            
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrfmiddlewaretoken';
+            csrf.value = getCSRFToken();
+            submitForm.appendChild(csrf);
+            
+            const m = document.createElement('input');
+            m.type = 'hidden';
+            m.name = 'montant';
+            m.value = montant;
+            submitForm.appendChild(m);
+            
+            const md = document.createElement('input');
+            md.type = 'hidden';
+            md.name = 'mode_paiement';
+            md.value = mode;
+            submitForm.appendChild(md);
+            
+            const recu = document.createElement('input');
+            recu.type = 'hidden';
+            recu.name = 'generer_recu';
+            recu.value = genererRecu ? 'on' : 'off';
+            submitForm.appendChild(recu);
+            
+            const caisse = document.createElement('input');
+            caisse.type = 'hidden';
+            caisse.name = 'ajouter_caisse';
+            caisse.value = ajouterCaisse ? 'on' : 'off';
+            submitForm.appendChild(caisse);
+            
+            document.body.appendChild(submitForm);
+            submitForm.submit();
+            return false;
+        };
+        
+        modal.style.display = 'flex';
+        document.getElementById('remboursement_montant').focus();
+    }
+};
+
+window.showHistory = (detteId) => {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳...';
+    btn.disabled = true;
+    
+    fetch(`/api/dettes/${detteId}/`)
+        .then(r => r.json())
+        .then(data => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            if (data.success) {
+                let msg = `📜 HISTORIQUE DES PAIEMENTS\n\n`;
+                msg += `Débiteur: ${data.debiteur_nom}\n`;
+                msg += `Montant total: ${data.montant.toLocaleString()} FCFA\n`;
+                msg += `Déjà remboursé: ${data.montant_rembourse.toLocaleString()} FCFA\n`;
+                msg += `${'─'.repeat(40)}\n\n`;
+                if (data.remboursements && data.remboursements.length) {
+                    msg += `Détail des paiements:\n`;
+                    data.remboursements.forEach((r, i) => {
+                        msg += `${i+1}. ${r.date} - ${r.montant.toLocaleString()} FCFA (${r.mode_display || r.mode_paiement})\n`;
+                    });
+                } else {
+                    msg += `Aucun paiement enregistré\n`;
+                }
+                msg += `\n${'─'.repeat(40)}\n`;
+                msg += `📊 RESTE À PAYER: ${data.reste.toLocaleString()} FCFA`;
+                alert(msg);
+            } else {
+                alert('Erreur lors du chargement');
+            }
+        })
+        .catch(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            alert('Erreur de connexion');
+        });
+};
+
+// ==================== MODAL OPERATION ====================
+window.openModalOperation = (type) => {
+    const modal = document.getElementById('modalOperation');
+    if (modal) {
+        const title = document.getElementById('modalOperationTitle');
+        const submitBtn = document.getElementById('operationSubmitBtn');
+        
+        if (type === 'encaissement') {
+            title.innerHTML = '➕ Encaissement';
+            submitBtn.innerHTML = 'Valider l\'encaissement';
+        } else {
+            title.innerHTML = '➖ Décaissement';
+            submitBtn.innerHTML = 'Valider le décaissement';
+        }
+        
+        document.querySelectorAll('.compte-card').forEach(card => card.classList.remove('selected'));
+        document.getElementById('operationMontant').value = '';
+        document.getElementById('operationDescription').value = '';
+        modal.style.display = 'flex';
+    }
+};
+
+document.querySelectorAll('.compte-card').forEach(card => {
+    card.addEventListener('click', function() {
+        document.querySelectorAll('.compte-card').forEach(c => c.classList.remove('selected'));
+        this.classList.add('selected');
+    });
+});
+
+document.getElementById('operationForm')?.addEventListener('submit', function(e) {
+    const selectedCompte = document.querySelector('.compte-card.selected');
+    if (!selectedCompte) {
+        alert('Veuillez sélectionner un compte');
+        e.preventDefault();
+        return false;
+    }
+    return true;
+});
+
+// ==================== COMPTES ====================
+const loadPage = (page) => {
+    const filtreType = document.getElementById('filtre-type')?.value || 'toutes';
+    const filtreCompte = document.getElementById('filtre-compte')?.value || 'tous';
+    const filtreDateDebut = document.getElementById('filtre-date-debut')?.value || '';
+    const filtreDateFin = document.getElementById('filtre-date-fin')?.value || '';
+    
+    const tbody = document.getElementById('historique-table-body');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Chargement...<\/td></tr>';
+    
+    fetch(`/api/historique-operations/?page=${page}&per_page=10&filtre_type=${filtreType}&filtre_compte=${filtreCompte}&filtre_date_debut=${filtreDateDebut}&filtre_date_fin=${filtreDateFin}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.operations && data.operations.length > 0) {
+                tbody.innerHTML = data.operations.map(op => `
+                    <tr>
+                        <td style="white-space: nowrap;">${op.date}<\/td>
+                        <td>${op.compte_nom}<\/td>
+                        <td>${op.type}<\/td>
+                        <td style="text-align: right; ${op.couleur}; font-weight: 600;">${op.signe} ${op.montant} F<\/td>
+                        <td>${op.description || '-'}<\/td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Aucune opération<\/td></tr>';
+            }
+            
+            const paginationDiv = document.getElementById('pagination-container');
+            if (paginationDiv && data.total_pages > 1) {
+                let html = '<div class="pagination">';
+                for (let i = 1; i <= data.total_pages; i++) {
+                    html += `<a onclick="loadPage(${i})" class="${i === data.page ? 'current' : ''}">${i}</a>`;
+                }
+                html += '<\/div>';
+                paginationDiv.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;color:red;">Erreur de chargement<\/td></tr>';
+        });
+};
+
+const chargerHistorique = () => loadPage(1);
+
+// ==================== ANALYSE ====================
+const chargerAnalyse = () => {
+    fetch('/api/analyse-stats/')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('perf-journaliere').innerHTML = `${(data.performance_journaliere.volume / 1000000).toFixed(1)}M F<br><small>${data.performance_journaliere.transactions} trans</small>`;
+                document.getElementById('meilleur-agent').innerHTML = data.meilleur_agent;
+                document.getElementById('operateur-prefere').innerHTML = data.operateur_prefere;
+                document.getElementById('prevision').innerHTML = `${(data.prevision_mensuelle / 1000000).toFixed(1)}M F`;
+                
+                if (window.evolutionChart) {
+                    window.evolutionChart.data.datasets[0].data = data.evolution_12_mois;
+                    window.evolutionChart.update();
+                } else {
+                    const ctx = document.getElementById('evolutionChart').getContext('2d');
+                    window.evolutionChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
+                            datasets: [{ label: 'Volume (Millions FCFA)', data: data.evolution_12_mois, borderColor: '#0f766e', tension: 0.4, fill: false }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: true }
+                    });
+                }
+            }
+        });
+};
+
+// Generation rapport
+document.getElementById('generer-rapport')?.addEventListener('click', () => {
+    const agentSelect = document.getElementById('report-agent');
+    const opt = agentSelect.options[agentSelect.selectedIndex];
+    const isAssistant = opt.parentElement.label === 'Assistants';
+    let params = new URLSearchParams({
+        date_debut: document.getElementById('report-date-debut').value,
+        date_fin: document.getElementById('report-date-fin').value,
+        format: 'excel'
+    });
+    if (agentSelect.value) {
+        params.append(isAssistant ? 'assistant' : 'agent', agentSelect.value);
+    }
+    window.open("{% url 'generer_rapport_admin' %}?" + params.toString(), '_blank');
+});
+
+// Filtres comptes
+document.getElementById('appliquer-filtres')?.addEventListener('click', () => chargerHistorique());
+document.getElementById('reset-filtres')?.addEventListener('click', () => {
+    document.getElementById('filtre-type').value = 'toutes';
+    document.getElementById('filtre-compte').value = 'tous';
+    document.getElementById('filtre-date-debut').value = '';
+    document.getElementById('filtre-date-fin').value = '';
+    chargerHistorique();
+});
+
+// Écouteurs pour le récapitulatif facture
+document.getElementById('type_facture')?.addEventListener('input', updateRecapFacture);
+document.getElementById('personne_nom')?.addEventListener('input', updateRecapFacture);
+document.getElementById('montant_total')?.addEventListener('input', updateRecapFacture);
+
+// ==================== INITIALISATION ====================
+document.addEventListener('DOMContentLoaded', () => {
+    restoreActiveTab();
+    chargerFactures();
+    loadDettes();
+    chargerHistorique();
+    setupAutocomplete();
+    
+    const recherche = document.getElementById('dette-recherche');
+    if (recherche) {
+        let timer;
+        recherche.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => loadDettes(), 500);
+        });
+    }
+    document.getElementById('dette-statut')?.addEventListener('change', () => loadDettes());
+});
+
+// Fermeture des modals avec clic sur le fond
+window.onclick = (event) => {
+    if (event.target.classList && event.target.classList.contains('modal')) {
+        closeModal(event.target.id);
+    }
+};
+
+// Fermeture avec la touche Echap
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        document.querySelectorAll('.modal').forEach(modal => {
+            if (modal.style.display === 'flex') {
+                closeModal(modal.id);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

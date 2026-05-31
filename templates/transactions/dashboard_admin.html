@@ -21,19 +21,14 @@
         }
 
         :root {
-            /* Couleurs primaires - Palette émeraude */
             --primary: #0f766e;
             --primary-dark: #0d9488;
             --primary-darker: #0f766e;
             --primary-light: #ccfbf1;
             --primary-bg: #f0fdfa;
-            
-            /* Couleurs secondaires */
             --secondary: #6366f1;
             --secondary-dark: #4f46e5;
             --secondary-light: #e0e7ff;
-            
-            /* États */
             --success: #059669;
             --success-light: #d1fae5;
             --warning: #d97706;
@@ -42,8 +37,6 @@
             --danger-light: #fee2e2;
             --info: #3b82f6;
             --info-light: #dbeafe;
-            
-            /* Niveaux de gris */
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
@@ -54,16 +47,12 @@
             --gray-700: #374151;
             --gray-800: #1f2937;
             --gray-900: #111827;
-            
-            /* Ombres - Systématiquement hiérarchisées */
             --shadow-xs: 0 1px 2px 0 rgba(0,0,0,0.03);
             --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.03);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
-            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
             --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.15);
-            
-            /* Rayon de bordure */
             --radius-xs: 6px;
             --radius-sm: 8px;
             --radius-md: 12px;
@@ -71,8 +60,6 @@
             --radius-xl: 20px;
             --radius-2xl: 24px;
             --radius-full: 9999px;
-            
-            /* Transitions */
             --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
             --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
             --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -87,7 +74,7 @@
         }
 
         /* ============================================
-           SIDEBAR ELEGANTE - VERSION PREMIUM
+           SIDEBAR PREMIUM
            ============================================ */
         
         .sidebar {
@@ -105,7 +92,6 @@
             transition: all var(--transition-base);
         }
 
-        /* Scrollbar personnalisée */
         .sidebar::-webkit-scrollbar {
             width: 4px;
         }
@@ -208,7 +194,7 @@
         }
 
         /* ============================================
-           HEADER MOBILE - COMPACT ET ÉLÉGANT
+           HEADER MOBILE
            ============================================ */
         
         .header {
@@ -266,60 +252,134 @@
             color: var(--gray-500);
         }
 
+        /* ========== MENU MOBILE PREMIUM - PLEIN ÉCRAN PRIORITAIRE ========== */
         .profile-menu {
-            position: absolute;
-            top: 68px;
-            left: 16px;
-            background: white;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-xl);
-            width: 220px;
-            overflow: hidden;
-            z-index: 100;
-            display: none;
-            border: 1px solid var(--gray-200);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
             backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
         .profile-menu.show {
-            display: block;
-            animation: slideDown 0.2s ease;
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .profile-menu-inner {
+            background: linear-gradient(180deg, #1a1f2e 0%, #0f1119 100%);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-2xl);
+            overflow: hidden;
+            width: 100%;
+            max-width: 380px;
+            border: 1px solid rgba(255,255,255,0.08);
+            animation: slideDown 0.25s ease;
         }
 
         @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-12px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .profile-menu-header {
+            padding: 24px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .profile-menu-avatar {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 22px;
+            margin: 0 auto 10px;
+        }
+
+        .profile-menu-name {
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .profile-menu-role {
+            color: #94a3b8;
+            font-size: 12px;
+            margin-top: 4px;
         }
 
         .profile-menu-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
+            gap: 14px;
+            padding: 14px 20px;
             text-decoration: none;
-            color: var(--gray-700);
-            transition: background var(--transition-fast);
+            color: #cbd5e1;
+            transition: all var(--transition-fast);
             width: 100%;
             background: none;
             border: none;
             text-align: left;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 500;
         }
 
         .profile-menu-item:hover {
-            background: var(--gray-50);
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        .profile-menu-item span:first-child {
+            font-size: 20px;
+            opacity: 0.8;
         }
 
         .logout-menu {
-            color: var(--danger);
-            border-top: 1px solid var(--gray-200);
+            color: #f87171;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            margin-top: 4px;
+        }
+
+        .logout-menu:hover {
+            background: rgba(220, 38, 38, 0.15);
+            color: #fca5a5;
+        }
+
+        .profile-menu-close {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            color: #94a3b8;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .profile-menu-close:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
         }
 
         .menu-btn {
@@ -351,7 +411,89 @@
         }
 
         /* ============================================
-           MAIN CONTENT - ZONE PRINCIPALE
+           MODAL SERVICES (OPERATIONS)
+           ============================================ */
+        
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .service-card {
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+            padding: 16px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 1px solid var(--gray-200);
+        }
+
+        .service-card:hover {
+            transform: translateY(-2px);
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        .service-logo {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 10px auto;
+        }
+
+        .service-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 10px;
+        }
+
+        .service-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 4px;
+        }
+
+        .service-sub {
+            font-size: 10px;
+            color: var(--gray-500);
+        }
+
+        /* ============================================
+           MODAL ACTIONS OPERATEUR
+           ============================================ */
+        
+        .actions-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .action-card {
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border: 1px solid var(--gray-200);
+            text-decoration: none;
+            color: var(--gray-800);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .action-card:hover {
+            transform: translateY(-2px);
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        /* ============================================
+           MAIN CONTENT
            ============================================ */
         
         .main-content {
@@ -361,7 +503,7 @@
         }
 
         /* ============================================
-           SYSTÈME D'ALERTES - PROFESSIONNEL
+           ALERTES
            ============================================ */
         
         .alert {
@@ -374,18 +516,11 @@
             align-items: center;
             gap: 12px;
             animation: slideIn 0.3s ease;
-            backdrop-filter: blur(4px);
         }
         
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .alert-success { background: var(--success-light); color: var(--success); border-left: 4px solid var(--success); }
@@ -394,7 +529,7 @@
         .alert-warning { background: var(--warning-light); color: var(--warning); border-left: 4px solid var(--warning); }
 
         /* ============================================
-           GRILLE DE STATISTIQUES - CARTES PREMIUM
+           STATISTIQUES
            ============================================ */
         
         .stats-grid {
@@ -407,13 +542,15 @@
         .stat-card {
             background: white;
             border-radius: var(--radius-xl);
-            padding: 22px 20px;
+            padding: 24px;
             box-shadow: var(--shadow-sm);
             border: 1px solid var(--gray-200);
             transition: all var(--transition-base);
             position: relative;
             overflow: hidden;
-            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            gap: 18px;
         }
 
         .stat-card::before {
@@ -444,21 +581,18 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform var(--transition-base);
+            flex-shrink: 0;
+            transition: all var(--transition-base);
         }
 
         .stat-card:hover .icon {
-            transform: scale(1.05);
+            transform: scale(1.1);
         }
 
-        .stat-card .icon.primary { background: linear-gradient(135deg, var(--primary-light), #e0f2fe); color: var(--primary); }
-        .stat-card .icon.success { background: linear-gradient(135deg, var(--success-light), #d1fae5); color: var(--success); }
-        .stat-card .icon.danger { background: linear-gradient(135deg, var(--danger-light), #fee2e2); color: var(--danger); }
-        .stat-card .icon.warning { background: linear-gradient(135deg, var(--warning-light), #fffbeb); color: var(--warning); }
-
-        .stat-card .info {
-            flex: 1;
-        }
+        .stat-card .icon.primary { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0284c7; }
+        .stat-card .icon.success { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: var(--success); }
+        .stat-card .icon.danger { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #dc2626; }
+        .stat-card .icon.warning { background: linear-gradient(135deg, #fef3c7, #fde68a); color: var(--warning); }
 
         .stat-card .info .value {
             font-size: 30px;
@@ -490,7 +624,131 @@
         .trend-neutral { background: var(--gray-100); color: var(--gray-600); }
 
         /* ============================================
-           SECTION DES COMPTES - VISUEL PREMIUM
+           COMPTES - VERSION MOBILE CARTES
+           ============================================ */
+        
+        .wallet-mobile {
+            display: none;
+        }
+
+        .wallet-mobile .wallet-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 14px 12px;
+            text-align: center;
+            border: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all var(--transition-fast);
+        }
+
+        .wallet-mobile .wallet-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .wallet-mobile .wallet-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-50);
+            flex-shrink: 0;
+        }
+
+        .wallet-mobile .wallet-icon img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+        }
+
+        .wallet-mobile .wallet-info {
+            text-align: left;
+            flex: 1;
+        }
+
+        .wallet-mobile .wallet-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+        }
+
+        .wallet-mobile .wallet-balance {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .wallet-mobile .wallet-balance small {
+            font-size: 10px;
+            color: var(--gray-500);
+        }
+
+        /* ============================================
+           SERVICES MOBILE - EN CARTES 2x2
+           ============================================ */
+        
+        .services-mobile {
+            display: none;
+        }
+
+        .services-grid-mobile {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .service-card-mobile {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 16px 10px;
+            text-align: center;
+            border: 1px solid var(--gray-200);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .service-card-mobile:active {
+            transform: scale(0.96);
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        .service-card-mobile .service-img-mobile {
+            width: 44px;
+            height: 44px;
+            margin: 0 auto 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-50);
+        }
+
+        .service-card-mobile .service-img-mobile img {
+            width: 30px;
+            height: 30px;
+            object-fit: contain;
+        }
+
+        .service-card-mobile .service-name-mobile {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 2px;
+        }
+
+        .service-card-mobile .service-sub-mobile {
+            font-size: 9px;
+            color: var(--gray-500);
+        }
+
+        /* ============================================
+           COMPTES
            ============================================ */
         
         .accounts-section {
@@ -500,7 +758,6 @@
             margin-bottom: 32px;
             box-shadow: var(--shadow-sm);
             border: 1px solid var(--gray-200);
-            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
         }
 
         .accounts-header {
@@ -599,7 +856,7 @@
         }
 
         /* ============================================
-           TABLEAUX DE DONNÉES - PROPRES ET LISIBLES
+           TABLEAUX
            ============================================ */
         
         .table-container {
@@ -609,6 +866,7 @@
             overflow-x: auto;
             margin-bottom: 28px;
             box-shadow: var(--shadow-xs);
+            -webkit-overflow-scrolling: touch;
         }
 
         .table-header {
@@ -633,6 +891,7 @@
         .data-table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 600px;
         }
 
         .data-table th {
@@ -662,7 +921,6 @@
             background: var(--gray-50);
         }
 
-        /* Badges */
         .badge {
             display: inline-flex;
             align-items: center;
@@ -678,6 +936,8 @@
         .badge-depot { background: var(--success-light); color: var(--success); }
         .badge-retrait { background: var(--danger-light); color: var(--danger); }
         .badge-credit { background: var(--warning-light); color: var(--warning); }
+        .badge-warning { background: var(--warning-light); color: var(--warning); }
+        .badge-cancelled { background: var(--danger-light); color: var(--danger); text-decoration: line-through; }
 
         .btn-icon {
             padding: 6px 14px;
@@ -711,7 +971,6 @@
             color: white;
         }
 
-        /* Demandes en attente */
         .pending-request {
             background: var(--warning-light);
             border-radius: var(--radius-lg);
@@ -765,38 +1024,16 @@
             transform: translateY(-2px);
         }
 
-        /* Top agents */
-        .top-agents-list {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-top: 12px;
+        .btn-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all var(--transition-fast);
         }
-
-        .top-agent {
-            background: var(--gray-50);
-            padding: 14px 20px;
-            border-radius: var(--radius-lg);
-            min-width: 160px;
-            border: 1px solid var(--gray-200);
-            transition: all var(--transition-base);
-        }
-
-        .top-agent:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-md);
-            border-color: var(--primary-light);
-        }
-
-        .top-agent strong {
-            font-size: 14px;
-            color: var(--gray-900);
-        }
-
-        .top-agent p {
-            font-size: 12px;
-            color: var(--gray-500);
-            margin-top: 6px;
+        .btn-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
         }
 
         /* Modal */
@@ -818,7 +1055,7 @@
             background: white;
             border-radius: var(--radius-2xl);
             width: 90%;
-            max-width: 380px;
+            max-width: 420px;
             overflow: hidden;
             animation: modalZoomIn 0.25s ease;
             box-shadow: var(--shadow-2xl);
@@ -892,7 +1129,6 @@
             background: var(--gray-200);
         }
 
-        /* Loading spinner */
         .loading {
             display: none;
             position: fixed;
@@ -925,8 +1161,30 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Effet ripple */
+        .btn-ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-ripple::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(15, 118, 110, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .btn-ripple:active::after {
+            width: 300px;
+            height: 300px;
+        }
+
         /* ============================================
-           RESPONSIVE DESIGN - MOBILE & TABLETTE
+           RESPONSIVE - MOBILE & TABLETTE
            ============================================ */
         
         @media (max-width: 1200px) {
@@ -950,13 +1208,23 @@
             .header {
                 display: block;
             }
+            /* CACHER les stats PC et la section comptes PC en mobile */
             .stats-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
+                display: none !important;
             }
-            .accounts-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
+            .accounts-section {
+                display: none !important;
+            }
+            /* AFFICHER les versions mobiles */
+            .wallet-mobile {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+            .services-mobile {
+                display: block !important;
+                margin-bottom: 20px;
             }
             .table-header {
                 flex-direction: column;
@@ -966,9 +1234,41 @@
                 flex-direction: column;
                 text-align: center;
             }
-            .top-agents-list {
-                flex-direction: column;
+            .data-table th, .data-table td {
+                padding: 10px 12px;
+                font-size: 12px;
             }
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-content {
+                padding: 16px 12px;
+            }
+            .wallet-mobile .wallet-balance {
+                font-size: 12px;
+            }
+            .btn-validate, .btn-reject {
+                padding: 6px 16px;
+                font-size: 12px;
+            }
+            .profile-name {
+                font-size: 12px;
+            }
+            .profile-role {
+                font-size: 10px;
+            }
+            .avatar {
+                width: 36px;
+                height: 36px;
+                font-size: 13px;
+            }
+        }
+        @media (max-width: 768px) {
+            #pcAlertBtn { display: none !important; }
+            #sidebarOperationsBtn { display: none !important; }
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -982,35 +1282,54 @@
         </div>
         <div class="sidebar-menu">
             <div class="menu-category">Navigation</div>
-            <a href="{% url 'dashboard_admin' %}" class="menu-item {% if request.resolver_match.url_name == 'dashboard_admin' %}active{% endif %}">
+            <a href="{% url 'dashboard_admin' %}" class="menu-item active" data-page="dashboard">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/>
                 </svg>
-                <span>Tableau de bord</span>
+                <span>TABLEAU DE BORD</span>
             </a>
-            <a href="{% url 'historique_admin' %}" class="menu-item {% if request.resolver_match.url_name == 'historique_admin' %}active{% endif %}">
+            <a href="{% url 'historique_admin' %}" class="menu-item" data-page="historique">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                     <rect x="3" y="4" width="18" height="16" rx="1"/>
                     <path d="M8 2v4M16 2v4M3 10h18"/>
                 </svg>
-                <span>Transactions</span>
+                <span>TRANSACTIONS</span>
             </a>
-            <a href="{% url 'gestion_agents' %}" class="menu-item {% if request.resolver_match.url_name == 'gestion_agents' %}active{% endif %}">
+            <a href="{% url 'gestion_agents' %}" class="menu-item" data-page="gestion">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                     <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                 </svg>
-                <span>Agents</span>
+                <span>PERSONNEL</span>
             </a>
+
+            <!-- Bouton ANNULATION -->
+            <a href="#" class="menu-item" onclick="openAnnulationModal(); return false;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M15 9l-6 6M9 9l6 6"/>
+                </svg>
+                <span>ANNULATION</span>
+            </a>
+
+            <!-- Bouton OPERATIONS -->
+            <a href="#" class="menu-item" id="sidebarOperationsBtn" onclick="openServicesModal(); return false;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 8v8M8 12h8"/>
+                </svg>
+                <span>OPERATIONS</span>
+            </a>
+
             <div class="menu-category">RAPPORTS ET GESTIONS</div>
-            <a href="{% url 'rapports_admin' %}" class="menu-item">
+            <a href="{% url 'rapports_admin' %}" class="menu-item" data-page="rapports">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                     <path d="M21 12v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4v-3"/>
                     <path d="M12 2v12M8 10l4 4 4-4"/>
                 </svg>
-                <span>Rapports financiers</span>
+                <span>RAPPORTS FINANCIERS</span>
             </a>
             <div class="logout-sidebar">
                 <form method="post" action="{% url 'logout' %}">
@@ -1026,362 +1345,337 @@
         </div>
     </div>
 
-    <!-- ========== HEADER MOBILE ========== -->
+    <!-- ========== HEADER MOBILE AVEC CLOCHE ========== -->
     <div class="header">
         <div class="header-top">
-            <div class="profile" onclick="toggleProfileMenu()">
+            <div class="profile" onclick="openProfileMenu()">
                 <div class="avatar">{{ admin.nom|slice:":1"|upper }}{{ admin.nom|slice:"1:2"|upper }}</div>
                 <div class="profile-info">
                     <div class="profile-name">{{ admin.nom }}</div>
                     <div class="profile-role">Administrateur</div>
                 </div>
             </div>
-            <button class="menu-btn" onclick="window.location.href='{% url "historique_admin" %}'">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn-ripple" style="background: none; border: none; position: relative; cursor: pointer; padding: 6px;" onclick="openAlertModal()" id="mobileAlertBtn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    <span id="mobileAlertBadge" style="position: absolute; top: 0; right: 0; background: #dc2626; color: white; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 10px; min-width: 16px; text-align: center; display: none;">0</span>
+                </button>
+                <button class="menu-btn" onclick="window.location.href='{% url "historique_admin" %}'">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Menu profil mobile -->
+    <!-- ========== MENU MOBILE PREMIUM (PLEIN ÉCRAN PRIORITAIRE) ========== -->
     <div class="profile-menu" id="profileMenu">
-        <button class="profile-menu-item" onclick="closeProfileMenuAndRedirect('{% url "historique_admin" %}')">
-            <span>📜</span>
-            <span>Transactions</span>
-        </button>
-        <button class="profile-menu-item" onclick="closeProfileMenuAndRedirect('{% url "gestion_agents" %}')">
-            <span>👥</span>
-            <span>Agents</span>
-        </button>
-        <button class="profile-menu-item" onclick="closeProfileMenuAndRedirect('{% url "rapports_admin" %}')">
-            <span>📊</span>
-            <span>Rapports</span>
-        </button>
-        <form method="post" action="{% url 'logout' %}" style="margin: 0;">
-            {% csrf_token %}
-            <button type="submit" class="profile-menu-item logout-menu">
-                <span>🚪</span>
-                <span>Déconnexion</span>
-            </button>
-        </form>
+        <div class="profile-menu-inner">
+            <div class="profile-menu-header">
+                <div class="profile-menu-avatar">{{ admin.nom|slice:":1"|upper }}{{ admin.nom|slice:"1:2"|upper }}</div>
+                <div class="profile-menu-name">{{ admin.nom }}</div>
+                <div class="profile-menu-role">Administrateur</div>
+            </div>
+            <a href="{% url 'dashboard_admin' %}" class="profile-menu-item"><span>🏠</span><span>Accueil</span></a>
+            <a href="{% url 'historique_admin' %}" class="profile-menu-item"><span>📜</span><span>Transactions</span></a>
+            <a href="{% url 'gestion_agents' %}" class="profile-menu-item"><span>👥</span><span>Personnel</span></a>
+            <a href="#" class="profile-menu-item" onclick="closeProfileMenu(); openServicesModal(); return false;"><span>➕</span><span>Opérations</span></a>
+            <a href="#" class="profile-menu-item" onclick="closeProfileMenu(); openAnnulationModal(); return false;"><span>↩</span><span>Annulation</span></a>
+            <a href="{% url 'rapports_admin' %}" class="profile-menu-item"><span>📊</span><span>Rapports</span></a>
+            <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="profile-menu-item logout-menu"><span>🚪</span><span>Déconnexion</span></button>
+            </form>
+            <button class="profile-menu-close" onclick="closeProfileMenu()">✕ Fermer</button>
+        </div>
     </div>
 
-    <!-- ========== MAIN CONTENT PREMIUM ========== -->
+    <!-- ========== MAIN CONTENT ========== -->
     <div class="main-content">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {% if message.tags == 'success' %}✓{% elif message.tags == 'error' %}⚠{% else %}ℹ{% endif %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">
+                    {% if message.tags == 'success' %}✓{% elif message.tags == 'error' %}⚠{% elif message.tags == 'warning' %}⚠{% else %}ℹ{% endif %}
                     {{ message }}
                 </div>
             {% endfor %}
         {% endif %}
 
         {% block content %}
-        <!-- STATISTIQUES PRINCIPALES -->
+        <!-- ========== STATISTIQUES ========== -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="icon primary">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                    </svg>
-                </div>
-                <div class="info">
-                    <div class="value">{{ total_agents }}</div>
-                    <div class="label">Agents actifs</div>
-                </div>
+                <div class="icon primary"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg></div>
+                <div class="info"><div class="value">{{ total_agents }}</div><div class="label">Agents actifs</div></div>
             </div>
             <div class="stat-card">
-                <div class="icon success">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/>
-                    </svg>
-                </div>
-                <div class="info">
-                    <div class="value">{{ stats_today.nombre }}</div>
-                    <div class="label">Transactions aujourd'hui</div>
-                    <div class="trend {% if evolution.nombre >= 0 %}trend-up{% else %}trend-down{% endif %}">
-                        {% if evolution.nombre >= 0 %}▲{% else %}▼{% endif %} {{ evolution.nombre|floatformat:1 }}% vs hier
-                    </div>
-                </div>
+                <div class="icon success"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/></svg></div>
+                <div class="info"><div class="value">{{ stats_today.nombre }}</div><div class="label">Transactions aujourd'hui</div><div class="trend {% if evolution.nombre >= 0 %}trend-up{% else %}trend-down{% endif %}">{% if evolution.nombre >= 0 %}▲{% else %}▼{% endif %} {{ evolution.nombre|floatformat:1 }}% vs hier</div></div>
             </div>
             <div class="stat-card">
-                <div class="icon danger">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <circle cx="12" cy="12" r="9"/>
-                        <path d="M12 8v4M12 16h.01"/>
-                    </svg>
-                </div>
-                <div class="info">
-                    <div class="value">{{ demandes_attente|length }}</div>
-                    <div class="label">Demandes en attente</div>
-                </div>
+                <div class="icon danger"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div>
+                <div class="info"><div class="value">{{ demandes_attente|length }}</div><div class="label">Demandes en attente</div></div>
             </div>
             <div class="stat-card">
-                <div class="icon warning">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/>
-                    </svg>
-                </div>
-                <div class="info">
-                    <div class="value">{{ total_commission|floatformat:0|default:"0"|intcomma }}</div>
-                    <div class="label">Commission totale</div>
-                </div>
+                <div class="icon warning"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/></svg></div>
+                <div class="info"><div class="value">{{ total_commission|floatformat:0|default:"0"|intcomma }}</div><div class="label">Commission totale (F)</div></div>
             </div>
         </div>
 
-        <!-- TOP AGENTS -->
-        {% if top_agents %}
-        <div class="table-container" style="margin-bottom: 28px;">
-            <div class="table-header">
-                <h3>🏆 Classement des agents</h3>
-                <span style="font-size: 12px; color: var(--gray-500);">Performance du jour</span>
-            </div>
-            <div class="top-agents-list" style="padding: 0 20px 20px 20px;">
-                {% for ta in top_agents %}
-                <div class="top-agent">
-                    <strong>{{ ta.agent.nom }}</strong>
-                    <p>📊 {{ ta.transactions }} transactions</p>
-                    <p>💰 {{ ta.montant|floatformat:0|intcomma }} F</p>
-                </div>
-                {% endfor %}
-            </div>
+        <!-- ========== MOBILE : PORTEFEUILLE + SERVICES ========== -->
+        <div class="wallet-mobile" id="wallet-mobile">
+            <div class="wallet-card"><div class="wallet-icon"><span style="font-size:24px;">💵</span></div><div class="wallet-info"><div class="wallet-label">Espèces</div><div class="wallet-balance">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }}<small> FCFA</small></div></div></div>
+            <div class="wallet-card"><div class="wallet-icon"><img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpiont" style="width:28px;height:28px;"></div><div class="wallet-info"><div class="wallet-label">UV Touchpiont</div><div class="wallet-balance">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }}</div></div></div>
+            <div class="wallet-card"><div class="wallet-icon"><img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave" style="width:28px;height:28px;"></div><div class="wallet-info"><div class="wallet-label">UV Wave</div><div class="wallet-balance">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }}</div></div></div>
+            <div class="wallet-card" style="background:var(--primary-light);border-color:var(--primary);"><div class="wallet-icon"><span style="font-size:24px;">🏦</span></div><div class="wallet-info"><div class="wallet-label">Total général</div><div class="wallet-balance" style="color:var(--primary);">{{ caisse.solde_cash|floatformat:0|default:0|add:caisse.solde_uv|floatformat:0|default:0|add:caisse.solde_wave|floatformat:0|default:0|intcomma }}<small> F</small></div></div></div>
         </div>
-        {% endif %}
-
-        <!-- COMPTES ADMIN -->
-        <div class="accounts-section">
-            <div class="accounts-header">
-                <h3>🏦 Mon portefeuille</h3>
-            </div>
-            <div class="accounts-grid">
-                <div class="account-card">
-                    <div class="icon">
-                        <img src="{% static 'image/inco_cash.webp' %}" alt="Espèces" 
-                             onerror="this.onerror=null; this.src='{% static 'image/inco_cash1.avif' %}'; this.onerror=function(){this.src='{% static 'image/inco_cash2.webp' %}'}">
-                    </div>
-                    <div class="label">+ Espèces</div>
-                    <div class="balance">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }}<small> F</small></div>
-                </div>
-                <div class="account-card">
-                    <div class="icon">
-                        <img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpiont">
-                    </div>
-                    <div class="label">📱 UV Touchpiont</div>
-                    <div class="balance">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }}<small> F</small></div>
-                </div>
-                <div class="account-card">
-                    <div class="icon">
-                        <img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave">
-                    </div>
-                    <div class="label">💳 UV Wave</div>
-                    <div class="balance">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }}<small> F</small></div>
-                </div>
+        <div class="services-mobile" id="services-mobile">
+            <div style="font-size:14px;font-weight:700;margin-bottom:10px;padding:0 4px;">🚀 Services</div>
+            <div class="services-grid-mobile">
+                <div class="service-card-mobile" onclick="openOperatorActions('orange')"><div class="service-img-mobile"><img src="{% static 'image/inco_orange.jpeg' %}" alt="Orange Money"></div><div class="service-name-mobile">Orange Money</div><div class="service-sub-mobile">Dépôt · Retrait · Crédit</div></div>
+                <div class="service-card-mobile" onclick="openOperatorActions('malitel')"><div class="service-img-mobile"><img src="{% static 'image/inco_moov.jpeg' %}" alt="Moov Africa"></div><div class="service-name-mobile">Moov Africa</div><div class="service-sub-mobile">Dépôt · Retrait · Crédit</div></div>
+                <div class="service-card-mobile" onclick="openOperatorActions('telecel')"><div class="service-img-mobile"><img src="{% static 'image/inco_telecel.jpeg' %}" alt="Telecel"></div><div class="service-name-mobile">Telecel</div><div class="service-sub-mobile">Crédit uniquement</div></div>
+                <div class="service-card-mobile" onclick="openOperatorActions('wave')"><div class="service-img-mobile"><img src="{% static 'image/inco_wave1.webp' %}" alt="Wave"></div><div class="service-name-mobile">Wave</div><div class="service-sub-mobile">Dépôt · Retrait</div></div>
             </div>
         </div>
 
-        <!-- DEMANDES EN ATTENTE -->
-        {% if demandes_attente %}
-        <div class="table-container" style="margin-bottom: 28px;">
-            <div class="table-header">
-                <h3>⏳ Demandes d'approvisionnement</h3>
-                <span class="badge badge-warning">{{ demandes_attente|length }} en attente</span>
-            </div>
-            <div style="padding: 0 20px 20px 20px;">
-                {% for demande in demandes_attente %}
-                <div class="pending-request">
-                    <div>
-                        <strong style="font-size: 15px;">{{ demande.agent.nom }}</strong>
-                        <span style="display: block; font-size: 12px; color: var(--gray-600); margin-top: 4px;">
-                            {{ demande.get_type_echange_display }}
-                        </span>
-                        {% if demande.motif %}
-                        <span style="display: block; font-size: 11px; color: var(--gray-500); margin-top: 4px;">
-                            📝 {{ demande.motif|truncatechars:40 }}
-                        </span>
-                        {% endif %}
-                    </div>
-                    <div>
-                        <strong style="font-size: 18px;">{{ demande.montant|floatformat:0|intcomma }} FCFA</strong>
-                        <div class="demande-actions" style="display: flex; gap: 8px; margin-top: 10px;">
-                            <form method="post" action="{% url 'valider_demande' demande.id %}" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" name="action" value="valider" class="btn-validate">✓ Valider</button>
-                            </form>
-                            <form method="post" action="{% url 'valider_demande' demande.id %}" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit" name="action" value="refuser" class="btn-reject">✗ Refuser</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
+        <!-- ========== COMPTES ========== -->
+        <div class="accounts-section"><div class="accounts-header"><h3>🏦 Mon portefeuille</h3></div><div class="accounts-grid">
+            <div class="account-card"><div class="icon"><img src="{% static 'image/inco_cash.webp' %}" alt="Espèces" onerror="this.src='{% static 'image/inco_cash2.webp' %}'"></div><div class="label">💵 Espèces</div><div class="balance">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }}<small> F</small></div></div>
+            <div class="account-card"><div class="icon"><img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpiont"></div><div class="label">📱 UV Touchpiont</div><div class="balance">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }}<small> F</small></div></div>
+            <div class="account-card"><div class="icon"><img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave"></div><div class="label">💳 UV Wave</div><div class="balance">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }}<small> F</small></div></div>
+        </div></div>
 
-        <!-- LISTE DES AGENTS -->
-        <div class="table-container">
-            <div class="table-header">
-                <h3> Liste des agents</h3>
-                <a href="{% url 'gestion_agents' %}" style="font-size: 13px; color: var(--primary); text-decoration: none; font-weight: 500;">Voir tout →</a>
-            </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Agent</th>
-                        <th>Contact</th>
-                        <th>Statut</th>
-                        <th>Espèces</th>
-                        <th>UV Touchpiont</th>
-                        <th>UV Wave</th>
-                        <th>Inscription</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for agent in agents|slice:":8" %}
-                    <tr>
-                        <td><strong>{{ agent.nom }}</strong></td>
-                        <td style="color: var(--gray-600);">{{ agent.telephone }}</td>
-                        <td>{% if agent.est_actif %}<span class="badge badge-active">✓ Actif</span>{% else %}<span class="badge badge-inactive">✗ Inactif</span>{% endif %}</td>
-                        <td>{{ agent.user.caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</td>
-                        <td>{{ agent.user.caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</td>
-                        <td>{{ agent.user.caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</td>
-                        <td style="font-size: 12px;">{{ agent.created_at|date:"d/m/Y" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="7" style="text-align: center;">Aucun agent enregistré</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <!-- ========== AGENTS ========== -->
+        <div class="table-container"><div class="table-header"><h3>👥 Liste des agents</h3><a href="{% url 'gestion_agents' %}" class="btn-link">Voir tout →</a></div><table class="data-table"><thead><tr><th>Agent</th><th>Contact</th><th>Statut</th><th>Espèces</th><th>UV Touchpiont</th><th>UV Wave</th><th>Inscription</th></tr></thead><tbody>{% for agent in agents|slice:":8" %}<tr><td><strong>{{ agent.nom }}</strong></td><td>{{ agent.telephone }}</td><td>{% if agent.est_actif %}<span class="badge badge-active">✓ Actif</span>{% else %}<span class="badge badge-inactive">✗ Inactif</span>{% endif %}</td><td>{{ agent.user.caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</td><td>{{ agent.user.caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</td><td>{{ agent.user.caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</td><td>{{ agent.created_at|date:"d/m/Y" }}</td></tr>{% empty %}<tr><td colspan="7" style="text-align:center;padding:32px;">Aucun agent</td></tr>{% endfor %}</tbody></table></div>
 
-        <!-- DERNIÈRES TRANSACTIONS -->
-        <div class="table-container">
-            <div class="table-header">
-                <h3>📋 Dernières transactions</h3>
-                <a href="{% url 'historique_admin' %}" style="font-size: 13px; color: var(--primary); text-decoration: none; font-weight: 500;">Voir tout →</a>
-            </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Référence</th>
-                        <th>Utilisateur</th>
-                        <th>Type</th>
-                        <th>Opérateur</th>
-                        <th>Client</th>
-                        <th>Montant</th>
-                        <th>Date</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in dernieres_transactions|slice:":8" %}
-                    <tr>
-                        <td><small style="font-family: monospace;">{{ t.reference|slice:":12" }}</small></td>
-                        <td>{% if t.user.admin_profile %}🏦 Admin{% else %}👤 {{ t.user.agent_profile.nom|truncatechars:15 }}{% endif %}</td>
-                        <td>{% if t.type_transaction == 'depot' %}<span class="badge badge-depot">Dépôt</span>{% elif t.type_transaction == 'retrait' %}<span class="badge badge-retrait">Retrait</span>{% else %}<span class="badge badge-credit">Crédit</span>{% endif %}</td>
-                        <td>{{ t.get_operateur_display }}</td>
-                        <td>{{ t.numero_client }}</td>
-                        <td><strong>{{ t.montant|floatformat:0|default:"0"|intcomma }} F</strong></td>
-                        <td><small>{{ t.date|date:"d/m/Y H:i" }}</small></td>
-                        <td><a href="{% url 'impression_recu' t.reference %}" target="_blank" class="btn-icon btn-print">🖨️</a></td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="8" style="text-align: center;">Aucune transaction</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <!-- ========== TRANSACTIONS ========== -->
+        <div class="table-container"><div class="table-header"><h3>📋 Dernières transactions</h3><a href="{% url 'historique_admin' %}" class="btn-link">Voir tout →</a></div><table class="data-table"><thead><tr><th>Référence</th><th>Utilisateur</th><th>Type</th><th>Opérateur</th><th>Client</th><th>Montant</th><th>Date</th><th>Action</th></tr></thead><tbody>{% for t in dernieres_transactions|slice:":8" %}<tr><td><small>{{ t.reference|slice:":12" }}</small></td><td>{% if t.user.admin_profile %}🏦 Admin{% else %}👤 {{ t.user.agent_profile.nom|default:t.user.username|truncatechars:15 }}{% endif %}</td><td>{% if t.type_transaction == 'depot' %}<span class="badge badge-depot">Dépôt</span>{% elif t.type_transaction == 'retrait' %}<span class="badge badge-retrait">Retrait</span>{% else %}<span class="badge badge-credit">Crédit</span>{% endif %}{% if t.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}</td><td>{{ t.get_operateur_display }}</td><td>{{ t.numero_client }}</td><td><strong>{{ t.montant|floatformat:0|default:"0"|intcomma }} F</strong></td><td><small>{{ t.date|date:"d/m/Y H:i" }}</small></td><td><a href="{% url 'impression_recu' t.reference %}" target="_blank" class="btn-icon btn-print">🖨️</a></td></tr>{% empty %}<tr><td colspan="8" style="text-align:center;padding:32px;">Aucune transaction</td></tr>{% endfor %}</tbody></table></div>
         {% endblock %}
     </div>
 
-    <!-- Modal transaction -->
-    <div id="transactionModal" class="modal">
+    <!-- ========== FLOTTING BELL (PC) ========== -->
+    <button id="pcAlertBtn" onclick="openAlertModal()" style="position: fixed; bottom: 20px; right: 20px; z-index: 999; background: white; border: 1px solid var(--gray-200); border-radius: 50%; width: 48px; height: 48px; cursor: pointer; box-shadow: var(--shadow-lg); display: flex; align-items: center; justify-content: center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+        <span id="pcAlertBadge" style="position: absolute; top: -4px; right: -4px; background: #dc2626; color: white; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 10px; min-width: 18px; text-align: center; display: none;">0</span>
+    </button>
+
+    <!-- ========== MODAL ALERTE ========== -->
+    <div id="alertModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalOperatorName">Orange Money</h3>
-                <p style="font-size: 13px; color: var(--gray-500);">Sélectionnez le type d'opération</p>
-            </div>
-            <div class="modal-body">
-                <div class="btn-group">
-                    <a href="#" id="btnDepot" class="btn-primary-action btn-deposit">💰 Dépôt</a>
-                    <a href="#" id="btnRetrait" class="btn-primary-action btn-withdraw">💸 Retrait</a>
-                    <a href="#" id="btnCredit" class="btn-primary-action btn-credit">📱 Crédit</a>
-                </div>
-                <button class="btn-close-modal" onclick="closeModal()">Fermer</button>
+            <div class="modal-header"><h3>🔔 Demandes en attente</h3></div>
+            <div class="modal-body" id="alertModalBody">
+                <p style="text-align: center;">Chargement...</p>
             </div>
         </div>
     </div>
 
-    <div class="loading" id="loading">Chargement en cours...</div>
+    <!-- ========== MODAL SERVICES (OPERATIONS) ========== -->
+    <div id="servicesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>🚀 Services</h3></div>
+            <div class="modal-body">
+                <div class="services-grid">
+                    <div class="service-card" onclick="openOperatorActions('orange')"><div class="service-logo"><img src="{% static 'image/inco_orange.jpeg' %}" alt="Orange"></div><div class="service-name">Orange Money</div><div class="service-sub">Dépôt · Retrait · Crédit</div></div>
+                    <div class="service-card" onclick="openOperatorActions('malitel')"><div class="service-logo"><img src="{% static 'image/inco_moov.jpeg' %}" alt="Moov"></div><div class="service-name">Moov Africa</div><div class="service-sub">Dépôt · Retrait · Crédit</div></div>
+                    <div class="service-card" onclick="openOperatorActions('telecel')"><div class="service-logo"><img src="{% static 'image/inco_telecel.jpeg' %}" alt="Telecel"></div><div class="service-name">Telecel</div><div class="service-sub">Crédit uniquement</div></div>
+                    <div class="service-card" onclick="openOperatorActions('wave')"><div class="service-logo"><img src="{% static 'image/inco_wave1.webp' %}" alt="Wave"></div><div class="service-name">Wave</div><div class="service-sub">Dépôt · Retrait</div></div>
+                </div>
+                <button class="btn-close-modal" onclick="closeModal('servicesModal')">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MODAL ACTIONS OPERATEUR ========== -->
+    <div id="actionsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3 id="actionsModalOperatorName">Orange Money</h3></div>
+            <div class="modal-body">
+                <div class="actions-grid">
+                    <a href="#" id="actionsBtnDepot" class="action-card">💰 Dépôt</a>
+                    <a href="#" id="actionsBtnRetrait" class="action-card">💸 Retrait</a>
+                    <a href="#" id="actionsBtnCredit" class="action-card">📱 Crédit</a>
+                </div>
+                <button class="btn-close-modal" onclick="closeModal('actionsModal')">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MODAL ANNULATION ========== -->
+    <div id="annulationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>↩ Annulation de transaction</h3><p style="font-size:13px;color:var(--gray-500);margin-top:4px;">Saisissez la référence de la transaction à annuler</p></div>
+            <div class="modal-body">
+                <div id="annulationStep1">
+                    <div class="filter-group" style="margin-bottom:16px;">
+                        <label>🔑 Référence de la transaction</label>
+                        <input type="text" id="annulationReference" placeholder="Ex: OMD3A1B2C3D4" style="width:100%;padding:12px;border:2px solid var(--gray-300);border-radius:12px;font-size:16px;font-family:monospace;text-transform:uppercase;letter-spacing:1px;">
+                    </div>
+                    <div id="annulationPreview" style="display:none;background:var(--gray-50);border-radius:12px;padding:16px;margin-bottom:16px;border:1px solid var(--gray-200);">
+                        <div style="font-size:13px;color:var(--gray-600);margin-bottom:8px;">📄 Transaction trouvée :</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+                            <span style="color:var(--gray-500);">Date</span><span id="annulDate" style="font-weight:600;"></span>
+                            <span style="color:var(--gray-500);">Type</span><span id="annulType" style="font-weight:600;"></span>
+                            <span style="color:var(--gray-500);">Opérateur</span><span id="annulOperateur" style="font-weight:600;"></span>
+                            <span style="color:var(--gray-500);">Montant</span><span id="annulMontant" style="font-weight:600;"></span>
+                            <span style="color:var(--gray-500);">Client</span><span id="annulClient" style="font-weight:600;"></span>
+                            <span style="color:var(--gray-500);">Agent</span><span id="annulAgent" style="font-weight:600;"></span>
+                        </div>
+                    </div>
+                    <div class="filter-group" style="margin-bottom:16px;">
+                        <label>📝 Motif de l'annulation</label>
+                        <textarea id="annulationMotif" rows="2" style="width:100%;padding:12px;border:2px solid var(--gray-300);border-radius:12px;font-size:14px;font-family:inherit;" placeholder="Optionnel : saisissez la raison de l'annulation"></textarea>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button class="btn-filter" id="btnAnnulerChercher" onclick="chercherTransactionAnnulation()" style="flex:1;">🔍 Chercher</button>
+                        <button class="btn-validate" id="btnAnnulerConfirmer" onclick="confirmerAnnulation()" style="flex:1;display:none;">↩ Confirmer l'annulation</button>
+                        <button class="btn-close-modal" onclick="closeModal('annulationModal')" style="flex:1;">Fermer</button>
+                    </div>
+                </div>
+                <div id="annulationResult" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">Chargement...</div>
 
     <script>
-        function toggleProfileMenu() {
-            const menu = document.getElementById('profileMenu');
-            menu.classList.toggle('show');
-        }
+        function openProfileMenu(){document.getElementById('profileMenu').classList.add('show');document.body.style.overflow='hidden';}
+        function closeProfileMenu(){document.getElementById('profileMenu').classList.remove('show');document.body.style.overflow='';}
+        document.getElementById('profileMenu').addEventListener('click',function(e){if(e.target===this)closeProfileMenu();});
 
-        function closeProfileMenuAndRedirect(url) {
-            document.getElementById('profileMenu').classList.remove('show');
-            window.location.href = url;
-        }
-
-        document.addEventListener('click', function(event) {
-            const profile = document.querySelector('.profile');
-            const menu = document.getElementById('profileMenu');
-            if (profile && !profile.contains(event.target) && menu && !menu.contains(event.target)) {
-                menu.classList.remove('show');
-            }
-        });
-
-        function openModal(operator) {
-            const names = { orange: 'Orange Money', malitel: 'Moov Africa', telecel: 'Telecel', wave: 'Wave' };
-            document.getElementById('modalOperatorName').textContent = names[operator];
-            
-            const btnDepot = document.getElementById('btnDepot');
-            const btnRetrait = document.getElementById('btnRetrait');
-            const btnCredit = document.getElementById('btnCredit');
-            
-            const baseUrl = "{% url 'transaction_user' 'OPERATEUR' 'depot' %}";
-            btnDepot.href = baseUrl.replace('OPERATEUR', operator).replace('depot', 'depot');
-            btnRetrait.href = baseUrl.replace('OPERATEUR', operator).replace('depot', 'retrait');
-            btnCredit.href = baseUrl.replace('OPERATEUR', operator).replace('depot', 'credit');
-            
-            if (operator === 'wave') {
-                btnCredit.style.display = 'none';
-                btnDepot.style.display = 'block';
-                btnRetrait.style.display = 'block';
-            } else if (operator === 'telecel') {
-                btnDepot.style.display = 'none';
-                btnRetrait.style.display = 'none';
-                btnCredit.style.display = 'block';
-            } else {
-                btnDepot.style.display = 'block';
-                btnRetrait.style.display = 'block';
-                btnCredit.style.display = 'block';
-            }
-            
-            document.getElementById('transactionModal').style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeModal() {
-            document.getElementById('transactionModal').style.display = 'none';
-            document.body.style.overflow = '';
-        }
-
-        window.onclick = function(event) {
-            const modal = document.getElementById('transactionModal');
-            if (event.target === modal) closeModal();
-        }
-
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', () => {
-                document.getElementById('loading').style.display = 'flex';
+        (function(){
+            var cp=window.location.pathname;
+            document.querySelectorAll('.sidebar-menu .menu-item').forEach(function(el){
+                el.classList.remove('active');
+                if(el.getAttribute('href')===cp) el.classList.add('active');
             });
-        });
+            if(!document.querySelector('.sidebar-menu .menu-item.active')){
+                var d=document.querySelector('.sidebar-menu .menu-item[href*="dashboard_admin"]');
+                if(d) d.classList.add('active');
+            }
+        })();
+
+        window.getCSRFToken=function(){let v=null;if(document.cookie){let c=document.cookie.split(';');for(let i=0;i<c.length;i++){let x=c[i].trim();if(x.substring(0,10)==='csrftoken='){v=decodeURIComponent(x.substring(10));break;}}}return v;}
+
+        window.openModal=function(id){document.getElementById(id).style.display='flex';document.body.style.overflow='hidden';}
+        window.closeModal=function(id){document.getElementById(id).style.display='none';document.body.style.overflow='';}
+        window.onclick=function(e){['alertModal','servicesModal','actionsModal'].forEach(function(id){if(e.target===document.getElementById(id))closeModal(id);});}
+        function openServicesModal(){openModal('servicesModal');}
+
+        // ========== ANNULATION ==========
+        function openAnnulationModal(){
+            document.getElementById('annulationReference').value='';
+            document.getElementById('annulationMotif').value='';
+            document.getElementById('annulationPreview').style.display='none';
+            document.getElementById('btnAnnulerChercher').style.display='block';
+            document.getElementById('btnAnnulerConfirmer').style.display='none';
+            document.getElementById('annulationResult').style.display='none';
+            document.getElementById('annulationStep1').style.display='block';
+            openModal('annulationModal');
+            setTimeout(function(){document.getElementById('annulationReference').focus();},300);
+        }
+        function chercherTransactionAnnulation(){
+            var ref=document.getElementById('annulationReference').value.trim().toUpperCase();
+            if(!ref){alert('Veuillez saisir une référence');return;}
+            var btn=document.getElementById('btnAnnulerChercher');
+            btn.textContent='⏳ Recherche...';btn.disabled=true;
+            fetch('/api/annuler-transaction/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},body:JSON.stringify({reference:ref,chercher:true})})
+            .then(function(r){return r.json();}).then(function(d){
+                btn.textContent='🔍 Chercher';btn.disabled=false;
+                if(!d.success){alert(d.error||'Transaction non trouvée');return;}
+                document.getElementById('annulDate').textContent=d.transaction.date;
+                document.getElementById('annulType').textContent=d.transaction.type;
+                document.getElementById('annulOperateur').textContent=d.transaction.operateur;
+                document.getElementById('annulMontant').textContent=d.transaction.montant+' FCFA';
+                document.getElementById('annulClient').textContent=d.transaction.client;
+                document.getElementById('annulAgent').textContent=d.transaction.agent;
+                document.getElementById('annulationPreview').style.display='block';
+                document.getElementById('btnAnnulerChercher').style.display='none';
+                document.getElementById('btnAnnulerConfirmer').style.display='block';
+            }).catch(function(){
+                btn.textContent='🔍 Chercher';btn.disabled=false;
+                alert('Erreur de connexion');
+            });
+        }
+        function confirmerAnnulation(){
+            if(!confirm('Êtes-vous sûr de vouloir annuler cette transaction ? Cette action est irréversible.'))return;
+            var ref=document.getElementById('annulationReference').value.trim().toUpperCase();
+            var motif=document.getElementById('annulationMotif').value.trim();
+            var btn=document.getElementById('btnAnnulerConfirmer');
+            btn.textContent='⏳ Annulation...';btn.disabled=true;
+            fetch('/api/annuler-transaction/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},body:JSON.stringify({reference:ref,motif:motif})})
+            .then(function(r){return r.json();}).then(function(d){
+                if(d.success){
+                    document.getElementById('annulationStep1').style.display='none';
+                    document.getElementById('annulationResult').style.display='block';
+                    document.getElementById('annulationResult').innerHTML='<div style="text-align:center;padding:24px;"><div style="font-size:48px;margin-bottom:12px;">✅</div><h3 style="margin-bottom:8px;">Transaction annulée</h3><p style="color:var(--gray-600);">'+d.message+'</p><button class="btn-close-modal" onclick="closeModal(\'annulationModal\');window.location.reload();" style="margin-top:16px;">Fermer</button></div>';
+                }else{
+                    alert(d.error||'Erreur lors de l\'annulation');
+                    btn.textContent='↩ Confirmer l\'annulation';btn.disabled=false;
+                }
+            }).catch(function(){
+                alert('Erreur de connexion');
+                btn.textContent='↩ Confirmer l\'annulation';btn.disabled=false;
+            });
+        }
+
+        function openOperatorActions(op){
+            closeModal('servicesModal');
+            document.getElementById('actionsModalOperatorName').textContent={orange:'Orange Money',malitel:'Moov Africa',telecel:'Telecel',wave:'Wave'}[op];
+            var b="{% url 'transaction_user' 'OPERATEUR' 'depot' %}";
+            var D=document.getElementById('actionsBtnDepot'),R=document.getElementById('actionsBtnRetrait'),C=document.getElementById('actionsBtnCredit');
+            D.href=b.replace('OPERATEUR',op).replace('depot','depot');
+            R.href=b.replace('OPERATEUR',op).replace('depot','retrait');
+            C.href=b.replace('OPERATEUR',op).replace('depot','credit');
+            if(op==='telecel'){D.style.display='none';R.style.display='none';C.style.display='flex';}
+            else if(op==='wave'){D.style.display='flex';R.style.display='flex';C.style.display='none';}
+            else{D.style.display='flex';R.style.display='flex';C.style.display='flex';}
+            openModal('actionsModal');
+        }
+
+        function updateAllBadges(){
+            fetch('/api/demandes-attente/count/').then(function(r){return r.json();}).then(function(d){
+                var c=d.count||0;
+                var mb=document.getElementById('mobileAlertBadge');
+                if(mb){mb.textContent=c;mb.style.display=c>0?'block':'none';}
+                var pb=document.getElementById('pcAlertBadge');
+                if(pb){pb.textContent=c;pb.style.display=c>0?'block':'none';}
+            }).catch(function(){});
+        }
+        function loadAlertModal(){
+            var body=document.getElementById('alertModalBody');
+            body.innerHTML='<p style="text-align:center;">Chargement...</p>';
+            fetch('/api/demandes-attente/list/').then(function(r){return r.json();}).then(function(d){
+                if(d.demands&&d.demands.length===0){body.innerHTML='<p style="text-align:center;">Aucune demande en attente</p><button class="btn-close-modal" onclick="closeModal(\'alertModal\')">Fermer</button>';return;}
+                var items=d.demandes||[];
+                if(items.length===0){body.innerHTML='<p style="text-align:center;">Aucune demande en attente</p><button class="btn-close-modal" onclick="closeModal(\'alertModal\')">Fermer</button>';return;}
+                var h='';
+                for(var i=0;i<items.length;i++){
+                    var it=items[i];
+                    h+='<div class="pending-request" style="margin-bottom:12px;">';
+                    h+='<div><strong>'+it.agent_nom+'</strong><span style="display:block;font-size:12px;">'+it.type_echange+'</span>';
+                    if(it.motif){h+='<span style="display:block;font-size:11px;color:var(--gray-500);">📝 '+it.motif+'</span>';}
+                    h+='<strong style="font-size:16px;">'+it.montant+' FCFA</strong></div>';
+                    h+='<div style="display:flex;gap:8px;margin-top:8px;">';
+                    h+='<form method="post" action="/valider-demande/'+it.id+'/" style="display:inline;"><input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRFToken()+'"><input type="hidden" name="action" value="valider"><button type="submit" class="btn-validate">✓ Valider</button></form>';
+                    h+='<form method="post" action="/valider-demande/'+it.id+'/" style="display:inline;"><input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRFToken()+'"><input type="hidden" name="action" value="refuser"><button type="submit" class="btn-reject">✗ Refuser</button></form>';
+                    h+='</div></div>';
+                }
+                h+='<button class="btn-close-modal" onclick="closeModal(\'alertModal\')">Fermer</button>';
+                body.innerHTML=h;
+            }).catch(function(){body.innerHTML='<p style="text-align:center;">Erreur de chargement</p><button class="btn-close-modal" onclick="closeModal(\'alertModal\')">Fermer</button>';});
+        }
+        function openAlertModal(){openModal('alertModal');loadAlertModal();}
+        updateAllBadges();setInterval(updateAllBadges,30000);
+        document.querySelectorAll('form').forEach(function(f){f.addEventListener('submit',function(){document.getElementById('loading').style.display='flex';});});
     </script>
     {% block extra_js %}{% endblock %}
 </body>

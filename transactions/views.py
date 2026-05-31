@@ -924,20 +924,61 @@ def valider_demande(request, demande_id):
     }
     return render(request, 'transactions/valider_demande.html', context)
 
+# views.py
+# views.py
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.template.loader import render_to_string
+from django.utils import timezone
 
 @login_required
 def impression_recu(request, transaction_id):
     """
-    Imprimer le reçu d'une transaction
+    Vue pour l'impression des reçus
+    Envoie uniquement les données brutes, le JS fait le formatage
     """
-    transaction = django.shortcuts.get_object_or_404(Transaction, reference=transaction_id)
+    transaction = get_object_or_404(Transaction, reference=transaction_id)
+    
+    # Déterminer le rôle de l'utilisateur
+    user_role = "Admin"
+    if hasattr(transaction.user, 'agent'):
+        user_role = "Agent"
+    elif hasattr(transaction.user, 'assistant'):
+        user_role = "Assistant"
+    elif transaction.user.is_superuser or transaction.user.is_staff:
+        user_role = "Admin"
+    
+    # Données brutes (sans formatage)
+    data = {
+        "operateur": transaction.user.username if transaction.user else "-",
+        "role_operateur": user_role,
+        "type": transaction.type_transaction if transaction.type_transaction else "-",
+        "operateur_money": transaction.get_operateur_display() if transaction.operateur else "-",
+        "client": transaction.numero_client if transaction.numero_client else "-",
+        "nom_client": transaction.nom_client if transaction.nom_client else "-",
+        "montant": int(transaction.montant) if transaction.montant else 0,
+        "reference": transaction.reference if transaction.reference else "-",
+        "date": transaction.date.strftime('%d/%m/%Y') if transaction.date else "-",
+        "heure": transaction.date.strftime('%H:%M:%S') if transaction.date else "-",
+    }
+    
+    # Retourner les données en JSON pour QZ Tray
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+        return JsonResponse(data)
+    
+    # Pour l'impression navigateur (fallback)
     context = {
         'transaction': transaction,
-        'date_impression': datetime.now()
+        'data': data,
+        'user_role': user_role,
+        'entreprise': {
+            'nom': 'KONE SERVICES',
+            'telephone': '76 89 77 31',
+            'adresse': 'Services Transfert'
+        }
     }
     return render(request, 'transactions/recu.html', context)
-
-
 # ==================== HISTORIQUES ====================
 
 @login_required
@@ -1024,6 +1065,7 @@ def historique_admin(request):
                 'montant': float(t.montant),
                 'commission': float(t.commission),
                 'date': t.date.strftime('%d/%m/%Y %H:%M'),
+                'est_annule': t.est_annule,
             })
         
         current = transactions_page.number
@@ -1057,6 +1099,7 @@ def historique_admin(request):
     agents = Agent.objects.filter(est_actif=True)
     assistants = Assistant.objects.filter(est_actif=True)
     
+    demandes_attente = DemandeApprovisionnement.objects.filter(statut='en_attente')
     context = {
         'title': 'Historique des transactions',
         'transactions': transactions_page,
@@ -1066,6 +1109,7 @@ def historique_admin(request):
         'admins': admins,
         'agents': agents,
         'assistants': assistants,
+        'demandes_attente': demandes_attente,
     }
     return render(request, 'transactions/historique_admin.html', context)
 
@@ -1163,36 +1207,40 @@ def historique_agent(request):
     }
     return render(request, 'transactions/historique_agent.html', context)
 
-
 @login_required
 def historique_demandes_agent(request):
     """
-    Historique des demandes d'approvisionnement
-    - Pour un AGENT: ses demandes envoyées
-    - Pour un ASSISTANT: les demandes qu'il a reçues (destinataire)
+    Historique des demandes d'approvisionnement ET des opérations de caisse
+    - Pour un AGENT: ses demandes envoyées + ses opérations de caisse
+    - Pour un ASSISTANT: les demandes qu'il a reçues + les opérations de sa caisse
     Avec filtres par date, statut et type d'échange
-    Affiche par défaut les demandes du jour
     """
+    from decimal import Decimal
+    
     # Vérifier si c'est un agent ou un assistant
     try:
         agent = Agent.objects.get(user=request.user)
         type_utilisateur = 'agent'
-        # Agent: voir ses demandes envoyées
+        # Demandes de l'agent
         demandes = DemandeApprovisionnement.objects.filter(agent=agent).order_by('-date_demande')
+        # Opérations de caisse de l'agent
+        operations = OperationCaisse.objects.filter(caisse__user=request.user).order_by('-date_operation')
+
     except Agent.DoesNotExist:
         try:
             assistant = Assistant.objects.get(user=request.user)
             type_utilisateur = 'assistant'
-            # Assistant: voir les demandes qu'il a reçues
+            # Demandes reçues par l'assistant
             demandes = DemandeApprovisionnement.objects.filter(
                 destinataire_type='assistant',
                 assistant_destinataire=assistant
             ).order_by('-date_demande')
+            # Opérations de caisse de l'assistant (même caisse que l'admin)
+            operations = OperationCaisse.objects.filter(caisse__user=request.user).order_by('-date_operation')
         except Assistant.DoesNotExist:
             messages.error(request, 'Vous n\'êtes pas autorisé.')
             return redirect('login')
     
-    # Date d'aujourd'hui
     today = timezone.now().date()
     
     # ========== FILTRES ==========
@@ -1200,12 +1248,14 @@ def historique_demandes_agent(request):
     date_fin = request.GET.get('date_fin')
     statut = request.GET.get('statut')
     type_echange = request.GET.get('type_echange')
+    type_operation_filtre = request.GET.get('type_operation')
     
-    # Appliquer les filtres de date
+    # Appliquer les filtres de date sur les demandes et opérations
     if date_debut:
         try:
             date_debut_obj = datetime.strptime(date_debut, '%Y-%m-%d').date()
             demandes = demandes.filter(date_demande__date__gte=date_debut_obj)
+            operations = operations.filter(date_operation__date__gte=date_debut_obj)
         except ValueError:
             pass
     
@@ -1213,55 +1263,69 @@ def historique_demandes_agent(request):
         try:
             date_fin_obj = datetime.strptime(date_fin, '%Y-%m-%d').date()
             demandes = demandes.filter(date_demande__date__lte=date_fin_obj)
+            operations = operations.filter(date_operation__date__lte=date_fin_obj)
         except ValueError:
             pass
     
-    # Si aucun filtre de date n'est appliqué, afficher uniquement les demandes du jour
+    # Si aucun filtre de date n'est appliqué, afficher les demandes et opérations du jour
     if not date_debut and not date_fin:
         demandes = demandes.filter(date_demande__date=today)
+        operations = operations.filter(date_operation__date=today)
         date_debut_display = today.strftime('%Y-%m-%d')
         date_fin_display = today.strftime('%Y-%m-%d')
     else:
         date_debut_display = date_debut or today.strftime('%Y-%m-%d')
         date_fin_display = date_fin or today.strftime('%Y-%m-%d')
     
-    # Filtre par statut
+    # Filtre par statut sur les demandes
     if statut:
         demandes = demandes.filter(statut=statut)
     
-    # Filtre par type d'échange
+    # Filtre par type d'échange sur les demandes
     if type_echange:
         demandes = demandes.filter(type_echange=type_echange)
+    
+    # Filtre par type d'opération sur les opérations de caisse
+    if type_operation_filtre:
+        operations = operations.filter(type_operation=type_operation_filtre)
     
     # ========== STATISTIQUES ==========
     if type_utilisateur == 'agent':
         stats = {
-            'attente': DemandeApprovisionnement.objects.filter(agent=agent, statut='en_attente').count(),
-            'valide': DemandeApprovisionnement.objects.filter(agent=agent, statut='valide').count(),
-            'refuse': DemandeApprovisionnement.objects.filter(agent=agent, statut='refuse').count(),
+            'demandes_attente': DemandeApprovisionnement.objects.filter(agent=agent, statut='en_attente').count(),
+            'demandes_valide': DemandeApprovisionnement.objects.filter(agent=agent, statut='valide').count(),
+            'demandes_refuse': DemandeApprovisionnement.objects.filter(agent=agent, statut='refuse').count(),
+            'operations_encaissement': OperationCaisse.objects.filter(caisse__user=request.user, type_operation='encaissement').count(),
+            'operations_decaissement': OperationCaisse.objects.filter(caisse__user=request.user, type_operation='decaissement').count(),
         }
     else:
         stats = {
-            'attente': DemandeApprovisionnement.objects.filter(
+            'demandes_attente': DemandeApprovisionnement.objects.filter(
                 destinataire_type='assistant',
                 assistant_destinataire=assistant,
                 statut='en_attente'
             ).count(),
-            'valide': DemandeApprovisionnement.objects.filter(
+            'demandes_valide': DemandeApprovisionnement.objects.filter(
                 destinataire_type='assistant',
                 assistant_destinataire=assistant,
                 statut='valide'
             ).count(),
-            'refuse': DemandeApprovisionnement.objects.filter(
+            'demandes_refuse': DemandeApprovisionnement.objects.filter(
                 destinataire_type='assistant',
                 assistant_destinataire=assistant,
                 statut='refuse'
             ).count(),
+            'operations_encaissement': OperationCaisse.objects.filter(caisse__user=request.user, type_operation='encaissement').count(),
+            'operations_decaissement': OperationCaisse.objects.filter(caisse__user=request.user, type_operation='decaissement').count(),
         }
     
-    # Ajouter le total des montants
+    # Montants totaux des demandes par statut
     stats['montant_attente'] = demandes.filter(statut='en_attente').aggregate(Sum('montant'))['montant__sum'] or 0
     stats['montant_valide'] = demandes.filter(statut='valide').aggregate(Sum('montant'))['montant__sum'] or 0
+    
+    # Montants totaux des opérations de caisse
+    stats['total_encaissements'] = operations.filter(type_operation='encaissement').aggregate(Sum('montant'))['montant__sum'] or 0
+    stats['total_decaissements'] = operations.filter(type_operation='decaissement').aggregate(Sum('montant'))['montant__sum'] or 0
     
     # ========== PAGINATION ==========
     page = request.GET.get('page', 1)
@@ -1274,18 +1338,31 @@ def historique_demandes_agent(request):
     except EmptyPage:
         demandes_page = paginator.page(paginator.num_pages)
     
+    # Pagination pour les opérations
+    page_ops = request.GET.get('page_ops', 1)
+    paginator_ops = Paginator(operations, 10)
+    
+    try:
+        operations_page = paginator_ops.page(page_ops)
+    except PageNotAnInteger:
+        operations_page = paginator_ops.page(1)
+    except EmptyPage:
+        operations_page = paginator_ops.page(paginator_ops.num_pages)
+    
     context = {
-        'title': 'Mes demandes',
+        'title': 'Mon historique',
         'type_utilisateur': type_utilisateur,
         'demandes': demandes_page,
+        'operations': operations_page,
         'stats': stats,
         'date_debut': date_debut_display,
         'date_fin': date_fin_display,
         'statut_filtre': statut,
         'type_echange_filtre': type_echange,
+        'type_operation_filtre': type_operation_filtre,
     }
     return render(request, 'transactions/historique_demandes.html', context)
-
+    
 @login_required
 def traiter_demande_assistant(request, demande_id):
     """
@@ -1452,6 +1529,7 @@ def gestion_agents(request):
     assistants_actifs = assistants.filter(est_actif=True).count()
     assistants_inactifs = assistants.filter(est_actif=False).count()
     
+    demandes_attente = DemandeApprovisionnement.objects.filter(statut='en_attente')
     context = {
         'title': 'Gestion des utilisateurs',
         'agents': agents,
@@ -1460,6 +1538,7 @@ def gestion_agents(request):
         'assistants': assistants,
         'assistants_actifs': assistants_actifs,
         'assistants_inactifs': assistants_inactifs,
+        'demandes_attente': demandes_attente,
     }
     return render(request, 'transactions/gestion_agents.html', context)
 
@@ -1542,44 +1621,400 @@ def ajouter_agent(request):
     return redirect('gestion_agents')
 
 
+from decimal import Decimal
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.shortcuts import redirect, render, get_object_or_404
+from django.contrib import messages
+from django.db.models import Sum
+from transactions.models import Agent, Assistant, Admin, Caisse, HistoriqueAgent
+
+
 @login_required
-def modifier_caisse(request):
+def operation_agent(request):
     """
-    Modifier les soldes de la caisse d'un agent
+    Opération sur agent : Admin ou Assistant peut ajouter ou retirer des fonds
+    Admin et Assistant partagent le même solde (caisse de l'admin)
     """
-    try:
-        admin = Admin.objects.get(user=request.user)
-    except Admin.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Non autorisé'})
+    if request.method != 'POST':
+        return redirect('gestion_agents')
     
+    agent_id = request.POST.get('agent_id')
+    operation_type = request.POST.get('operation_type')  # 'ajout' ou 'retrait'
+    type_fonds = request.POST.get('type_fonds')  # 'cash', 'uv', 'wave'
+    montant = request.POST.get('montant')
+    description = request.POST.get('description', '')
+    
+    if not agent_id:
+        messages.error(request, "Veuillez sélectionner un agent")
+        return redirect('gestion_agents')
+    
+    try:
+        montant = Decimal(str(montant))
+        if montant <= 0:
+            messages.error(request, "Le montant doit être supérieur à 0")
+            return redirect('gestion_agents')
+        
+        if montant < 100:
+            messages.error(request, "Le montant minimum est de 100 FCFA")
+            return redirect('gestion_agents')
+        
+        # Récupérer l'agent
+        agent = Agent.objects.get(id=agent_id)
+        
+        # Récupérer la caisse partagée (Admin)
+        caisse_partagee = Caisse.objects.filter(user__is_superuser=True).first()
+        if not caisse_partagee:
+            messages.error(request, "Caisse administrateur introuvable")
+            return redirect('gestion_agents')
+        
+        # Déterminer qui est l'opérateur
+        if request.user.is_superuser:
+            operateur_type = 'admin'
+            admin_obj = Admin.objects.get(user=request.user)
+            operateur_nom = admin_obj.nom
+        else:
+            operateur_type = 'assistant'
+            assistant = Assistant.objects.get(user=request.user)
+            operateur_nom = assistant.nom
+        
+        # Déterminer le champ et les soldes
+        if type_fonds == 'cash':
+            champ = 'solde_cash'
+            solde_partage = getattr(caisse_partagee, champ, 0)
+            solde_agent = getattr(agent.user.caisse, champ, 0)
+            type_label = "Cash"
+        elif type_fonds == 'uv':
+            champ = 'solde_uv'
+            solde_partage = getattr(caisse_partagee, champ, 0)
+            solde_agent = getattr(agent.user.caisse, champ, 0)
+            type_label = "UV Touchpoint"
+        else:
+            champ = 'solde_wave'
+            solde_partage = getattr(caisse_partagee, champ, 0)
+            solde_agent = getattr(agent.user.caisse, champ, 0)
+            type_label = "UV Wave"
+        
+        if operation_type == 'ajout':
+            # ➕ AJOUT : Donner à l'agent
+            if solde_partage < montant:
+                messages.error(request, f"Solde {type_label} insuffisant. Disponible: {solde_partage:,.0f} FCFA")
+                return redirect('gestion_agents')
+            
+            # Débiter la caisse partagée
+            setattr(caisse_partagee, champ, solde_partage - montant)
+            caisse_partagee.save()
+            
+            # Créditer l'agent
+            setattr(agent.user.caisse, champ, solde_agent + montant)
+            agent.user.caisse.save()
+            
+            # Enregistrer l'historique
+            HistoriqueAgent.objects.create(
+                agent=agent,
+                type_operation='decaissement',
+                operateur_type=operateur_type,
+                operateur_nom=operateur_nom,
+                montant_cash=montant if type_fonds == 'cash' else 0,
+                montant_uv=montant if type_fonds == 'uv' else 0,
+                montant_wave=montant if type_fonds == 'wave' else 0,
+                description=f"Ajout de {montant:,.0f} FCFA en {type_label} - {description}" if description else f"Ajout de {montant:,.0f} FCFA en {type_label}"
+            )
+            
+            messages.success(request, f"✅ {montant:,.0f} FCFA ajoutés à {agent.nom} en {type_label}")
+            
+        elif operation_type == 'retrait':
+            # ➖ RETRAIT : Reprendre à l'agent
+            if solde_agent < montant:
+                messages.error(request, f"Solde {type_label} de {agent.nom} insuffisant. Disponible: {solde_agent:,.0f} FCFA")
+                return redirect('gestion_agents')
+            
+            # Débiter l'agent
+            setattr(agent.user.caisse, champ, solde_agent - montant)
+            agent.user.caisse.save()
+            
+            # Créditer la caisse partagée
+            setattr(caisse_partagee, champ, solde_partage + montant)
+            caisse_partagee.save()
+            
+            # Enregistrer l'historique
+            HistoriqueAgent.objects.create(
+                agent=agent,
+                type_operation='encaissement',
+                operateur_type=operateur_type,
+                operateur_nom=operateur_nom,
+                montant_cash=montant if type_fonds == 'cash' else 0,
+                montant_uv=montant if type_fonds == 'uv' else 0,
+                montant_wave=montant if type_fonds == 'wave' else 0,
+                description=f"Retrait de {montant:,.0f} FCFA en {type_label} - {description}" if description else f"Retrait de {montant:,.0f} FCFA en {type_label}"
+            )
+            
+            messages.success(request, f"✅ {montant:,.0f} FCFA retirés de {agent.nom} en {type_label}")
+        
+        else:
+            messages.error(request, "Type d'opération invalide")
+        
+    except Agent.DoesNotExist:
+        messages.error(request, "Agent introuvable")
+    except Assistant.DoesNotExist:
+        messages.error(request, "Assistant non trouvé")
+    except Admin.DoesNotExist:
+        messages.error(request, "Admin non trouvé")
+    except Exception as e:
+        messages.error(request, f"Erreur: {str(e)}")
+    
+    return redirect('gestion_agents')
+
+from django.core.paginator import Paginator
+from datetime import datetime
+from django.db.models import Sum, Q
+from transactions.models import HistoriqueAgent, Agent
+
+@login_required
+def historique_operations(request):
+    """Page d'historique des opérations (Admin/Assistant → Agents)"""
+    agents = Agent.objects.all()
+    return render(request, 'transactions/historique_operations.html', {'agents': agents})
+
+
+@login_required
+def api_historique_agent_page(request):
+    """API pour récupérer l'historique des opérations avec pagination et filtres"""
+    
+    # Récupérer les paramètres
+    page = request.GET.get('page', 1)
+    date_debut_str = request.GET.get('date_debut')
+    date_fin_str = request.GET.get('date_fin')
+    agent_id = request.GET.get('agent_id')
+    type_operation = request.GET.get('type')  # 'decaissement' ou 'encaissement'
+    
+    # Base des opérations
+    historique = HistoriqueAgent.objects.all().order_by('-date_operation')
+    
+    # Appliquer les filtres
+    if date_debut_str:
+        try:
+            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
+            historique = historique.filter(date_operation__date__gte=date_debut)
+        except:
+            pass
+    
+    if date_fin_str:
+        try:
+            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
+            historique = historique.filter(date_operation__date__lte=date_fin)
+        except:
+            pass
+    
+    if agent_id:
+        try:
+            historique = historique.filter(agent_id=int(agent_id))
+        except:
+            pass
+    
+    if type_operation:
+        historique = historique.filter(type_operation=type_operation)
+    
+    # Calcul des stats (sans pagination)
+    total_ajouts = 0
+    total_retraits = 0
+    
+    for h in historique:
+        montant_total = float(h.get_montant_total())
+        if h.type_operation == 'decaissement':
+            total_ajouts += montant_total
+        else:
+            total_retraits += montant_total
+    
+    # Pagination
+    paginator = Paginator(historique, 20)
+    page_obj = paginator.get_page(page)
+    
+    # Formater les données
+    data = []
+    for h in page_obj:
+        isAjout = h.type_operation == 'decaissement'
+        data.append({
+            'id': h.id,
+            'agent': h.agent.nom,
+            'agent_id': h.agent.id,
+            'type_operation': h.type_operation,
+            'type_label': 'Ajout (Donné)' if isAjout else 'Retrait (Récupéré)',
+            'operateur_type': h.operateur_type,
+            'operateur_label': 'Admin' if h.operateur_type == 'admin' else 'Assistant',
+            'operateur_nom': h.operateur_nom,
+            'montant_total': float(h.get_montant_total()),
+            'description': h.description or '',
+            'date': h.date_operation.strftime('%d/%m/%Y %H:%M:%S')
+        })
+    
+    # Pagination info
+    start_page = max(1, page_obj.number - 2)
+    end_page = min(paginator.num_pages, page_obj.number + 2)
+    
+    return JsonResponse({
+        'success': True,
+        'historique': data,
+        'stats': {
+            'total_ajouts': total_ajouts,
+            'total_retraits': total_retraits,
+            'total_operations': historique.count()
+        },
+        'pagination': {
+            'current_page': page_obj.number,
+            'total_pages': paginator.num_pages,
+            'has_previous': page_obj.has_previous(),
+            'has_next': page_obj.has_next(),
+            'previous_page': page_obj.previous_page_number() if page_obj.has_previous() else None,
+            'next_page': page_obj.next_page_number() if page_obj.has_next() else None,
+            'start_page': start_page,
+            'end_page': end_page,
+        }
+    })
+    
+@login_required
+def api_historique_agent(request, agent_id=None):
+    """API pour récupérer l'historique des opérations sur les agents"""
+    historique = HistoriqueAgent.objects.all().order_by('-date_operation')[:200]
+    
+    if agent_id:
+        historique = historique.filter(agent_id=agent_id)
+    
+    data = {
+        'success': True,
+        'historique': []
+    }
+    
+    for h in historique:
+        if h.type_operation == 'decaissement':
+            type_label = '📤 Ajout (Admin/Assistant donne)'
+        else:
+            type_label = '📥 Retrait (Admin/Assistant reprend)'
+        
+        operateur_label = '👨‍💼 Admin' if h.operateur_type == 'admin' else '🤝 Assistant'
+        
+        data['historique'].append({
+            'id': h.id,
+            'agent': h.agent.nom,
+            'agent_id': h.agent.id,
+            'type_operation': h.type_operation,
+            'type_label': type_label,
+            'operateur_type': h.operateur_type,
+            'operateur_label': operateur_label,
+            'operateur_nom': h.operateur_nom,
+            'montant_cash': float(h.montant_cash),
+            'montant_uv': float(h.montant_uv),
+            'montant_wave': float(h.montant_wave),
+            'montant_total': float(h.get_montant_total()),
+            'description': h.description or '',
+            'date': h.date_operation.strftime('%d/%m/%Y %H:%M:%S')
+        })
+    
+    return JsonResponse(data)
+
+@login_required
+def modifier_mot_de_passe_agent(request, user_id):
     if request.method == 'POST':
-        agent_id = request.POST.get('agent_id')
-        solde_cash = request.POST.get('solde_cash')
-        solde_uv = request.POST.get('solde_uv')
-        solde_wave = request.POST.get('solde_wave')
+        nouveau_password = request.POST.get('nouveau_password')
+        
+        if not nouveau_password or len(nouveau_password) < 4:
+            messages.error(request, "Le mot de passe doit contenir au moins 4 caractères")
+            return redirect('gestion_agents')
         
         try:
-            agent = Agent.objects.get(id=agent_id)
-            caisse = agent.user.caisse
+            user = User.objects.get(id=user_id)
+            agent = Agent.objects.get(user=user)
             
-            if solde_cash is not None:
-                caisse.solde_cash = Decimal(solde_cash)
-            if solde_uv is not None:
-                caisse.solde_uv = Decimal(solde_uv)
-            if solde_wave is not None:
-                caisse.solde_wave = Decimal(solde_wave)
+            # Modifier le mot de passe hashé
+            user.password = make_password(nouveau_password)
+            user.save()
             
-            caisse.save()
-            messages.success(request, f'✅ Caisse de "{agent.nom}" mise à jour avec succès.')
+            # Modifier le mot de passe en clair
+            agent.mot_de_passe_clair = nouveau_password
+            agent.save()
+            
+            messages.success(request, f"Mot de passe de {agent.nom} modifié avec succès")
+            
+        except User.DoesNotExist:
+            messages.error(request, "Utilisateur introuvable")
         except Agent.DoesNotExist:
-            messages.error(request, 'Agent non trouvé.')
+            messages.error(request, "Agent introuvable")
         except Exception as e:
-            messages.error(request, f'Erreur: {str(e)}')
+            messages.error(request, f"Erreur: {str(e)}")
         
         return redirect('gestion_agents')
     
     return redirect('gestion_agents')
 
+
+@login_required
+def api_assistant_infos(request, assistant_id):
+    """API pour récupérer les informations d'un assistant"""
+    from transactions.models import Assistant
+    
+    try:
+        assistant = Assistant.objects.get(id=assistant_id)
+        return JsonResponse({
+            'success': True,
+            'username': assistant.user.username if assistant.user else ''
+        })
+    except Assistant.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'username': ''
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'username': '',
+            'error': str(e)
+        })
+
+@login_required
+def modifier_caisse(request):
+    """Modifier la caisse d'un agent"""
+    if request.method == 'POST':
+        agent_id = request.POST.get('agent_id')  # ← c'est l'ID de l'agent
+        nouveau_cash = request.POST.get('solde_cash')
+        nouveau_uv = request.POST.get('solde_uv')
+        nouveau_wave = request.POST.get('solde_wave')
+        
+        if not agent_id:
+            messages.error(request, "Agent non spécifié")
+            return redirect('gestion_agents')
+        
+        try:
+            # Récupérer L'AGENT (pas l'admin)
+            from transactions.models import Agent
+            agent = Agent.objects.get(id=agent_id)
+            user_agent = agent.user  # ← l'utilisateur agent
+            
+            # Récupérer la caisse de l'AGENT
+            caisse = Caisse.objects.get(user=user_agent)
+            
+            # Sauvegarder les anciennes valeurs
+            ancien_cash = caisse.solde_cash
+            ancien_uv = caisse.solde_uv
+            ancien_wave = caisse.solde_wave
+            
+            # Mettre à jour la caisse de l'AGENT
+            caisse.solde_cash = Decimal(str(nouveau_cash)) if nouveau_cash else Decimal('0')
+            caisse.solde_uv = Decimal(str(nouveau_uv)) if nouveau_uv else Decimal('0')
+            caisse.solde_wave = Decimal(str(nouveau_wave)) if nouveau_wave else Decimal('0')
+            caisse.save()
+            
+            messages.success(request, f"Caisse de l'agent {agent.nom} mise à jour avec succès")
+            
+        except Agent.DoesNotExist:
+            messages.error(request, "Agent introuvable")
+        except Caisse.DoesNotExist:
+            messages.error(request, "Caisse de l'agent introuvable")
+        except Exception as e:
+            messages.error(request, f"Erreur: {str(e)}")
+        
+        return redirect('gestion_agents')
+    
+    return redirect('gestion_agents')
 
 @login_required
 def api_agent_caisse(request, agent_id):
@@ -3947,123 +4382,84 @@ def rapports_admin(request):
 
 @login_required
 def api_historique_operations(request):
-    """API pour recuperer l'historique des operations au format JSON avec pagination"""
+    """API pour recuperer l'historique des operations"""
     from django.core.paginator import Paginator
     from django.http import JsonResponse
     from datetime import datetime
     
-    # Recuperer les parametres
     page = request.GET.get('page', 1)
-    per_page = int(request.GET.get('per_page', 7))  # 7 elements par page
-    filtre_type = request.GET.get('filtre_type', 'toutes')
-    filtre_compte = request.GET.get('filtre_compte', 'tous')
-    filtre_date_debut = request.GET.get('filtre_date_debut', '')
-    filtre_date_fin = request.GET.get('filtre_date_fin', '')
+    per_page = int(request.GET.get('per_page', 10))
     
     operations = []
     
-    # Operations caisse
-    queryset_caisse = OperationCaisse.objects.filter(user=request.user)
-    if filtre_date_debut and filtre_date_fin:
-        try:
-            date_debut = datetime.strptime(filtre_date_debut, '%Y-%m-%d').date()
-            date_fin = datetime.strptime(filtre_date_fin, '%Y-%m-%d').date()
-            queryset_caisse = queryset_caisse.filter(
-                date_operation__date__gte=date_debut,
-                date_operation__date__lte=date_fin
-            )
-        except ValueError:
-            pass
+    # 1. Opérations Caisse
+    for op in OperationCaisse.objects.filter(user=request.user).order_by('-date_operation'):
+        operations.append({
+            'date': op.date_operation.strftime('%d/%m/%Y %H:%M:%S'),
+            'compte_icon': '💰',
+            'compte_nom': 'Espèces',
+            'type': 'Encaissement' if op.type_operation == 'encaissement' else 'Décaissement',
+            'signe': '+' if op.type_operation == 'encaissement' else '-',
+            'montant': f"{op.montant:,.0f}",
+            'couleur': '#10b981' if op.type_operation == 'encaissement' else '#ef4444',
+            'description': op.description or '-'
+        })
     
-    for op in queryset_caisse.order_by('-date_operation'):
-        type_operation = op.type_operation
-        if filtre_type == 'toutes' or (filtre_type == 'encaissements' and type_operation == 'encaissement') or (filtre_type == 'decaissements' and type_operation == 'decaissement'):
-            if filtre_compte == 'tous' or (filtre_compte == 'especes'):
-                operations.append({
-                    'date': op.date_operation.strftime('%d/%m/%Y %H:%M:%S'),
-                    'compte_icon': '💰',
-                    'compte_nom': 'Especes',
-                    'type': 'Encaissement' if type_operation == 'encaissement' else 'Decaissement',
-                    'signe': '+' if type_operation == 'encaissement' else '-',
-                    'montant': f'{op.montant:,.0f}',
-                    'couleur': 'color:#10b981' if type_operation == 'encaissement' else 'color:#ef4444',
-                    'description': op.description or '-'
-                })
+    # 2. Opérations UV
+    for op in OperationUv.objects.filter(user=request.user).order_by('-date_operation'):
+        operations.append({
+            'date': op.date_operation.strftime('%d/%m/%Y %H:%M:%S'),
+            'compte_icon': '📱' if op.type_uv == 'touchpoint' else '💳',
+            'compte_nom': 'UV Touchpoint' if op.type_uv == 'touchpoint' else 'UV Wave',
+            'type': 'Ajout' if op.type_operation == 'ajout' else 'Retrait',
+            'signe': '+' if op.type_operation == 'ajout' else '-',
+            'montant': f"{op.montant:,.0f}",
+            'couleur': '#10b981' if op.type_operation == 'ajout' else '#ef4444',
+            'description': op.description or '-'
+        })
     
-    # Operations UV
-    queryset_uv = OperationUv.objects.filter(user=request.user)
-    if filtre_date_debut and filtre_date_fin:
-        try:
-            queryset_uv = queryset_uv.filter(
-                date_operation__date__gte=date_debut,
-                date_operation__date__lte=date_fin
-            )
-        except ValueError:
-            pass
-    
-    for op in queryset_uv.order_by('-date_operation'):
-        type_operation = op.type_operation
-        type_label = 'Ajout' if type_operation == 'ajout' else 'Retrait'
-        if filtre_type == 'toutes' or (filtre_type == 'encaissements' and type_operation == 'ajout') or (filtre_type == 'decaissements' and type_operation == 'retrait'):
-            compte_label = 'UV Touchpoint' if op.type_uv == 'touchpoint' else 'UV Wave'
-            compte_icon = '📱' if op.type_uv == 'touchpoint' else '💳'
-            if filtre_compte == 'tous' or (filtre_compte == 'uv_touchpoint' and op.type_uv == 'touchpoint') or (filtre_compte == 'uv_wave' and op.type_uv == 'wave'):
-                operations.append({
-                    'date': op.date_operation.strftime('%d/%m/%Y %H:%M:%S'),
-                    'compte_icon': compte_icon,
-                    'compte_nom': compte_label,
-                    'type': type_label,
-                    'signe': '+' if type_operation == 'ajout' else '-',
-                    'montant': f'{op.montant:,.0f}',
-                    'couleur': 'color:#10b981' if type_operation == 'ajout' else 'color:#ef4444',
-                    'description': op.description or '-'
-                })
-    
-    # Operations Epargne
+    # 3. Opérations Epargne
     compte_epargne = CompteEpargneAdmin.objects.filter(user=request.user).first()
     if compte_epargne:
-        queryset_epargne = OperationEpargne.objects.filter(compte=compte_epargne)
-        if filtre_date_debut and filtre_date_fin:
-            try:
-                queryset_epargne = queryset_epargne.filter(
-                    date_operation__date__gte=date_debut,
-                    date_operation__date__lte=date_fin
-                )
-            except ValueError:
-                pass
-        
-        for op in queryset_epargne.order_by('-date_operation'):
-            type_operation = op.type_operation
-            type_label = 'Ajout' if type_operation == 'depot' else 'Retrait'
-            if filtre_type == 'toutes' or (filtre_type == 'encaissements' and type_operation == 'depot') or (filtre_type == 'decaissements' and type_operation == 'retrait'):
-                if filtre_compte == 'tous' or filtre_compte == 'epargne':
-                    operations.append({
-                        'date': op.date_operation.strftime('%d/%m/%Y %H:%M:%S'),
-                        'compte_icon': '🏦',
-                        'compte_nom': 'Epargne',
-                        'type': type_label,
-                        'signe': '+' if type_operation == 'depot' else '-',
-                        'montant': f'{op.montant:,.0f}',
-                        'couleur': 'color:#10b981' if type_operation == 'depot' else 'color:#ef4444',
-                        'description': op.description or '-'
-                    })
+        for op in OperationEpargne.objects.filter(compte=compte_epargne).order_by('-date_operation'):
+            operations.append({
+                'date': op.date_operation.strftime('%d/%m/%Y %H:%M:%S'),
+                'compte_icon': '🏦',
+                'compte_nom': 'Epargne',
+                'type': 'Dépôt' if op.type_operation == 'depot' else 'Retrait',
+                'signe': '+' if op.type_operation == 'depot' else '-',
+                'montant': f"{op.montant:,.0f}",
+                'couleur': '#10b981' if op.type_operation == 'depot' else '#ef4444',
+                'description': op.description or '-'
+            })
     
-    # Trier par date decroissante
+    # Trier par date
     operations.sort(key=lambda x: x['date'], reverse=True)
+    
+    # Calculer les totaux
+    total_encaissements = sum(int(op['montant'].replace(',', '').replace(' ', '')) for op in operations if op['signe'] == '+')
+    total_decaissements = sum(int(op['montant'].replace(',', '').replace(' ', '')) for op in operations if op['signe'] == '-')
     
     # Pagination
     paginator = Paginator(operations, per_page)
-    page_obj = paginator.get_page(page)
+    try:
+        page_obj = paginator.page(page)
+    except:
+        page_obj = paginator.page(1)
     
     return JsonResponse({
+        'success': True,
         'operations': list(page_obj),
         'total': paginator.count,
         'page': page_obj.number,
         'total_pages': paginator.num_pages,
         'has_next': page_obj.has_next(),
         'has_previous': page_obj.has_previous(),
-        'per_page': per_page
+        'per_page': per_page,
+        'total_encaissements': f"{total_encaissements:,.0f}",
+        'total_decaissements': f"{total_decaissements:,.0f}"
     })
+
 
 @login_required
 def api_totaux_operations(request):
@@ -4120,17 +4516,33 @@ def api_totaux_operations(request):
 
 @login_required
 def generer_rapport_admin(request):
-    """Genere un rapport Excel ou CSV avec filtres par personnel et date"""
+    """
+    RAPPORT ADMINISTRATEUR - Version Finale
+    =======================================
+    Contient :
+    1. Onglet "RECAP ADMIN" - Totaux généraux + Stats Admin + Soldes Admin + Liste des Agents + Liste des Assistants
+    2. Onglet "TRANSACTIONS" - Toutes les transactions
+    3. Onglet "DEMANDES" - Toutes les demandes
+    4. Onglets individuels pour chaque Agent
+    5. Onglets individuels pour chaque Assistant
+    """
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+    from django.utils.timezone import now
+    from datetime import datetime, timedelta
+    from django.db.models import Sum, Q
+    from transactions.models import Transaction, Agent, Assistant, Admin, Caisse, DemandeApprovisionnement
+    from django.contrib.auth.models import User
+    
+    # ==================== PARAMETRES ====================
     format_type = request.GET.get('format', 'excel')
     date_debut_str = request.GET.get('date_debut')
     date_fin_str = request.GET.get('date_fin')
-    agent_id = request.GET.get('agent')
-    assistant_id = request.GET.get('assistant')
-    admin_id = request.GET.get('admin')
     
-    today = timezone.now().date()
+    today = now().date()
     
-    # Gestion des dates
     if date_debut_str and date_fin_str:
         try:
             date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
@@ -4142,133 +4554,702 @@ def generer_rapport_admin(request):
         date_debut = today - timedelta(days=30)
         date_fin = today
     
-    # Base des transactions
-    transactions = Transaction.objects.filter(
+    # ==================== STYLES EXCEL ====================
+    COLOR_PRIMARY = "1a73e8"
+    COLOR_DARK = "202124"
+    COLOR_SUCCESS = "28a745"
+    COLOR_DANGER = "dc3545"
+    
+    font_title = Font(bold=True, size=16, color="FFFFFF")
+    font_subtitle = Font(bold=True, size=12, color=COLOR_PRIMARY)
+    font_header = Font(bold=True, size=10, color="FFFFFF")
+    font_bold = Font(bold=True)
+    font_money = Font(bold=True, size=11, color=COLOR_SUCCESS)
+    font_entree = Font(bold=True, size=14, color=COLOR_SUCCESS)
+    font_sortie = Font(bold=True, size=14, color=COLOR_DANGER)
+    
+    fill_title = PatternFill(start_color=COLOR_PRIMARY, end_color=COLOR_PRIMARY, fill_type="solid")
+    fill_header = PatternFill(start_color=COLOR_DARK, end_color=COLOR_DARK, fill_type="solid")
+    fill_success = PatternFill(start_color="d4edda", end_color="d4edda", fill_type="solid")
+    fill_warning = PatternFill(start_color="fff3cd", end_color="fff3cd", fill_type="solid")
+    fill_info = PatternFill(start_color="d1ecf1", end_color="d1ecf1", fill_type="solid")
+    fill_entree = PatternFill(start_color="d4edda", end_color="d4edda", fill_type="solid")
+    fill_sortie = PatternFill(start_color="f8d7da", end_color="f8d7da", fill_type="solid")
+    fill_admin = PatternFill(start_color="e2f0d9", end_color="e2f0d9", fill_type="solid")
+    
+    align_center = Alignment(horizontal='center', vertical='center')
+    align_left = Alignment(horizontal='left', vertical='center')
+    
+    # ==================== COLLECTE DES DONNEES AVEC FILTRES DATES ====================
+    # IMPORTANT: Toutes les transactions sont filtrées par la période
+    all_transactions = Transaction.objects.filter(
         date__date__gte=date_debut,
         date__date__lte=date_fin
-    )
+    ).select_related('user')
     
-    # Variables pour le rapport
-    target_nom = "Tous"
-    target_type = "tous"
-    caisse = None
-    demandes = []
+    # Totaux généraux (déjà filtrés par date)
+    total_entree = int(all_transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0)
+    total_sortie = int(all_transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0)
+    total_commission = int(all_transactions.aggregate(Sum('commission'))['commission__sum'] or 0)
+    total_transactions = all_transactions.count()
     
-    # Filtrer par AGENT
-    if agent_id:
+    # ==================== STATISTIQUES ADMIN ====================
+    admin_stats = {
+        'nom': "ADMINISTRATEUR",
+        'solde_cash': 0,
+        'solde_uv': 0,
+        'solde_wave': 0,
+        'solde_cash_hier': 0,
+        'solde_uv_hier': 0,
+        'solde_wave_hier': 0,
+        'total_entree': 0,
+        'total_sortie': 0,
+        'commission': 0,
+        'total_transactions': 0,
+    }
+    
+    try:
+        admin_user = User.objects.filter(is_superuser=True).first()
+        if admin_user:
+            caisse_admin = Caisse.objects.get(user=admin_user)
+            admin_stats['solde_cash'] = int(caisse_admin.solde_cash or 0)
+            admin_stats['solde_uv'] = int(caisse_admin.solde_uv or 0)
+            admin_stats['solde_wave'] = int(caisse_admin.solde_wave or 0)
+            
+            # Transactions de l'admin sur la période
+            admin_transactions = all_transactions.filter(user=admin_user)
+            admin_stats['total_entree'] = int(admin_transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0)
+            admin_stats['total_sortie'] = int(admin_transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0)
+            admin_stats['commission'] = int(admin_transactions.aggregate(Sum('commission'))['commission__sum'] or 0)
+            admin_stats['total_transactions'] = admin_transactions.count()
+            
+            # Calcul des soldes d'hier (basé sur les transactions d'aujourd'hui)
+            transactions_auj = Transaction.objects.filter(date__date=today)
+            cash_depot = int(transactions_auj.filter(type_transaction='depot', user=admin_user).aggregate(Sum('montant'))['montant__sum'] or 0)
+            cash_retrait = int(transactions_auj.filter(type_transaction='retrait', user=admin_user).aggregate(Sum('montant'))['montant__sum'] or 0)
+            admin_stats['solde_cash_hier'] = admin_stats['solde_cash'] - (cash_depot - cash_retrait)
+            
+            uv_depot = int(transactions_auj.filter(operateur__in=['orange','malitel','telecel'], type_transaction='depot', user=admin_user).aggregate(Sum('montant'))['montant__sum'] or 0)
+            uv_retrait = int(transactions_auj.filter(operateur__in=['orange','malitel','telecel'], type_transaction='retrait', user=admin_user).aggregate(Sum('montant'))['montant__sum'] or 0)
+            admin_stats['solde_uv_hier'] = admin_stats['solde_uv'] - (uv_retrait - uv_depot)
+            
+            wave_depot = int(transactions_auj.filter(operateur='wave', type_transaction='depot', user=admin_user).aggregate(Sum('montant'))['montant__sum'] or 0)
+            wave_retrait = int(transactions_auj.filter(operateur='wave', type_transaction='retrait', user=admin_user).aggregate(Sum('montant'))['montant__sum'] or 0)
+            admin_stats['solde_wave_hier'] = admin_stats['solde_wave'] - (wave_retrait - wave_depot)
+    except Exception as e:
+        print(f"Erreur admin stats: {e}")
+    
+    # Statistiques par opérateur (filtrées par date)
+    stats = {
+        'orange': {
+            'depot': int(all_transactions.filter(operateur='orange', type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0),
+            'retrait': int(all_transactions.filter(operateur='orange', type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0),
+            'credit': int(all_transactions.filter(operateur='orange', type_transaction='credit').aggregate(Sum('montant'))['montant__sum'] or 0),
+        },
+        'malitel': {
+            'depot': int(all_transactions.filter(operateur='malitel', type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0),
+            'retrait': int(all_transactions.filter(operateur='malitel', type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0),
+            'credit': int(all_transactions.filter(operateur='malitel', type_transaction='credit').aggregate(Sum('montant'))['montant__sum'] or 0),
+        },
+        'telecel': {
+            'depot': int(all_transactions.filter(operateur='telecel', type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0),
+            'retrait': int(all_transactions.filter(operateur='telecel', type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0),
+            'credit': int(all_transactions.filter(operateur='telecel', type_transaction='credit').aggregate(Sum('montant'))['montant__sum'] or 0),
+        },
+        'wave': {
+            'depot': int(all_transactions.filter(operateur='wave', type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0),
+            'retrait': int(all_transactions.filter(operateur='wave', type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0),
+        },
+    }
+    
+    # Demandes filtrées par date
+    all_demandes = DemandeApprovisionnement.objects.filter(
+        date_demande__date__gte=date_debut,
+        date_demande__date__lte=date_fin
+    ).order_by('-date_demande')
+    
+    # ==================== COLLECTE DES AGENTS (avec filtres date) ====================
+    agents_data = []
+    
+    for agent in Agent.objects.all():
+        # Transactions de l'agent sur la période UNIQUEMENT
+        agent_transactions = all_transactions.filter(user=agent.user)
+        
         try:
-            agent = Agent.objects.get(id=agent_id)
-            transactions = transactions.filter(user=agent.user)
-            target_nom = agent.nom
-            target_type = "agent"
-            
-            # Recuperer la caisse de l'agent
-            try:
-                caisse = Caisse.objects.get(user=agent.user)
-                caisse.solde_cash = int(caisse.solde_cash or 0)
-                caisse.solde_uv = int(caisse.solde_uv or 0)
-                caisse.solde_wave = int(caisse.solde_wave or 0)
-            except Caisse.DoesNotExist:
-                caisse = None
-            
-            # Demandes d'approvisionnement de l'agent
-            demandes = DemandeApprovisionnement.objects.filter(agent=agent).order_by('-date_demande')
-            
-        except Agent.DoesNotExist:
-            pass
+            caisse = Caisse.objects.get(user=agent.user)
+            solde_cash = int(caisse.solde_cash or 0)
+            solde_uv = int(caisse.solde_uv or 0)
+            solde_wave = int(caisse.solde_wave or 0)
+        except Caisse.DoesNotExist:
+            solde_cash = solde_uv = solde_wave = 0
+        
+        # Soldes d'hier (basé sur les transactions d'aujourd'hui seulement)
+        transactions_auj = Transaction.objects.filter(date__date=today, user=agent.user)
+        cash_depot = int(transactions_auj.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0)
+        cash_retrait = int(transactions_auj.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0)
+        solde_cash_hier = solde_cash - (cash_depot - cash_retrait)
+        
+        uv_depot = int(transactions_auj.filter(operateur__in=['orange','malitel','telecel'], type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0)
+        uv_retrait = int(transactions_auj.filter(operateur__in=['orange','malitel','telecel'], type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0)
+        uv_credit = int(transactions_auj.filter(operateur__in=['orange','malitel','telecel'], type_transaction='credit').aggregate(Sum('montant'))['montant__sum'] or 0)
+        solde_uv_hier = solde_uv - (uv_retrait - uv_depot - uv_credit)
+        
+        wave_depot = int(transactions_auj.filter(operateur='wave', type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0)
+        wave_retrait = int(transactions_auj.filter(operateur='wave', type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0)
+        solde_wave_hier = solde_wave - (wave_retrait - wave_depot)
+        
+        # Stats sur la période
+        total_entree_agent = int(agent_transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0)
+        total_sortie_agent = int(agent_transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0)
+        commission_agent = int(agent_transactions.aggregate(Sum('commission'))['commission__sum'] or 0)
+        
+        agents_data.append({
+            'nom': agent.nom,
+            'telephone': agent.telephone or '-',
+            'email': agent.user.email if agent.user else '-',
+            'solde_cash': solde_cash,
+            'solde_cash_hier': solde_cash_hier,
+            'solde_uv': solde_uv,
+            'solde_uv_hier': solde_uv_hier,
+            'solde_wave': solde_wave,
+            'solde_wave_hier': solde_wave_hier,
+            'total_entree': total_entree_agent,
+            'total_sortie': total_sortie_agent,
+            'commission': commission_agent,
+            'total_transactions': agent_transactions.count(),
+            'transactions': agent_transactions,
+            'demandes': all_demandes.filter(agent=agent),
+        })
     
-    # Filtrer par ASSISTANT
-    elif assistant_id:
-        try:
-            assistant = Assistant.objects.get(id=assistant_id)
-            transactions = transactions.filter(user=assistant.user)
-            target_nom = assistant.nom
-            target_type = "assistant"
-            
-            # Recuperer la caisse de l'assistant
-            try:
-                caisse = Caisse.objects.get(user=assistant.user)
-                caisse.solde_cash = int(caisse.solde_cash or 0)
-                caisse.solde_uv = int(caisse.solde_uv or 0)
-                caisse.solde_wave = int(caisse.solde_wave or 0)
-            except Caisse.DoesNotExist:
-                caisse = None
-            
-            # Demandes d'approvisionnement recues par l'assistant
-            demandes = DemandeApprovisionnement.objects.filter(assistant_destinataire=assistant).order_by('-date_demande')
-            
-        except Assistant.DoesNotExist:
-            pass
+    # ==================== COLLECTE DES ASSISTANTS (avec filtres date) ====================
+    assistants_data = []
     
-    # Filtrer par ADMIN
-    elif admin_id:
-        try:
-            admin_obj = Admin.objects.get(id=admin_id)
-            transactions = transactions.filter(user=admin_obj.user)
-            target_nom = admin_obj.nom
-            target_type = "admin"
-            
-            # Recuperer la caisse de l'admin
-            try:
-                caisse = Caisse.objects.get(user=admin_obj.user)
-                caisse.solde_cash = int(caisse.solde_cash or 0)
-                caisse.solde_uv = int(caisse.solde_uv or 0)
-                caisse.solde_wave = int(caisse.solde_wave or 0)
-            except Caisse.DoesNotExist:
-                caisse = None
-            
-            # Demandes d'approvisionnement
-            demandes = DemandeApprovisionnement.objects.filter(statut__in=['en_attente', 'validee']).order_by('-date_demande')
-            
-        except Admin.DoesNotExist:
-            pass
+    for assistant in Assistant.objects.all():
+        # Transactions de l'assistant sur la période UNIQUEMENT
+        assistant_transactions = all_transactions.filter(user=assistant.user)
+        
+        total_entree_assistant = int(assistant_transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0)
+        total_sortie_assistant = int(assistant_transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0)
+        commission_assistant = int(assistant_transactions.aggregate(Sum('commission'))['commission__sum'] or 0)
+        
+        assistants_data.append({
+            'nom': assistant.nom,
+            'telephone': assistant.telephone or '-',
+            'email': assistant.user.email if assistant.user else '-',
+            'total_entree': total_entree_assistant,
+            'total_sortie': total_sortie_assistant,
+            'commission': commission_assistant,
+            'total_transactions': assistant_transactions.count(),
+            'transactions': assistant_transactions,
+            'demandes': all_demandes.filter(assistant_destinataire=assistant),
+        })
     
-    # Calcul des totaux
-    total_entree = int(transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0)
-    total_sortie = int(transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0)
-    total_commission = int(transactions.aggregate(Sum('commission'))['commission__sum'] or 0)
+    # ==================== EXPORT EXCEL ====================
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="rapport_admin_{date_debut}_{date_fin}.xlsx"'
     
-    # Statistiques par operateur
-    stats_orange = {
-        'depot': int(transactions.filter(operateur='orange', type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0),
-        'retrait': int(transactions.filter(operateur='orange', type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0),
-        'credit': int(transactions.filter(operateur='orange', type_transaction='credit').aggregate(Sum('montant'))['montant__sum'] or 0),
-    }
-    stats_malitel = {
-        'depot': int(transactions.filter(operateur='malitel', type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0),
-        'retrait': int(transactions.filter(operateur='malitel', type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0),
-        'credit': int(transactions.filter(operateur='malitel', type_transaction='credit').aggregate(Sum('montant'))['montant__sum'] or 0),
-    }
-    stats_telecel = {
-        'depot': int(transactions.filter(operateur='telecel', type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0),
-        'retrait': int(transactions.filter(operateur='telecel', type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0),
-        'credit': int(transactions.filter(operateur='telecel', type_transaction='credit').aggregate(Sum('montant'))['montant__sum'] or 0),
-    }
-    stats_wave = {
-        'depot': int(transactions.filter(operateur='wave', type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0),
-        'retrait': int(transactions.filter(operateur='wave', type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0),
-    }
+    wb = Workbook()
     
-    # Appeler la fonction d'export
-    return export_complete_report(
-        transactions=transactions,
-        nom=target_nom,
-        user_type=target_type,
-        caisse=caisse,
-        total_entree=total_entree,
-        total_sortie=total_sortie,
-        total_commission=total_commission,
-        demandes=demandes,
-        format_type=format_type,
-        date_debut=date_debut,
-        date_fin=date_fin,
-        stats_orange=stats_orange,
-        stats_malitel=stats_malitel,
-        stats_telecel=stats_telecel,
-        stats_wave=stats_wave
-    )
-
-
+    # ==================== ONGLET 1: RECAP ADMIN ====================
+    ws = wb.active
+    ws.title = "1. RECAP ADMIN"
+    
+    # Titre
+    ws.merge_cells('A1:H1')
+    ws['A1'] = "📊 RAPPORT ADMINISTRATEUR"
+    ws['A1'].font = font_title
+    ws['A1'].fill = fill_title
+    ws['A1'].alignment = align_center
+    
+    ws['A2'] = f"📅 Periode: du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}"
+    ws['A2'].font = font_bold
+    ws['A3'] = f"⏰ Date d'export: {datetime.now().strftime('%d/%m/%Y à %H:%M:%S')}"
+    
+    current_row = 5
+    
+    # ========== SECTION 1: TOTAUX GENERAUX ==========
+    ws.merge_cells(f'A{current_row}:H{current_row}')
+    ws[f'A{current_row}'] = "💰 TOTAUX GENERAUX"
+    ws[f'A{current_row}'].font = font_subtitle
+    ws[f'A{current_row}'].fill = fill_info
+    current_row += 1
+    
+    ws[f'A{current_row}'] = "📈 TOTAL ENTREES"
+    ws[f'A{current_row}'].font = font_entree
+    ws[f'B{current_row}'] = f"{total_entree:,.0f} FCFA"
+    ws[f'B{current_row}'].font = font_entree
+    ws[f'B{current_row}'].fill = fill_entree
+    ws[f'D{current_row}'] = "📉 TOTAL SORTIES"
+    ws[f'D{current_row}'].font = font_sortie
+    ws[f'E{current_row}'] = f"{total_sortie:,.0f} FCFA"
+    ws[f'E{current_row}'].font = font_sortie
+    ws[f'E{current_row}'].fill = fill_sortie
+    current_row += 1
+    
+    ws[f'A{current_row}'] = "🎯 TOTAL COMMISSION"
+    ws[f'A{current_row}'].font = font_bold
+    ws[f'B{current_row}'] = f"{total_commission:,.0f} FCFA"
+    ws[f'B{current_row}'].font = font_money
+    ws[f'D{current_row}'] = "📋 NOMBRE DE TRANSACTIONS"
+    ws[f'D{current_row}'].font = font_bold
+    ws[f'E{current_row}'] = total_transactions
+    current_row += 2
+    
+    # ========== SECTION 2: SOLDES ET ACTIVITE DE L'ADMIN ==========
+    ws.merge_cells(f'A{current_row}:H{current_row}')
+    ws[f'A{current_row}'] = "👨‍💼 ADMINISTRATEUR"
+    ws[f'A{current_row}'].font = font_subtitle
+    ws[f'A{current_row}'].fill = fill_admin
+    current_row += 1
+    
+    # Sous-section: Soldes
+    ws[f'A{current_row}'] = "💰 SOLDES"
+    ws[f'A{current_row}'].font = font_bold
+    current_row += 1
+    
+    ws[f'A{current_row}'] = "Compte"
+    ws[f'B{current_row}'] = "Solde Aujourd'hui"
+    ws[f'C{current_row}'] = "Solde Hier"
+    ws[f'D{current_row}'] = "Variation"
+    for col in range(1, 5):
+        ws.cell(row=current_row, column=col).font = font_header
+        ws.cell(row=current_row, column=col).fill = fill_header
+    current_row += 1
+    
+    ws[f'A{current_row}'] = "💵 Cash (Espèces)"
+    ws[f'B{current_row}'] = f"{admin_stats['solde_cash']:,.0f} FCFA"
+    ws[f'C{current_row}'] = f"{admin_stats['solde_cash_hier']:,.0f} FCFA"
+    ws[f'D{current_row}'] = f"{admin_stats['solde_cash'] - admin_stats['solde_cash_hier']:+,.0f} FCFA"
+    current_row += 1
+    
+    ws[f'A{current_row}'] = "📱 UV Touchpiont"
+    ws[f'B{current_row}'] = f"{admin_stats['solde_uv']:,.0f} FCFA"
+    ws[f'C{current_row}'] = f"{admin_stats['solde_uv_hier']:,.0f} FCFA"
+    ws[f'D{current_row}'] = f"{admin_stats['solde_uv'] - admin_stats['solde_uv_hier']:+,.0f} FCFA"
+    current_row += 1
+    
+    ws[f'A{current_row}'] = "🌊 UV Wave"
+    ws[f'B{current_row}'] = f"{admin_stats['solde_wave']:,.0f} FCFA"
+    ws[f'C{current_row}'] = f"{admin_stats['solde_wave_hier']:,.0f} FCFA"
+    ws[f'D{current_row}'] = f"{admin_stats['solde_wave'] - admin_stats['solde_wave_hier']:+,.0f} FCFA"
+    current_row += 2
+    
+    # Sous-section: Activité sur la période
+    ws[f'A{current_row}'] = "📊 ACTIVITE SUR LA PERIODE"
+    ws[f'A{current_row}'].font = font_bold
+    current_row += 1
+    
+    ws[f'A{current_row}'] = f"💰 Entrées: {admin_stats['total_entree']:,.0f} FCFA"
+    ws[f'C{current_row}'] = f"💸 Sorties: {admin_stats['total_sortie']:,.0f} FCFA"
+    ws[f'E{current_row}'] = f"🎯 Commission: {admin_stats['commission']:,.0f} FCFA"
+    ws[f'G{current_row}'] = f"📋 Nb Ops: {admin_stats['total_transactions']}"
+    current_row += 2
+    
+    # ========== SECTION 3: STATISTIQUES PAR OPERATEUR ==========
+    ws.merge_cells(f'A{current_row}:H{current_row}')
+    ws[f'A{current_row}'] = "📱 STATISTIQUES PAR OPERATEUR"
+    ws[f'A{current_row}'].font = font_subtitle
+    ws[f'A{current_row}'].fill = fill_info
+    current_row += 1
+    
+    headers = ['Opérateur', 'Dépôts', 'Retraits', 'Crédits', 'Total', 'Commission']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=current_row, column=col, value=header)
+        cell.font = font_header
+        cell.fill = fill_header
+        cell.alignment = align_center
+    current_row += 1
+    
+    ops_data = [('Orange', 'orange'), ('Malitel', 'malitel'), ('Telecel', 'telecel'), ('Wave', 'wave')]
+    for op_name, op_key in ops_data:
+        ws.cell(row=current_row, column=1, value=op_name)
+        ws.cell(row=current_row, column=2, value=f"{stats[op_key]['depot']:,.0f} FCFA")
+        ws.cell(row=current_row, column=3, value=f"{stats[op_key]['retrait']:,.0f} FCFA")
+        ws.cell(row=current_row, column=4, value=f"{stats[op_key]['credit']:,.0f} FCFA" if op_key != 'wave' else "-")
+        total = stats[op_key]['depot'] + stats[op_key]['retrait'] + (stats[op_key].get('credit', 0) if op_key != 'wave' else 0)
+        ws.cell(row=current_row, column=5, value=f"{total:,.0f} FCFA")
+        ws.cell(row=current_row, column=6, value=f"{int(total * 0.01):,.0f} FCFA")
+        current_row += 1
+    current_row += 2
+    
+    # ========== SECTION 4: LISTE DES AGENTS ==========
+    ws.merge_cells(f'A{current_row}:H{current_row}')
+    ws[f'A{current_row}'] = "👥 LISTE DES AGENTS"
+    ws[f'A{current_row}'].font = font_subtitle
+    ws[f'A{current_row}'].fill = fill_info
+    current_row += 1
+    
+    for agent in agents_data:
+        # Nom de l'agent
+        ws.merge_cells(f'A{current_row}:D{current_row}')
+        ws[f'A{current_row}'] = f"👤 {agent['nom']}"
+        ws[f'A{current_row}'].font = font_bold
+        ws[f'A{current_row}'].fill = fill_info
+        current_row += 1
+        
+        # Téléphone et email
+        ws[f'A{current_row}'] = f"📞 {agent['telephone']}  |  ✉️ {agent['email']}"
+        current_row += 1
+        
+        # En-tête du tableau des soldes
+        ws[f'A{current_row}'] = "Compte"
+        ws[f'B{current_row}'] = "Solde Aujourd'hui"
+        ws[f'C{current_row}'] = "Solde Hier"
+        ws[f'D{current_row}'] = "Variation"
+        for col in range(1, 5):
+            ws.cell(row=current_row, column=col).font = font_header
+            ws.cell(row=current_row, column=col).fill = fill_header
+        current_row += 1
+        
+        # Cash
+        ws[f'A{current_row}'] = "💵 Cash (Espèces)"
+        ws[f'B{current_row}'] = f"{agent['solde_cash']:,.0f} FCFA"
+        ws[f'C{current_row}'] = f"{agent['solde_cash_hier']:,.0f} FCFA"
+        var_cash = agent['solde_cash'] - agent['solde_cash_hier']
+        ws[f'D{current_row}'] = f"{var_cash:+,.0f} FCFA"
+        ws[f'D{current_row}'].fill = fill_success if var_cash >= 0 else fill_warning
+        current_row += 1
+        
+        # UV
+        ws[f'A{current_row}'] = "📱 UV Touchpiont"
+        ws[f'B{current_row}'] = f"{agent['solde_uv']:,.0f} FCFA"
+        ws[f'C{current_row}'] = f"{agent['solde_uv_hier']:,.0f} FCFA"
+        ws[f'D{current_row}'] = f"{agent['solde_uv'] - agent['solde_uv_hier']:+,.0f} FCFA"
+        current_row += 1
+        
+        # Wave
+        ws[f'A{current_row}'] = "🌊 UV Wave"
+        ws[f'B{current_row}'] = f"{agent['solde_wave']:,.0f} FCFA"
+        ws[f'C{current_row}'] = f"{agent['solde_wave_hier']:,.0f} FCFA"
+        ws[f'D{current_row}'] = f"{agent['solde_wave'] - agent['solde_wave_hier']:+,.0f} FCFA"
+        current_row += 1
+        
+        # Résumé période
+        ws[f'A{current_row}'] = "📊 RÉSUMÉ PÉRIODE"
+        ws[f'B{current_row}'] = f"Entrées: {agent['total_entree']:,.0f} FCFA | Sorties: {agent['total_sortie']:,.0f} FCFA | Commission: {agent['commission']:,.0f} FCFA | Nb Ops: {agent['total_transactions']}"
+        current_row += 2
+        
+        # Séparateur
+        ws.merge_cells(f'A{current_row}:D{current_row}')
+        ws[f'A{current_row}'] = "-" * 60
+        current_row += 1
+    
+    # ========== SECTION 5: LISTE DES ASSISTANTS (AJOUTÉE) ==========
+    ws.merge_cells(f'A{current_row}:H{current_row}')
+    ws[f'A{current_row}'] = "👥 LISTE DES ASSISTANTS"
+    ws[f'A{current_row}'].font = font_subtitle
+    ws[f'A{current_row}'].fill = fill_info
+    current_row += 1
+    
+    headers_assistants = ['Assistant', 'Téléphone', 'Email', 'Entrées', 'Sorties', 'Commission', 'Nb Ops']
+    for col, header in enumerate(headers_assistants, 1):
+        cell = ws.cell(row=current_row, column=col, value=header)
+        cell.font = font_header
+        cell.fill = fill_header
+        cell.alignment = align_center
+    current_row += 1
+    
+    for assistant in assistants_data:
+        ws.cell(row=current_row, column=1, value=assistant['nom'])
+        ws.cell(row=current_row, column=2, value=assistant['telephone'])
+        ws.cell(row=current_row, column=3, value=assistant['email'])
+        ws.cell(row=current_row, column=4, value=f"{assistant['total_entree']:,.0f} FCFA")
+        ws.cell(row=current_row, column=5, value=f"{assistant['total_sortie']:,.0f} FCFA")
+        ws.cell(row=current_row, column=6, value=f"{assistant['commission']:,.0f} FCFA")
+        ws.cell(row=current_row, column=7, value=assistant['total_transactions'])
+        current_row += 1
+    
+    # Ajuster largeurs
+    ws.column_dimensions['A'].width = 25
+    ws.column_dimensions['B'].width = 22
+    ws.column_dimensions['C'].width = 18
+    ws.column_dimensions['D'].width = 18
+    ws.column_dimensions['E'].width = 18
+    ws.column_dimensions['F'].width = 18
+    ws.column_dimensions['G'].width = 12
+    
+    # ==================== ONGLET 2: TRANSACTIONS ====================
+    ws2 = wb.create_sheet("2. TRANSACTIONS")
+    ws2.merge_cells('A1:H1')
+    ws2['A1'] = "DETAIL DES TRANSACTIONS"
+    ws2['A1'].font = font_title
+    ws2['A1'].fill = fill_title
+    ws2['A1'].alignment = align_center
+    ws2['A2'] = f"📅 Periode: du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}"
+    
+    row = 4
+    headers_trans = ['Date', 'Référence', 'Type', 'Opérateur', 'Client', 'Montant', 'Commission', 'Utilisateur']
+    for col, header in enumerate(headers_trans, 1):
+        cell = ws2.cell(row=row, column=col, value=header)
+        cell.font = font_header
+        cell.fill = fill_header
+        cell.alignment = align_center
+    row += 1
+    
+    for t in all_transactions.order_by('-date'):
+        ws2.cell(row=row, column=1, value=t.date.strftime('%d/%m/%Y %H:%M'))
+        ws2.cell(row=row, column=2, value=t.reference)
+        ws2.cell(row=row, column=3, value=t.get_type_transaction_display())
+        ws2.cell(row=row, column=4, value=t.get_operateur_display())
+        ws2.cell(row=row, column=5, value=t.numero_client)
+        ws2.cell(row=row, column=6, value=f"{int(t.montant):,.0f}")
+        ws2.cell(row=row, column=6).font = font_money
+        ws2.cell(row=row, column=7, value=f"{int(t.commission):,.0f}")
+        ws2.cell(row=row, column=8, value=t.user.username if t.user else "-")
+        row += 1
+    
+    for col in range(1, 9):
+        ws2.column_dimensions[get_column_letter(col)].width = 16
+    
+    # ==================== ONGLET 3: DEMANDES ====================
+    if all_demandes.exists():
+        ws3 = wb.create_sheet("3. DEMANDES")
+        ws3.merge_cells('A1:G1')
+        ws3['A1'] = "DEMANDES D'APPROVISIONNEMENT"
+        ws3['A1'].font = font_title
+        ws3['A1'].fill = fill_title
+        ws3['A1'].alignment = align_center
+        ws3['A2'] = f"📅 Periode: du {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}"
+        
+        row = 4
+        headers_dem = ['Date', 'Type', 'Montant', 'Statut', 'Motif', 'Agent', 'Assistant']
+        for col, header in enumerate(headers_dem, 1):
+            cell = ws3.cell(row=row, column=col, value=header)
+            cell.font = font_header
+            cell.fill = fill_header
+            cell.alignment = align_center
+        row += 1
+        
+        for d in all_demandes:
+            ws3.cell(row=row, column=1, value=d.date_demande.strftime('%d/%m/%Y %H:%M'))
+            ws3.cell(row=row, column=2, value=d.get_type_echange_display())
+            ws3.cell(row=row, column=3, value=f"{int(d.montant):,.0f} FCFA")
+            ws3.cell(row=row, column=4, value=d.get_statut_display())
+            ws3.cell(row=row, column=5, value=d.motif or "-")
+            ws3.cell(row=row, column=6, value=d.agent.nom if d.agent else "-")
+            ws3.cell(row=row, column=7, value=d.assistant_destinataire.nom if d.assistant_destinataire else "-")
+            row += 1
+        
+        for col in range(1, 8):
+            ws3.column_dimensions[get_column_letter(col)].width = 18
+    
+    # ==================== ONGLETS INDIVIDUELS POUR CHAQUE AGENT ====================
+    for agent in agents_data:
+        nom_feuille = f"Agent_{agent['nom'][:20]}".replace(' ', '_').replace('-', '_')
+        ws_agent = wb.create_sheet(nom_feuille[:25])
+        
+        ws_agent.merge_cells('A1:D1')
+        ws_agent['A1'] = f"AGENT : {agent['nom']}"
+        ws_agent['A1'].font = font_title
+        ws_agent['A1'].fill = fill_title
+        ws_agent['A1'].alignment = align_center
+        
+        ws_agent['A2'] = f"📞 {agent['telephone']}  |  ✉️ {agent['email']}"
+        ws_agent['A3'] = f"📅 Periode: {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}"
+        
+        row = 5
+        
+        # SOLDES
+        ws_agent.merge_cells(f'A{row}:D{row}')
+        ws_agent[f'A{row}'] = "💰 SOLDES"
+        ws_agent[f'A{row}'].font = font_subtitle
+        ws_agent[f'A{row}'].fill = fill_info
+        row += 1
+        
+        ws_agent[f'A{row}'] = "Compte"
+        ws_agent[f'B{row}'] = "Aujourd'hui"
+        ws_agent[f'C{row}'] = "Hier"
+        ws_agent[f'D{row}'] = "Variation"
+        for col in range(1, 5):
+            ws_agent.cell(row=row, column=col).font = font_header
+            ws_agent.cell(row=row, column=col).fill = fill_header
+        row += 1
+        
+        ws_agent[f'A{row}'] = "💵 Cash"
+        ws_agent[f'B{row}'] = f"{agent['solde_cash']:,.0f} FCFA"
+        ws_agent[f'C{row}'] = f"{agent['solde_cash_hier']:,.0f} FCFA"
+        ws_agent[f'D{row}'] = f"{agent['solde_cash'] - agent['solde_cash_hier']:+,.0f} FCFA"
+        row += 1
+        
+        ws_agent[f'A{row}'] = "📱 UV Touchpiont"
+        ws_agent[f'B{row}'] = f"{agent['solde_uv']:,.0f} FCFA"
+        ws_agent[f'C{row}'] = f"{agent['solde_uv_hier']:,.0f} FCFA"
+        ws_agent[f'D{row}'] = f"{agent['solde_uv'] - agent['solde_uv_hier']:+,.0f} FCFA"
+        row += 1
+        
+        ws_agent[f'A{row}'] = "🌊 UV Wave"
+        ws_agent[f'B{row}'] = f"{agent['solde_wave']:,.0f} FCFA"
+        ws_agent[f'C{row}'] = f"{agent['solde_wave_hier']:,.0f} FCFA"
+        ws_agent[f'D{row}'] = f"{agent['solde_wave'] - agent['solde_wave_hier']:+,.0f} FCFA"
+        row += 2
+        
+        ws_agent[f'A{row}'] = "📊 RÉSUMÉ PÉRIODE"
+        ws_agent[f'A{row}'].font = font_bold
+        ws_agent[f'B{row}'] = f"Entrées: {agent['total_entree']:,.0f} FCFA"
+        ws_agent[f'C{row}'] = f"Sorties: {agent['total_sortie']:,.0f} FCFA"
+        ws_agent[f'D{row}'] = f"Commission: {agent['commission']:,.0f} FCFA"
+        row += 2
+        
+        # DEMANDES
+        if agent['demandes'].exists():
+            ws_agent.merge_cells(f'A{row}:D{row}')
+            ws_agent[f'A{row}'] = "📨 DEMANDES"
+            ws_agent[f'A{row}'].font = font_subtitle
+            ws_agent[f'A{row}'].fill = fill_info
+            row += 1
+            
+            headers_dem = ['Date', 'Type', 'Montant', 'Statut']
+            for col, header in enumerate(headers_dem, 1):
+                cell = ws_agent.cell(row=row, column=col, value=header)
+                cell.font = font_header
+                cell.fill = fill_header
+                cell.alignment = align_center
+            row += 1
+            
+            for d in agent['demandes']:
+                ws_agent.cell(row=row, column=1, value=d.date_demande.strftime('%d/%m/%Y'))
+                ws_agent.cell(row=row, column=2, value=d.get_type_echange_display())
+                ws_agent.cell(row=row, column=3, value=f"{int(d.montant):,.0f} FCFA")
+                ws_agent.cell(row=row, column=4, value=d.get_statut_display())
+                row += 1
+        
+        # TRANSACTIONS (colonne F à K)
+        col_trans = 6
+        row_trans = 5
+        
+        ws_agent.merge_cells(start_row=row_trans, start_column=col_trans, end_row=row_trans, end_column=col_trans+5)
+        ws_agent.cell(row=row_trans, column=col_trans, value="📊 TRANSACTIONS SUR LA PÉRIODE")
+        ws_agent.cell(row=row_trans, column=col_trans).font = font_subtitle
+        ws_agent.cell(row=row_trans, column=col_trans).fill = fill_info
+        ws_agent.cell(row=row_trans, column=col_trans).alignment = align_center
+        row_trans += 1
+        
+        headers_trans_pers = ['Date', 'Type', 'Opérateur', 'Client', 'Montant', 'Commission']
+        for col, header in enumerate(headers_trans_pers, col_trans):
+            cell = ws_agent.cell(row=row_trans, column=col, value=header)
+            cell.font = font_header
+            cell.fill = fill_header
+            cell.alignment = align_center
+        row_trans += 1
+        
+        for t in agent['transactions'].order_by('-date'):
+            ws_agent.cell(row=row_trans, column=col_trans, value=t.date.strftime('%d/%m/%Y'))
+            ws_agent.cell(row=row_trans, column=col_trans+1, value=t.get_type_transaction_display())
+            ws_agent.cell(row=row_trans, column=col_trans+2, value=t.get_operateur_display())
+            ws_agent.cell(row=row_trans, column=col_trans+3, value=t.numero_client)
+            ws_agent.cell(row=row_trans, column=col_trans+4, value=f"{int(t.montant):,.0f}")
+            ws_agent.cell(row=row_trans, column=col_trans+5, value=f"{int(t.commission):,.0f}")
+            row_trans += 1
+        
+        if agent['transactions'].count() == 0:
+            ws_agent.cell(row=row_trans, column=col_trans, value="Aucune transaction sur cette période")
+        
+        # Ajuster largeurs
+        for col in range(1, 5):
+            ws_agent.column_dimensions[get_column_letter(col)].width = 20
+        for col in range(6, 12):
+            ws_agent.column_dimensions[get_column_letter(col)].width = 16
+    
+    # ==================== ONGLETS INDIVIDUELS POUR CHAQUE ASSISTANT ====================
+    for assistant in assistants_data:
+        nom_feuille = f"Assistant_{assistant['nom'][:20]}".replace(' ', '_').replace('-', '_')
+        ws_assistant = wb.create_sheet(nom_feuille[:25])
+        
+        ws_assistant.merge_cells('A1:D1')
+        ws_assistant['A1'] = f"ASSISTANT : {assistant['nom']}"
+        ws_assistant['A1'].font = font_title
+        ws_assistant['A1'].fill = fill_title
+        ws_assistant['A1'].alignment = align_center
+        
+        ws_assistant['A2'] = f"📞 {assistant['telephone']}  |  ✉️ {assistant['email']}"
+        ws_assistant['A3'] = f"📅 Periode: {date_debut.strftime('%d/%m/%Y')} au {date_fin.strftime('%d/%m/%Y')}"
+        ws_assistant['A4'] = "ℹ️ Les assistants partagent le solde de l'administrateur"
+        ws_assistant['A4'].fill = fill_info
+        
+        row = 6
+        
+        # RÉSUMÉ
+        ws_assistant.merge_cells(f'A{row}:D{row}')
+        ws_assistant[f'A{row}'] = "📊 RÉSUMÉ DES OPÉRATIONS"
+        ws_assistant[f'A{row}'].font = font_subtitle
+        ws_assistant[f'A{row}'].fill = fill_info
+        row += 1
+        
+        ws_assistant[f'A{row}'] = "💰 Total Entrées"
+        ws_assistant[f'B{row}'] = f"{assistant['total_entree']:,.0f} FCFA"
+        ws_assistant[f'C{row}'] = "💸 Total Sorties"
+        ws_assistant[f'D{row}'] = f"{assistant['total_sortie']:,.0f} FCFA"
+        row += 1
+        
+        ws_assistant[f'A{row}'] = "🎯 Commission totale"
+        ws_assistant[f'B{row}'] = f"{assistant['commission']:,.0f} FCFA"
+        ws_assistant[f'C{row}'] = "📋 Nombre de transactions"
+        ws_assistant[f'D{row}'] = assistant['total_transactions']
+        row += 2
+        
+        # DEMANDES
+        if assistant['demandes'].exists():
+            ws_assistant.merge_cells(f'A{row}:D{row}')
+            ws_assistant[f'A{row}'] = "📨 DEMANDES TRAITÉES"
+            ws_assistant[f'A{row}'].font = font_subtitle
+            ws_assistant[f'A{row}'].fill = fill_info
+            row += 1
+            
+            headers_dem = ['Date', 'Type', 'Montant', 'Statut']
+            for col, header in enumerate(headers_dem, 1):
+                cell = ws_assistant.cell(row=row, column=col, value=header)
+                cell.font = font_header
+                cell.fill = fill_header
+                cell.alignment = align_center
+            row += 1
+            
+            for d in assistant['demandes']:
+                ws_assistant.cell(row=row, column=1, value=d.date_demande.strftime('%d/%m/%Y'))
+                ws_assistant.cell(row=row, column=2, value=d.get_type_echange_display())
+                ws_assistant.cell(row=row, column=3, value=f"{int(d.montant):,.0f} FCFA")
+                ws_assistant.cell(row=row, column=4, value=d.get_statut_display())
+                row += 1
+        
+        # TRANSACTIONS
+        col_trans = 6
+        row_trans = 6
+        
+        ws_assistant.merge_cells(start_row=row_trans, start_column=col_trans, end_row=row_trans, end_column=col_trans+5)
+        ws_assistant.cell(row=row_trans, column=col_trans, value="📊 TRANSACTIONS SUR LA PÉRIODE")
+        ws_assistant.cell(row=row_trans, column=col_trans).font = font_subtitle
+        ws_assistant.cell(row=row_trans, column=col_trans).fill = fill_info
+        ws_assistant.cell(row=row_trans, column=col_trans).alignment = align_center
+        row_trans += 1
+        
+        headers_trans_pers = ['Date', 'Type', 'Opérateur', 'Client', 'Montant', 'Commission']
+        for col, header in enumerate(headers_trans_pers, col_trans):
+            cell = ws_assistant.cell(row=row_trans, column=col, value=header)
+            cell.font = font_header
+            cell.fill = fill_header
+            cell.alignment = align_center
+        row_trans += 1
+        
+        for t in assistant['transactions'].order_by('-date'):
+            ws_assistant.cell(row=row_trans, column=col_trans, value=t.date.strftime('%d/%m/%Y'))
+            ws_assistant.cell(row=row_trans, column=col_trans+1, value=t.get_type_transaction_display())
+            ws_assistant.cell(row=row_trans, column=col_trans+2, value=t.get_operateur_display())
+            ws_assistant.cell(row=row_trans, column=col_trans+3, value=t.numero_client)
+            ws_assistant.cell(row=row_trans, column=col_trans+4, value=f"{int(t.montant):,.0f}")
+            ws_assistant.cell(row=row_trans, column=col_trans+5, value=f"{int(t.commission):,.0f}")
+            row_trans += 1
+        
+        if assistant['transactions'].count() == 0:
+            ws_assistant.cell(row=row_trans, column=col_trans, value="Aucune transaction sur cette période")
+        
+        # Ajuster largeurs
+        for col in range(1, 5):
+            ws_assistant.column_dimensions[get_column_letter(col)].width = 20
+        for col in range(6, 12):
+            ws_assistant.column_dimensions[get_column_letter(col)].width = 16
+    
+    wb.save(response)
+    return response
+    
 def export_complete_report(transactions, nom, user_type, caisse, total_entree, total_sortie, total_commission, demandes, format_type, date_debut, date_fin, stats_orange, stats_malitel, stats_telecel, stats_wave):
     """Export complet avec recap, demandes et transactions"""
     from openpyxl import Workbook
@@ -4561,8 +5542,7 @@ def export_complete_report(transactions, nom, user_type, caisse, total_entree, t
         return response
 
 
-# ==================== VUES FACTURES ====================
- 
+# ==================== VUES FACTURES ===================
 @login_required
 def creer_facture(request):
     """Creer une nouvelle facture"""
@@ -4607,8 +5587,6 @@ def creer_facture(request):
     
     return redirect('rapports_admin')
 
-
-# API pour recuperer les factures
 @login_required
 def api_factures(request):
     """API pour recuperer les factures"""
@@ -4753,10 +5731,32 @@ def enregistrer_paiement_facture(request, facture_id):
 
 
 # ==================== VUES DETTES ====================
+# views.py - VERSION CORRECTE AVEC VOS MODÈLES
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db.models import Sum
+from django.http import JsonResponse, FileResponse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
+from datetime import datetime
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from io import BytesIO
+
+from .models import Dette, RemboursementDette, Debiteur
+
+
+# ==================== VUES PRINCIPALES ====================
 
 @login_required
 def ajouter_dette(request):
-    """Ajouter une nouvelle dette"""
+    """Ajouter une nouvelle dette - SAISIE LIBRE DU NOM"""
     if request.method == 'POST':
         try:
             montant = request.POST.get('montant', 0)
@@ -4769,12 +5769,33 @@ def ajouter_dette(request):
                 messages.error(request, 'Le montant doit être supérieur à 0')
                 return redirect('rapports_admin')
             
-            debiteur_id = request.POST.get('debiteur_id')
-            if not debiteur_id:
-                messages.error(request, 'Veuillez sélectionner un débiteur')
+            nom_debiteur = request.POST.get('nom_debiteur', '').strip()
+            if not nom_debiteur:
+                messages.error(request, 'Veuillez saisir le nom du débiteur')
                 return redirect('rapports_admin')
             
-            debiteur = Agent.objects.get(id=debiteur_id)
+            # Récupérer la valeur de la case "ajouter à la caisse"
+            ajouter_caisse = request.POST.get('ajouter_caisse') == 'on'
+            
+            debiteur, created = Debiteur.objects.get_or_create(
+                nom__iexact=nom_debiteur,
+                defaults={
+                    'nom': nom_debiteur,
+                    'telephone': request.POST.get('telephone', ''),
+                    'email': request.POST.get('email', ''),
+                    'adresse': request.POST.get('adresse', ''),
+                    'cree_par': request.user
+                }
+            )
+            
+            if not created:
+                if request.POST.get('telephone') and not debiteur.telephone:
+                    debiteur.telephone = request.POST.get('telephone')
+                if request.POST.get('email') and not debiteur.email:
+                    debiteur.email = request.POST.get('email')
+                if request.POST.get('adresse') and not debiteur.adresse:
+                    debiteur.adresse = request.POST.get('adresse')
+                debiteur.save()
             
             dette = Dette.objects.create(
                 debiteur=debiteur,
@@ -4783,9 +5804,28 @@ def ajouter_dette(request):
                 motif=request.POST.get('motif', ''),
                 cree_par=request.user
             )
-            messages.success(request, f'Dette de {montant:,.0f} FCFA ajoutée avec succès')
-        except Agent.DoesNotExist:
-            messages.error(request, 'Agent non trouvé')
+            
+            message = f'Dette de {montant:,.0f} FCFA ajoutée pour {debiteur.nom}'
+            
+            # ========== CRÉATION DETTE : ON SOUSTRAIT DE LA CAISSE ==========
+            if ajouter_caisse:
+                try:
+                    caisse, cree = Caisse.objects.get_or_create(
+                        user=request.user,
+                        defaults={'solde_cash': 0, 'solde_uv': 0, 'solde_wave': 0}
+                    )
+                    # SOUSTRAIRE de la caisse (l'argent sort)
+                    caisse.solde_cash -= montant
+                    caisse.save()
+                    message += f" et retiré {montant:,.0f} FCFA de la caisse espèces"
+                except Exception as e:
+                    message += f" (⚠️ erreur caisse: {str(e)})"
+            
+            if created:
+                messages.success(request, f'Nouveau débiteur "{nom_debiteur}" créé. {message}')
+            else:
+                messages.success(request, message)
+                
         except Exception as e:
             messages.error(request, f'Erreur: {str(e)}')
     
@@ -4804,6 +5844,19 @@ def modifier_dette(request, dette_id):
                 montant = int(montant)
             except ValueError:
                 montant = dette.montant
+            
+            nouveau_nom = request.POST.get('nom_debiteur', '').strip()
+            if nouveau_nom and nouveau_nom != dette.debiteur.nom:
+                debiteur_existant = Debiteur.objects.filter(nom__iexact=nouveau_nom).first()
+                if debiteur_existant:
+                    dette.debiteur = debiteur_existant
+                else:
+                    dette.debiteur.nom = nouveau_nom
+                    if request.POST.get('telephone'):
+                        dette.debiteur.telephone = request.POST.get('telephone')
+                    if request.POST.get('email'):
+                        dette.debiteur.email = request.POST.get('email')
+                    dette.debiteur.save()
             
             dette.montant = montant
             dette.date_echeance = request.POST.get('date_echeance', dette.date_echeance)
@@ -4827,10 +5880,10 @@ def supprimer_dette(request, dette_id):
     
     return redirect('rapports_admin')
 
-
+ 
 @login_required
 def enregistrer_remboursement_dette(request, dette_id):
-    """Enregistrer un remboursement sur une dette"""
+    """Enregistrer un remboursement et AJOUTER à la caisse"""
     dette = get_object_or_404(Dette, id=dette_id)
     
     if request.method == 'POST':
@@ -4842,30 +5895,153 @@ def enregistrer_remboursement_dette(request, dette_id):
                 montant = 0
             
             mode = request.POST.get('mode_paiement', 'cash')
+            generer_recu = request.POST.get('generer_recu') == 'on'
+            ajouter_caisse = request.POST.get('ajouter_caisse') == 'on'
             
             if montant <= 0:
                 messages.error(request, 'Montant invalide')
             elif montant > dette.reste_a_payer:
                 messages.error(request, f'Montant dépasse le reste à payer ({dette.reste_a_payer:,.0f} FCFA)')
             else:
-                dette.montant_rembourse += montant
-                dette.save()
-                
-                RemboursementDette.objects.create(
+                # Enregistrer le remboursement
+                remboursement = RemboursementDette.objects.create(
                     dette=dette,
                     montant=montant,
                     mode_paiement=mode,
                     cree_par=request.user
                 )
-                messages.success(request, f'Remboursement de {montant:,.0f} FCFA enregistré')
+                
+                # Mettre à jour la dette
+                dette.montant_rembourse += montant
+                dette.save()
+                
+                message = f'✅ Remboursement de {montant:,.0f} FCFA enregistré'
+                
+                # ========== REMBOURSEMENT : ON AJOUTE À LA CAISSE ==========
+                if ajouter_caisse:
+                    try:
+                        caisse, created = Caisse.objects.get_or_create(
+                            user=request.user,
+                            defaults={'solde_cash': 0, 'solde_uv': 0, 'solde_wave': 0}
+                        )
+                        
+                        mode_labels = {'cash': 'espèces', 'uv': 'UV Touchpiont', 'wave': 'UV Wave'}
+                        
+                        # AJOUTER à la caisse selon le mode de paiement
+                        if mode == 'cash':
+                            caisse.solde_cash += montant
+                        elif mode == 'uv':
+                            caisse.solde_uv += montant
+                        elif mode == 'wave':
+                            caisse.solde_wave += montant
+                        
+                        caisse.save()
+                        message += f" et ajouté {montant:,.0f} FCFA au solde {mode_labels.get(mode, mode)}"
+                    except Exception as e:
+                        message += f" (⚠️ erreur caisse: {str(e)})"
+                
+                messages.success(request, message)
+                
+                # Générer le reçu si demandé
+                if generer_recu:
+                    return download_recu(request, remboursement.id)
+                    
         except Exception as e:
             messages.error(request, f'Erreur: {str(e)}')
     
     return redirect('rapports_admin')
 
 
-# ==================== API REST ====================
+def generer_recu_pdf(remboursement):
+    """Génère un PDF de reçu pour un paiement (format ticket 80mm)"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=(200, 400), topMargin=10, bottomMargin=10, leftMargin=10, rightMargin=10)
+    
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle('TicketTitle', parent=styles['Heading1'], fontSize=12, textColor=colors.HexColor('#2c3e50'), alignment=1, spaceAfter=6, fontName='Helvetica-Bold')
+    header_style = ParagraphStyle('TicketHeader', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#7f8c8d'), alignment=1, spaceAfter=4)
+    normal_style = ParagraphStyle('TicketNormal', parent=styles['Normal'], fontSize=8, alignment=0, spaceAfter=2)
+    bold_style = ParagraphStyle('TicketBold', parent=styles['Normal'], fontSize=9, fontName='Helvetica-Bold', alignment=0, spaceAfter=2)
+    center_bold = ParagraphStyle('TicketCenterBold', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', alignment=1, spaceAfter=4)
+    big_amount = ParagraphStyle('BigAmount', parent=styles['Normal'], fontSize=14, fontName='Helvetica-Bold', alignment=1, textColor=colors.HexColor('#27ae60'), spaceAfter=4)
+    
+    story = []
+    
+    story.append(Paragraph("=" * 28, normal_style))
+    story.append(Paragraph("U V   S E R V I C E S", title_style))
+    story.append(Paragraph("Service Financier", header_style))
+    story.append(Paragraph("=" * 28, normal_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("REÇU DE PAIEMENT", center_bold))
+    story.append(Paragraph("-" * 28, normal_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(f"N° RECU: REC-{remboursement.id:06d}", normal_style))
+    story.append(Paragraph(f"DATE: {remboursement.date_remboursement.strftime('%d/%m/%Y %H:%M')}", normal_style))
+    story.append(Paragraph(f"ENREG. PAR: {remboursement.cree_par.username[:15]}", normal_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("-" * 28, normal_style))
+    story.append(Paragraph("DEBITEUR:", bold_style))
+    story.append(Paragraph(f"{remboursement.dette.debiteur.nom[:25]}", normal_style))
+    if remboursement.dette.debiteur.telephone:
+        story.append(Paragraph(f"TEL: {remboursement.dette.debiteur.telephone}", normal_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("-" * 28, normal_style))
+    motif = remboursement.dette.motif or "Prêt"
+    story.append(Paragraph(f"MOTIF: {motif[:25]}", normal_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("-" * 28, normal_style))
+    story.append(Paragraph("MONTANT PAYE", center_bold))
+    story.append(Paragraph(f"{remboursement.montant:,.0f} FCFA", big_amount))
+    story.append(Paragraph(f"MODE: {remboursement.get_mode_paiement_display()}", normal_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("-" * 28, normal_style))
+    story.append(Paragraph("RECAPITULATIF:", bold_style))
+    story.append(Paragraph(f"Total dette: {remboursement.dette.montant:,.0f} FCFA", normal_style))
+    story.append(Paragraph(f"Deja rembourse: {(remboursement.dette.montant_rembourse - remboursement.montant):,.0f} FCFA", normal_style))
+    story.append(Paragraph(f"Ce paiement: {remboursement.montant:,.0f} FCFA", normal_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("-" * 28, normal_style))
+    story.append(Paragraph("RESTE A PAYER", bold_style))
+    story.append(Paragraph(f"{remboursement.dette.reste_a_payer:,.0f} FCFA", ParagraphStyle('RestAmount', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold', alignment=0, textColor=colors.HexColor('#e74c3c'))))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("-" * 28, normal_style))
+    statut = "PAYEE" if remboursement.dette.statut == 'payee' else "EN COURS"
+    story.append(Paragraph(f"STATUT: {statut}", normal_style))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("~" * 28, normal_style))
+    story.append(Paragraph("Merci de votre confiance", header_style))
+    story.append(Paragraph("Ce ticket fait office de reçu", ParagraphStyle('Footer', parent=styles['Normal'], fontSize=7, alignment=1, textColor=colors.HexColor('#95a5a6'))))
+    story.append(Paragraph(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", header_style))
+    story.append(Paragraph("=" * 28, normal_style))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
+
+@login_required
+def download_recu(request, remboursement_id):
+    """Télécharger le reçu PDF"""
+    remboursement = get_object_or_404(RemboursementDette, id=remboursement_id)
+    
+    if remboursement.cree_par != request.user and not request.user.is_staff:
+        messages.error(request, "Permission non accordée")
+        return redirect('rapports_admin')
+    
+    buffer = generer_recu_pdf(remboursement)
+    
+    filename = f"recu_{remboursement.dette.debiteur.nom}_{remboursement.date_remboursement.strftime('%Y%m%d_%H%M%S')}.pdf"
+    
+    return FileResponse(
+        buffer,
+        as_attachment=True,
+        filename=filename,
+        content_type='application/pdf'
+    )
+
+
+# ==================== API REST ====================
 
 @login_required
 def api_dettes(request):
@@ -4874,16 +6050,15 @@ def api_dettes(request):
         dettes = Dette.objects.all().order_by('-date_creation')
         
         statut = request.GET.get('statut')
-        debiteur_id = request.GET.get('debiteur')
+        debiteur_nom = request.GET.get('debiteur_nom')
         
         if statut and statut != 'all':
             dettes = dettes.filter(statut=statut)
-        if debiteur_id:
-            dettes = dettes.filter(debiteur_id=debiteur_id)
+        if debiteur_nom:
+            dettes = dettes.filter(debiteur__nom__icontains=debiteur_nom)
         
         total_montant = dettes.aggregate(Sum('montant'))['montant__sum'] or 0
         total_rembourse = dettes.aggregate(Sum('montant_rembourse'))['montant_rembourse__sum'] or 0
-        total_attente = dettes.filter(statut='active').aggregate(Sum('montant'))['montant__sum'] or 0
         
         data = {
             'success': True,
@@ -4903,7 +6078,7 @@ def api_dettes(request):
             ],
             'total': float(total_montant),
             'payees': float(total_rembourse),
-            'attente': float(total_attente),
+            'attente': float(total_montant - total_rembourse),
             'nombre': dettes.count(),
         }
         return JsonResponse(data)
@@ -4922,6 +6097,8 @@ def api_dette_detail(request, dette_id):
             'id': dette.id,
             'debiteur_nom': dette.debiteur.nom,
             'debiteur_id': dette.debiteur.id,
+            'debiteur_telephone': dette.debiteur.telephone or '',
+            'debiteur_email': dette.debiteur.email or '',
             'montant': float(dette.montant),
             'montant_rembourse': float(dette.montant_rembourse),
             'reste': float(dette.reste_a_payer),
@@ -4934,10 +6111,37 @@ def api_dette_detail(request, dette_id):
                     'id': r.id,
                     'montant': float(r.montant),
                     'mode_paiement': r.mode_paiement,
+                    'mode_display': r.get_mode_paiement_display(),
                     'date': r.date_remboursement.strftime('%d/%m/%Y %H:%M:%S'),
+                    'cree_par': r.cree_par.username,
                 } for r in dette.remboursements.all()
             ]
         }
+        return JsonResponse(data)
+    
+    return JsonResponse({'success': False, 'error': 'Method not allowed'})
+
+
+@login_required
+def api_chercher_debiteurs(request):
+    """API pour rechercher des débiteurs par nom (autocomplétion)"""
+    if request.method == 'GET':
+        terme = request.GET.get('q', '')
+        if len(terme) >= 2:
+            debiteurs = Debiteur.objects.filter(nom__icontains=terme)[:10]
+            data = {
+                'success': True,
+                'debiteurs': [
+                    {
+                        'id': d.id,
+                        'nom': d.nom,
+                        'telephone': d.telephone or '',
+                        'email': d.email or '',
+                    } for d in debiteurs
+                ]
+            }
+        else:
+            data = {'success': True, 'debiteurs': []}
         return JsonResponse(data)
     
     return JsonResponse({'success': False, 'error': 'Method not allowed'})
@@ -5109,19 +6313,19 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from django.http import HttpResponse
 from datetime import datetime
+from reportlab.lib.units import cm
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from django.http import HttpResponse
+from datetime import datetime
 
 
 @login_required
 def generer_facture_pdf(request, facture_id):
     """Générer une facture PDF professionnelle"""
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import cm
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-    from django.http import HttpResponse
-    from datetime import datetime
     
     facture = get_object_or_404(Facture, id=facture_id)
     
@@ -5140,15 +6344,15 @@ def generer_facture_pdf(request, facture_id):
     styles = getSampleStyleSheet()
     normal = styles['Normal']
     
-    primary = colors.HexColor('#0f766e')
-    gold = colors.HexColor('#f59e0b')
-    danger = colors.HexColor('#ef4444')
-    success = colors.HexColor('#10b981')
-    warning = colors.HexColor('#f59e0b')
-    light = colors.HexColor('#f8fafc')
-    border = colors.HexColor('#e2e8f0')
-    medium = colors.HexColor('#6b7280')
-    dark = colors.HexColor('#374151')
+    # ========== COULEURS AMÉLIORÉES ==========
+    primary = colors.HexColor('#0f766e')      # Teal élégant
+    gold = colors.HexColor('#f59e0b')         # Orange doré
+    danger = colors.HexColor('#dc2626')       # Rouge plus vif
+    success = colors.HexColor('#059669')      # Vert plus profond
+    light = colors.HexColor('#f0fdf4')        # Vert très clair
+    border = colors.HexColor('#cbd5e1')       # Bordure plus douce
+    medium = colors.HexColor('#475569')       # Gris plus soutenu
+    dark = colors.HexColor('#1e293b')         # Gris très foncé
     
     style_h1 = ParagraphStyle('H1', parent=styles['Heading1'], fontSize=22, textColor=primary, alignment=TA_LEFT, fontName='Helvetica-Bold')
     style_h1_right = ParagraphStyle('H1Right', parent=styles['Heading1'], fontSize=22, textColor=primary, alignment=TA_RIGHT, fontName='Helvetica-Bold')
@@ -5163,13 +6367,13 @@ def generer_facture_pdf(request, facture_id):
     elements = []
     
     # En-tête
-    header_row1 = [[Paragraph("VOTRE ENTREPRISE", style_h1), Paragraph("FACTURE", style_h1_right)]]
+    header_row1 = [[Paragraph("KONE SERVICES", style_h1), Paragraph("FACTURE", style_h1_right)]]
     header_table1 = Table(header_row1, colWidths=[8.5*cm, 8.5*cm])
     header_table1.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     elements.append(header_table1)
     elements.append(Spacer(1, 5))
     
-    header_row2 = [[Paragraph("✉ contact@entreprise.com", style_small), Paragraph(f"TYPE : {('CREANCE' if facture.type_facture == 'cliente' else 'DETTE')}", style_small_right)]]
+    header_row2 = [[Paragraph("✉ contact@koneservices.com", style_small), Paragraph(f"TYPE : {facture.type_facture}", style_small_right)]]
     header_table2 = Table(header_row2, colWidths=[8.5*cm, 8.5*cm])
     header_table2.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     elements.append(header_table2)
@@ -5181,7 +6385,7 @@ def generer_facture_pdf(request, facture_id):
     elements.append(header_table3)
     elements.append(Spacer(1, 3))
     
-    header_row4 = [[Paragraph("📞 +223 XX XX XX XX", style_small), Paragraph(f"EMISSION : {facture.date_emission.strftime('%d/%m/%Y')}", style_small_right)]]
+    header_row4 = [[Paragraph("📞 +223 76 12 34 56", style_small), Paragraph(f"EMISSION : {facture.date_emission.strftime('%d/%m/%Y')}", style_small_right)]]
     header_table4 = Table(header_row4, colWidths=[8.5*cm, 8.5*cm])
     header_table4.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     elements.append(header_table4)
@@ -5199,20 +6403,14 @@ def generer_facture_pdf(request, facture_id):
     elements.append(Spacer(1, 20))
     
     # Titre
-    if facture.type_facture == 'cliente':
-        elements.append(Paragraph("FACTURE CLIENT", style_title))
-        elements.append(Paragraph("Créance commerciale", style_subtitle))
-    else:
-        elements.append(Paragraph("FACTURE FOURNISSEUR", style_title))
-        elements.append(Paragraph("Dette fournisseur", style_subtitle))
+    elements.append(Paragraph(f"FACTURE {facture.type_facture.upper()}", style_title))
     elements.append(Spacer(1, 20))
-    
     # Informations client
-    elements.append(Paragraph("INFORMATIONS", style_section))
+
     
     client_data = [
         [Paragraph("NOM", style_label), Paragraph(facture.personne_nom or "Non renseigné", style_value)],
-        [Paragraph("TÉLÉPHONE", style_label), Paragraph(facture.numero or "Non renseigné", style_value)],
+        [Paragraph("TÉLÉPHONE", style_label), Paragraph(facture.personne_telephone or "Non renseigné", style_value)],
     ]
     
     client_table = Table(client_data, colWidths=[4.5*cm, 12*cm])
@@ -5227,20 +6425,6 @@ def generer_facture_pdf(request, facture_id):
     elements.append(client_table)
     elements.append(Spacer(1, 20))
     
-    # Statut
-    statut_text = "EN ATTENTE" if facture.statut != 'payee' else "PAYEE"
-    statut_color = warning if facture.statut != 'payee' else success
-    
-    statut_table = Table([[Paragraph(f"STATUT : {statut_text}", ParagraphStyle('Statut', parent=normal, fontSize=10, textColor=colors.white, fontName='Helvetica-Bold', alignment=TA_CENTER))]], 
-                          colWidths=[6*cm], rowHeights=[0.7*cm])
-    statut_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), statut_color),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-    ]))
-    
-    statut_container = Table([[statut_table]], colWidths=[17*cm])
-    statut_container.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
-    elements.append(statut_container)
     elements.append(Spacer(1, 20))
     
     # Détails
@@ -5251,8 +6435,11 @@ def generer_facture_pdf(request, facture_id):
         [Paragraph("DESIGNATION", style_label), Paragraph("QTE", style_label), Paragraph("MONTANT", style_label)]
     ]
     details_row = [
-        [Paragraph("Prestation de service", style_value), Paragraph("1", style_value), Paragraph(f"{facture.montant_total:,.0f} FCFA", style_value)]
+        
     ]
+    
+    if facture.description:
+        details_row.insert(0, [Paragraph(facture.description[:50], style_value), Paragraph("1", style_value), Paragraph(f"{facture.montant_total:,.0f} FCFA", style_value)])
     
     details_table = Table(details_header + details_row, colWidths=[9*cm, 3*cm, 5*cm])
     details_table.setStyle(TableStyle([
@@ -5270,26 +6457,25 @@ def generer_facture_pdf(request, facture_id):
     elements.append(Spacer(1, 20))
     
     # Totaux
-    total_restant = facture.montant_total - facture.montant_paye
-    
     totals_data = [
-        ["TOTAL", f"{facture.montant_total:,.0f} FCFA"],
-        ["NET A PAYER", f"{total_restant:,.0f} FCFA"],
+        ["MONTANT TOTAL", f"{facture.montant_total:,.0f} FCFA"],
     ]
+    
+    if facture.montant_paye > 0:
+        totals_data.insert(0, ["MONTANT PAYÉ", f"{facture.montant_paye:,.0f} FCFA"])
     
     totals_table = Table(totals_data, colWidths=[5*cm, 5*cm])
     totals_table.setStyle(TableStyle([
         ('FONTSIZE', (0,0), (-1,-1), 9),
         ('ALIGN', (1,0), (1,-1), 'RIGHT'),
-        ('FONTNAME', (0,0), (0,1), 'Helvetica-Bold'),
-        ('LINEABOVE', (0,1), (-1,1), 1, border),
-        ('BACKGROUND', (0,1), (-1,1), gold),
-        ('FONTNAME', (0,1), (-1,1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0,1), (-1,1), 11),
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0,-1), (-1,-1), gold),
+        ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,-1), (-1,-1), 11),
         ('TOPPADDING', (0,0), (-1,-1), 5),
         ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('LEFTPADDING', (0,1), (-1,1), 15),
-        ('RIGHTPADDING', (0,1), (-1,1), 15),
+        ('LEFTPADDING', (0,-1), (-1,-1), 15),
+        ('RIGHTPADDING', (0,-1), (-1,-1), 15),
     ]))
     
     totals_container = Table([[totals_table]], colWidths=[17*cm])
@@ -5297,25 +6483,13 @@ def generer_facture_pdf(request, facture_id):
     elements.append(totals_container)
     elements.append(Spacer(1, 20))
     
-    # Message
-    if total_restant > 0:
-        msg = f"📅 Merci de régler le solde de {total_restant:,.0f} FCFA avant le {facture.date_echeance.strftime('%d/%m/%Y')}"
-        msg_color = danger
-    else:
-        msg = f"✓ Facture entièrement acquittée. Merci de votre confiance !"
-        msg_color = success
-    
-    msg_style = ParagraphStyle('Message', parent=normal, fontSize=9, textColor=msg_color, alignment=TA_CENTER, spaceAfter=15)
-    elements.append(Paragraph(msg, msg_style))
-    elements.append(Spacer(1, 10))
-    
     # Pied de page
     footer_line = Table([['']], colWidths=[17*cm], rowHeights=[1])
     footer_line.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), border)]))
     elements.append(footer_line)
     elements.append(Spacer(1, 8))
     
-    footer = "Conditions: Paiement sous 30 jours"
+    footer = "MERCI POUR VOTRE CONFIANCE"
     elements.append(Paragraph(footer, style_small))
     elements.append(Paragraph(f"Genere le {datetime.now().strftime('%d/%m/%Y a %H:%M')}", style_small))
     
@@ -5325,79 +6499,578 @@ def generer_facture_pdf(request, facture_id):
 
 @login_required
 def generer_facture_80mm(request, facture_id):
-    """Générer un ticket 80mm professionnel"""
+    """Générer un ticket 80mm professionnel avec QR code, détails complets et design pro"""
     from reportlab.lib.units import cm
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
     from django.http import HttpResponse
     from datetime import datetime
+    import qrcode
+    from io import BytesIO
+    from reportlab.lib.utils import ImageReader
     
     facture = get_object_or_404(Facture, id=facture_id)
     
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="TICKET_{facture.numero}.pdf"'
     
-    page_width = 8*cm
+    # Dimensions exactes pour papier 80mm (182mm de haut pour 80mm de large)
+    page_width = 8.0 * cm
+    page_height = 28.0 * cm
+    
     doc = SimpleDocTemplate(
         response, 
-        pagesize=(page_width, 25*cm),
-        topMargin=0.5*cm,
-        bottomMargin=0.5*cm,
+        pagesize=(page_width, page_height),
+        topMargin=0.3*cm,
+        bottomMargin=0.3*cm,
         leftMargin=0.3*cm,
         rightMargin=0.3*cm
     )
     
     styles = getSampleStyleSheet()
-    normal = styles['Normal']
     
-    style_logo = ParagraphStyle('Logo', parent=normal, alignment=TA_CENTER, fontSize=12, fontName='Helvetica-Bold', textColor=colors.HexColor('#0f766e'))
-    style_tel = ParagraphStyle('Tel', parent=normal, alignment=TA_CENTER, fontSize=8, textColor=colors.HexColor('#6b7280'))
-    style_sep = ParagraphStyle('Sep', parent=normal, alignment=TA_CENTER, fontSize=8, textColor=colors.HexColor('#9ca3af'))
-    style_title = ParagraphStyle('Title', parent=normal, alignment=TA_CENTER, fontSize=10, fontName='Helvetica-Bold', textColor=colors.HexColor('#374151'))
-    style_center = ParagraphStyle('Center', parent=normal, alignment=TA_CENTER, fontSize=9)
-    style_bold = ParagraphStyle('Bold', parent=normal, alignment=TA_CENTER, fontSize=9, fontName='Helvetica-Bold')
-    style_montant = ParagraphStyle('Montant', parent=normal, alignment=TA_CENTER, fontSize=10, fontName='Helvetica-Bold', textColor=colors.HexColor('#0f766e'))
-    style_total = ParagraphStyle('Total', parent=normal, alignment=TA_CENTER, fontSize=12, fontName='Helvetica-Bold', textColor=colors.HexColor('#ef4444'))
+    # Styles personnalisés professionnels
+    style_logo = ParagraphStyle(
+        'Logo', parent=styles['Normal'], 
+        alignment=TA_CENTER, fontSize=14, 
+        fontName='Helvetica-Bold', 
+        textColor=colors.HexColor('#0f766e'),
+        spaceAfter=4
+    )
+    
+    style_soustitre = ParagraphStyle(
+        'Soustitre', parent=styles['Normal'], 
+        alignment=TA_CENTER, fontSize=9, 
+        textColor=colors.HexColor('#374151'),
+        spaceAfter=2
+    )
+    
+    style_sep = ParagraphStyle(
+        'Sep', parent=styles['Normal'], 
+        alignment=TA_CENTER, fontSize=7, 
+        textColor=colors.HexColor('#9ca3af'),
+        spaceAfter=4,
+        spaceBefore=4
+    )
+    
+    style_title = ParagraphStyle(
+        'Title', parent=styles['Normal'], 
+        alignment=TA_CENTER, fontSize=12, 
+        fontName='Helvetica-Bold', 
+        textColor=colors.HexColor('#1f2937'),
+        spaceAfter=6,
+        spaceBefore=4
+    )
+    
+    style_info = ParagraphStyle(
+        'Info', parent=styles['Normal'], 
+        alignment=TA_LEFT, fontSize=8, 
+        fontName='Helvetica',
+        spaceAfter=2
+    )
+    
+    style_info_center = ParagraphStyle(
+        'InfoCenter', parent=styles['Normal'], 
+        alignment=TA_CENTER, fontSize=8,
+        spaceAfter=2
+    )
+    
+    style_label = ParagraphStyle(
+        'Label', parent=styles['Normal'], 
+        alignment=TA_LEFT, fontSize=8, 
+        fontName='Helvetica-Bold',
+        textColor=colors.HexColor('#4b5563')
+    )
+    
+    style_valeur = ParagraphStyle(
+        'Valeur', parent=styles['Normal'], 
+        alignment=TA_RIGHT, fontSize=8, 
+        fontName='Helvetica'
+    )
+    
+    style_montant = ParagraphStyle(
+        'Montant', parent=styles['Normal'], 
+        alignment=TA_CENTER, fontSize=16, 
+        fontName='Helvetica-Bold', 
+        textColor=colors.HexColor('#0f766e'),
+        spaceAfter=6,
+        spaceBefore=4
+    )
+    
+    style_total = ParagraphStyle(
+        'Total', parent=styles['Normal'], 
+        alignment=TA_CENTER, fontSize=18, 
+        fontName='Helvetica-Bold', 
+        textColor=colors.HexColor('#ef4444'),
+        spaceAfter=6,
+        spaceBefore=4
+    )
+    
+    style_badge = ParagraphStyle(
+        'Badge', parent=styles['Normal'], 
+        alignment=TA_CENTER, fontSize=9, 
+        fontName='Helvetica-Bold',
+        spaceAfter=6,
+        spaceBefore=4
+    )
+    
+    style_footer = ParagraphStyle(
+        'Footer', parent=styles['Normal'], 
+        alignment=TA_CENTER, fontSize=7, 
+        textColor=colors.HexColor('#6b7280'),
+        spaceAfter=2
+    )
     
     elements = []
     
-    elements.append(Paragraph("VOTRE ENTREPRISE", style_logo))
-    elements.append(Paragraph("Tel: +223 XX XX XX XX", style_tel))
-    elements.append(Paragraph("────────────────────────", style_sep))
+    # ==================== ENTÊTE ====================
+    elements.append(Paragraph("🏦 KONE SERVICES ", style_logo))
+    elements.append(Paragraph("• Solutions Financières •", style_soustitre))
+    elements.append(Paragraph("Tel: +223 76 12 34 56", style_soustitre))
+    elements.append(Paragraph("Email: contact@entreprise.com", style_soustitre))
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#0f766e'), spaceAfter=4, spaceBefore=4))
     
+    # ==================== TYPE DE DOCUMENT ====================
     if facture.type_facture == 'cliente':
-        elements.append(Paragraph("FACTURE CLIENT", style_title))
+        elements.append(Paragraph("📄 FACTURE CLIENT", style_title))
+    elif facture.type_facture == 'fournisseur':
+        elements.append(Paragraph("📄 FACTURE FOURNISSEUR", style_title))
     else:
-        elements.append(Paragraph("FACTURE FOURNISSEUR", style_title))
+        elements.append(Paragraph(f"📄 {facture.type_facture.upper()}", style_title))
     
-    elements.append(Paragraph("────────────────────────", style_sep))
-    elements.append(Paragraph(f"N°: {facture.numero}", style_center))
-    elements.append(Paragraph(f"Date: {facture.date_emission.strftime('%d/%m/%Y')}", style_center))
-    elements.append(Paragraph("────────────────────────", style_sep))
-    elements.append(Paragraph(facture.personne_nom or "Client", style_bold))
-    if facture.numero:
-        elements.append(Paragraph(f"Tel: {facture.numero}", style_center))
-    elements.append(Paragraph("────────────────────────", style_sep))
+    elements.append(HRFlowable(width="100%", thickness=0.3, color=colors.HexColor('#d1d5db'), spaceAfter=4, spaceBefore=2))
     
-    elements.append(Paragraph("Prestation de service", style_center))
-    elements.append(Paragraph(f"{facture.montant_total:,.0f} FCFA", style_montant))
-    elements.append(Paragraph("────────────────────────", style_sep))
+    # ==================== INFORMATIONS FACTURE ====================
+    # Tableau des infos facture
+    info_data = [
+        [Paragraph("<b>N° Facture</b>", style_label), Paragraph(facture.numero, style_valeur)],
+        [Paragraph("<b>Date émission</b>", style_label), Paragraph(facture.date_emission.strftime('%d/%m/%Y à %H:%M'), style_valeur)],
+    ]
     
-    total_restant = facture.montant_total - facture.montant_paye
-    elements.append(Paragraph("TOTAL A PAYER", style_center))
-    elements.append(Paragraph(f"{total_restant:,.0f} FCFA", style_total))
-    elements.append(Paragraph("────────────────────────", style_sep))
+    if facture.date_echeance:
+        info_data.append([Paragraph("<b>Date échéance</b>", style_label), Paragraph(facture.date_echeance.strftime('%d/%m/%Y'), style_valeur)])
     
-    if facture.statut == 'payee':
-        elements.append(Paragraph("PAYEE", style_bold))
-    else:
-        elements.append(Paragraph("EN ATTENTE", style_center))
+    info_table = Table(info_data, colWidths=[3.2*cm, 3.8*cm])
+    info_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    elements.append(info_table)
     
-    elements.append(Paragraph("────────────────────────", style_sep))
-    elements.append(Paragraph("Merci de votre confiance", style_center))
-    elements.append(Paragraph(f"{datetime.now().strftime('%d/%m/%Y %H:%M')}", style_tel))
+    elements.append(HRFlowable(width="100%", thickness=0.3, color=colors.HexColor('#d1d5db'), spaceAfter=4, spaceBefore=4))
     
+    # ==================== INFORMATIONS CLIENT ====================
+    elements.append(Paragraph("<b>👤 INFORMATIONS CLIENT</b>", style_label))
+    
+    client_data = [
+        [Paragraph("<b>Nom</b>", style_label), Paragraph(facture.personne_nom or "-", style_valeur)],
+    ]
+    
+    if facture.personne_telephone:
+        client_data.append([Paragraph("<b>Téléphone</b>", style_label), Paragraph(facture.personne_telephone, style_valeur)])
+    
+    client_table = Table(client_data, colWidths=[3.2*cm, 3.8*cm])
+    client_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    elements.append(client_table)
+    
+    elements.append(HRFlowable(width="100%", thickness=0.3, color=colors.HexColor('#d1d5db'), spaceAfter=4, spaceBefore=4))
+    
+    # ==================== DÉTAIL DE LA FACTURE ====================
+    elements.append(Paragraph("<b>📋 DÉTAIL DE LA FACTURE</b>", style_label))
+    
+    # Tableau des lignes de détail
+    detail_data = [
+        [Paragraph("<b>Désignation</b>", style_label), Paragraph("<b>Montant</b>", style_valeur)],
+        [Paragraph("Prestation de service", style_info), Paragraph(f"{facture.montant_total:,.0f} FCFA", style_valeur)],
+    ]
+    
+    if facture.description:
+        detail_data.insert(2, [Paragraph(facture.description[:50], style_info), Paragraph("", style_valeur)])
+    
+    detail_table = Table(detail_data, colWidths=[4.5*cm, 2.5*cm])
+    detail_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('GRID', (0, 0), (-1, 0), 0.5, colors.HexColor('#d1d5db')),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(detail_table)
+    
+    elements.append(HRFlowable(width="100%", thickness=0.3, color=colors.HexColor('#d1d5db'), spaceAfter=4, spaceBefore=4))
+    
+    # ==================== RÉCAPITULATIF FINANCIER (sans TVA ni RESTE À PAYER) ====================
+    recap_data = [
+        [Paragraph("<b>Montant total</b>", style_label), Paragraph(f"{facture.montant_total:,.0f} FCFA", style_valeur)],
+    ]
+    
+    if facture.montant_paye > 0:
+        recap_data.append([Paragraph("<b>Montant payé</b>", style_label), Paragraph(f"{facture.montant_paye:,.0f} FCFA", style_valeur)])
+    
+    recap_table = Table(recap_data, colWidths=[4.5*cm, 2.5*cm])
+    recap_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(recap_table)
+    
+    elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#0f766e'), spaceAfter=4, spaceBefore=4))
+    
+    # ==================== STATUT ====================
+   
+    
+    # ==================== QR CODE (POUR PAIEMENT RAPIDE) ====================
+    try:
+        # Génération du QR code avec les infos de la facture
+        qr_data = f"FACTURE:{facture.numero}|MONTANT:{facture.montant_total - facture.montant_paye}|CLIENT:{facture.personne_nom}"
+        qr = qrcode.QRCode(version=1, box_size=2, border=1)
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="#0f766e", back_color="white")
+        
+        # Convertir en bytes pour ReportLab
+        qr_bytes = BytesIO()
+        qr_img.save(qr_bytes, format='PNG')
+        qr_bytes.seek(0)
+        qr_reader = ImageReader(qr_bytes)
+        
+        # Ajouter le QR code
+        from reportlab.platypus import Image
+        qr_image = Image(qr_reader, width=1.5*cm, height=1.5*cm)
+        qr_image.hAlign = 'CENTER'
+        elements.append(Spacer(1, 4))
+        elements.append(qr_image)
+        elements.append(Paragraph("Scannez pour régler", style_footer))
+    except Exception:
+        pass  # Si erreur QR code, on continue sans
+    
+    elements.append(HRFlowable(width="100%", thickness=0.3, color=colors.HexColor('#d1d5db'), spaceAfter=4, spaceBefore=4))
+    
+    # ==================== PIED DE PAGE ====================
+    elements.append(Paragraph("Merci de votre confiance !", style_footer))
+    
+    elements.append(Paragraph("Conservez ce ticket comme justificatif", style_footer))
+    
+    # Construction du PDF
     doc.build(elements)
     return response
+
+
+
+# views.py - Modifier l'API
+@login_required
+def api_user_password(request, user_id):
+    """API pour récupérer le mot de passe d'un utilisateur"""
+    try:
+        user = User.objects.get(id=user_id)
+        
+        # Essayer de récupérer depuis Agent
+        try:
+            agent = Agent.objects.get(user=user)
+            if agent.mot_de_passe_clair:
+                return JsonResponse({
+                    'success': True,
+                    'password': agent.mot_de_passe_clair
+                })
+        except Agent.DoesNotExist:
+            pass
+        
+        # Essayer de récupérer depuis Assistant
+        try:
+            assistant = Assistant.objects.get(user=user)
+            if assistant.mot_de_passe_clair:
+                return JsonResponse({
+                    'success': True,
+                    'password': assistant.mot_de_passe_clair
+                })
+        except Assistant.DoesNotExist:
+            pass
+        
+        return JsonResponse({
+            'success': True,
+            'password': 'Mot de passe non stocké en clair'
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'password': 'Utilisateur introuvable'
+        })
+
+from django.db.models import Sum, Count, Avg
+from django.utils import timezone
+from datetime import timedelta, datetime
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from decimal import Decimal
+
+@login_required
+def api_analyse_stats(request):
+    """
+    API pour les statistiques d'analyse
+    """
+    try:
+        today = timezone.now().date()
+        
+        # ========== PERFORMANCE JOURNALIERE ==========
+        transactions_today = Transaction.objects.filter(date__date=today)
+        volume_today = transactions_today.aggregate(Sum('montant'))['montant__sum'] or 0
+        transactions_count_today = transactions_today.count()
+        
+        # Convertir Decimal en int/float
+        if isinstance(volume_today, Decimal):
+            volume_today = int(volume_today)
+        
+        # Taux de croissance (comparaison avec hier)
+        yesterday = today - timedelta(days=1)
+        transactions_yesterday = Transaction.objects.filter(date__date=yesterday)
+        volume_yesterday = transactions_yesterday.aggregate(Sum('montant'))['montant__sum'] or 0
+        
+        if isinstance(volume_yesterday, Decimal):
+            volume_yesterday = int(volume_yesterday)
+        
+        if volume_yesterday > 0:
+            croissance = ((volume_today - volume_yesterday) / volume_yesterday) * 100
+        else:
+            croissance = 0 if volume_today == 0 else 100
+        
+        # ========== MEILLEUR AGENT / UTILISATEUR ==========
+        from django.contrib.auth.models import User
+        
+        user_stats = []
+        for user_obj in User.objects.filter(is_active=True):
+            total_volume = Transaction.objects.filter(
+                user=user_obj,
+                date__date__gte=today - timedelta(days=30)
+            ).aggregate(Sum('montant'))['montant__sum'] or 0
+            
+            if isinstance(total_volume, Decimal):
+                total_volume = int(total_volume)
+            
+            if total_volume > 0:
+                nom_complet = f"{user_obj.first_name} {user_obj.last_name}".strip()
+                if not nom_complet:
+                    nom_complet = user_obj.username
+                user_stats.append({
+                    'nom': nom_complet,
+                    'volume': total_volume
+                })
+        
+        user_stats.sort(key=lambda x: x['volume'], reverse=True)
+        
+        if user_stats:
+            meilleur_agent = user_stats[0]['nom']
+        else:
+            meilleur_agent = "Aucune transaction"
+        
+        # ========== OPERATEUR PREFERE ==========
+        operateur_stats = Transaction.objects.values('operateur')\
+            .annotate(total_volume=Sum('montant'), total_count=Count('id'))\
+            .order_by('-total_volume')\
+            .first()
+        
+        operateur_labels = {
+            'orange': 'Orange Money',
+            'malitel': 'Malitel',
+            'telecel': 'Telecel',
+            'wave': 'Wave'
+        }
+        
+        if operateur_stats:
+            operateur_prefere = operateur_labels.get(operateur_stats['operateur'], operateur_stats['operateur'])
+        else:
+            operateur_prefere = "Aucune opération"
+        
+        # ========== PREVISION MENSUELLE ==========
+        # Calculer la moyenne des 3 derniers mois complets
+        three_months_ago = today - timedelta(days=90)
+        start_date = datetime(three_months_ago.year, three_months_ago.month, 1).date()
+        end_date = datetime(today.year, today.month, 1).date() - timedelta(days=1)
+        
+        if start_date <= end_date:
+            monthly_transactions = Transaction.objects.filter(
+                date__date__gte=start_date,
+                date__date__lte=end_date
+            )
+            total_volume_3mois = monthly_transactions.aggregate(Sum('montant'))['montant__sum'] or 0
+            
+            if isinstance(total_volume_3mois, Decimal):
+                total_volume_3mois = int(total_volume_3mois)
+            
+            prevision_mensuelle = total_volume_3mois / 3 if total_volume_3mois > 0 else 0
+        else:
+            prevision_mensuelle = 0
+        
+        # ========== EVOLUTION SUR 12 MOIS ==========
+        evolution_12_mois = []
+        for i in range(11, -1, -1):
+            date_cible = today.replace(day=1) - timedelta(days=30 * i)
+            mois = date_cible.month
+            annee = date_cible.year
+            
+            # Premier jour du mois
+            debut_mois = date_cible.replace(day=1)
+            # Dernier jour du mois
+            if mois == 12:
+                fin_mois = debut_mois.replace(year=annee+1, month=1) - timedelta(days=1)
+            else:
+                fin_mois = debut_mois.replace(month=mois+1) - timedelta(days=1)
+            
+            volume_mois = Transaction.objects.filter(
+                date__date__gte=debut_mois,
+                date__date__lte=fin_mois
+            ).aggregate(Sum('montant'))['montant__sum'] or 0
+            
+            if isinstance(volume_mois, Decimal):
+                volume_mois = int(volume_mois)
+            
+            # Convertir en millions (avec 1 décimale)
+            evolution_12_mois.append(round(float(volume_mois / 1000000), 1))
+        
+        return JsonResponse({
+            'success': True,
+            'performance_journaliere': {
+                'volume': int(volume_today),
+                'transactions': transactions_count_today,
+                'croissance': round(float(croissance), 1)
+            },
+            'meilleur_agent': meilleur_agent,
+            'operateur_prefere': operateur_prefere,
+            'prevision_mensuelle': int(prevision_mensuelle),
+            'evolution_12_mois': evolution_12_mois
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+
+@login_required
+def supprimer_facture(request, facture_id):
+    print(f"=== Tentative de suppression de la facture {facture_id} par {request.user} ===")
+    
+    try:
+        from transactions.models import Facture
+        print("Modèle Facture importé")
+        
+        facture = Facture.objects.get(id=facture_id)
+        print(f"Facture trouvée: {facture.numero}")
+        
+        facture.delete()
+        print("Facture supprimée avec succès")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Facture supprimée avec succès'
+        })
+        
+    except Facture.DoesNotExist:
+        print(f"Facture {facture_id} non trouvée")
+        return JsonResponse({
+            'success': False,
+            'error': f'Facture avec ID {facture_id} non trouvée'
+        }, status=404)
+    except Exception as e:
+        print(f"Erreur: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+
+def get_demandes_filter_for_user(user):
+    q = Q(statut='en_attente')
+    if hasattr(user, 'assistant_profile'):
+        q &= Q(destinataire_type='assistant', assistant_destinataire=user.assistant_profile)
+    else:
+        q &= Q(destinataire_type='admin')
+    return q
+
+def api_demandes_attente_count(request):
+    q = get_demandes_filter_for_user(request.user)
+    count = DemandeApprovisionnement.objects.filter(q).count()
+    return JsonResponse({'count': count})
+
+def api_demandes_attente_list(request):
+    q = get_demandes_filter_for_user(request.user)
+    demandes = DemandeApprovisionnement.objects.filter(q).select_related('agent')
+    data = []
+    for d in demandes:
+        data.append({
+            'id': d.id,
+            'agent_nom': d.agent.nom,
+            'type_echange': d.get_type_echange_display(),
+            'montant': f"{d.montant:,.0f}".replace(',', ' '),
+            'motif': d.motif[:40] if d.motif else '',
+        })
+    return JsonResponse({'demandes': data})
+
+@login_required
+def api_annuler_transaction(request):
+    import json
+    try:
+        data = json.loads(request.body)
+        reference = data.get('reference', '').strip().upper()
+        motif = data.get('motif', '').strip()
+        chercher = data.get('chercher', False)
+    except (json.JSONDecodeError, AttributeError):
+        reference = request.POST.get('reference', '').strip().upper()
+        motif = request.POST.get('motif', '').strip()
+        chercher = request.POST.get('chercher') == 'true'
+
+    if not reference:
+        return JsonResponse({'success': False, 'error': 'Référence obligatoire.'})
+
+    try:
+        transaction = Transaction.objects.select_related('user__agent_profile', 'user__admin_profile', 'user__assistant_profile').get(reference=reference)
+    except Transaction.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Aucune transaction trouvée avec cette référence.'})
+
+    if chercher:
+        agent_nom = ''
+        if hasattr(transaction.user, 'agent_profile'):
+            agent_nom = transaction.user.agent_profile.nom
+        elif hasattr(transaction.user, 'assistant_profile'):
+            agent_nom = f"{transaction.user.assistant_profile.nom} (Assistant)"
+        elif hasattr(transaction.user, 'admin_profile'):
+            agent_nom = f"{transaction.user.admin_profile.nom} (Admin)"
+        return JsonResponse({
+            'success': True,
+            'transaction': {
+                'reference': transaction.reference,
+                'date': transaction.date.strftime('%d/%m/%Y %H:%M'),
+                'type': transaction.get_type_transaction_display(),
+                'operateur': transaction.get_operateur_display(),
+                'montant': f"{transaction.montant:,.0f}".replace(',', ' '),
+                'client': f"{transaction.numero_client} {transaction.nom_client or ''}",
+                'agent': agent_nom,
+                'est_annule': transaction.est_annule,
+            }
+        })
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée.'})
+
+    if transaction.est_annule:
+        return JsonResponse({'success': False, 'error': 'Cette transaction est déjà annulée.'})
+
+    from django.utils import timezone
+    transaction.annuler(user=request.user, motif=motif)
+    return JsonResponse({'success': True, 'message': f'Transaction {reference} annulée avec succès.'})

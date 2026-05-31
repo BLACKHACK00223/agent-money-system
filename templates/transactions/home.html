@@ -1,3 +1,4 @@
+{% load humanize %}
 <!-- templates/transactions/home.html -->
 <!DOCTYPE html>
 <html lang="fr">
@@ -378,23 +379,23 @@
         <div class="soldes-grid">
             <div class="solde-card cash">
                 <h3>💰 Espèces (Cash)</h3>
-                <div class="montant">{{ caisse.solde_cash|floatformat:0 }} FCFA</div>
+                <div class="montant">{{ caisse.solde_cash|floatformat:0|intcomma }} FCFA</div>
             </div>
             <div class="solde-card orange">
                 <h3>📱 Orange Money</h3>
-                <div class="montant">{{ caisse.solde_orange|floatformat:0 }} FCFA</div>
+                <div class="montant">{{ caisse.solde_orange|floatformat:0|intcomma }} FCFA</div>
             </div>
             <div class="solde-card wave">
                 <h3>💳 Wave</h3>
-                <div class="montant">{{ caisse.solde_wave|floatformat:0 }} FCFA</div>
+                <div class="montant">{{ caisse.solde_wave|floatformat:0|intcomma }} FCFA</div>
             </div>
             <div class="solde-card malitel">
                 <h3>📱 Malitel</h3>
-                <div class="montant">{{ caisse.solde_malitel|floatformat:0 }} FCFA</div>
+                <div class="montant">{{ caisse.solde_malitel|floatformat:0|intcomma }} FCFA</div>
             </div>
             <div class="solde-card telecel">
                 <h3>📱 Telecel</h3>
-                <div class="montant">{{ caisse.solde_telecel|floatformat:0 }} FCFA</div>
+                <div class="montant">{{ caisse.solde_telecel|floatformat:0|intcomma }} FCFA</div>
             </div>
         </div>
 
@@ -487,19 +488,19 @@
         <div class="totals">
             <div class="total-item">
                 <div class="label">💰 Total Dépôts</div>
-                <div class="value">{{ total_depots|floatformat:0 }} FCFA</div>
+                <div class="value">{{ total_depots|floatformat:0|intcomma }} FCFA</div>
             </div>
             <div class="total-item">
                 <div class="label">💸 Total Retraits</div>
-                <div class="value">{{ total_retraits|floatformat:0 }} FCFA</div>
+                <div class="value">{{ total_retraits|floatformat:0|intcomma }} FCFA</div>
             </div>
             <div class="total-item">
                 <div class="label">📱 Total Crédits</div>
-                <div class="value">{{ total_credits|floatformat:0 }} FCFA</div>
+                <div class="value">{{ total_credits|floatformat:0|intcomma }} FCFA</div>
             </div>
             <div class="total-item">
                 <div class="label">⭐ Commissions</div>
-                <div class="value">{{ total_commission|floatformat:0 }} FCFA</div>
+                <div class="value">{{ total_commission|floatformat:0|intcomma }} FCFA</div>
             </div>
         </div>
 
@@ -527,12 +528,12 @@
                         <td>
                             <span class="badge badge-{{ trans.type_transaction }}">
                                 {{ trans.get_type_transaction_display }}
-                            </span>
+                            </span>{% if trans.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}
                         </td>
                         <td>{{ trans.get_operateur_display }}</td>
                         <td>{{ trans.numero_client }}</td>
-                        <td><strong>{{ trans.montant|floatformat:0 }} FCFA</strong></td>
-                        <td>{{ trans.commission|floatformat:0 }} FCFA</td>
+                        <td><strong>{{ trans.montant|floatformat:0|intcomma }} FCFA</strong></td>
+                        <td>{{ trans.commission|floatformat:0|intcomma }} FCFA</td>
                         <td><small>{{ trans.date|date:"H:i:s" }}</small></td>
                         <td>
                             <a href="{% url 'impression_recu' trans.reference %}" target="_blank" class="btn-print">

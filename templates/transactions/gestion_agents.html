@@ -1,15 +1,50 @@
 <!-- templates/transactions/gestion_agents.html -->
 {% extends "transactions/dashboard_admin.html" %}
 {% load humanize %}
+{% load static %}
 
 {% block extra_css %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <style>
-    /* Page header */
+    /* ===== TES STYLES ORIGINAUX (INCHANGÉS POUR PC) ===== */
+    :root {
+        --primary: #4f46e5;
+        --primary-dark: #4338ca;
+        --primary-light: #e0e7ff;
+        --success: #10b981;
+        --success-light: #d1fae5;
+        --danger: #ef4444;
+        --danger-light: #fee2e2;
+        --warning: #f59e0b;
+        --warning-light: #fef3c7;
+        --info: #3b82f6;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-500: #6b7280;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        -webkit-text-size-adjust: 100%;
+    }
+
+    /* ===== PAGE HEADER ===== */
     .page-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 28px;
+        margin-bottom: 24px;
         flex-wrap: wrap;
         gap: 16px;
     }
@@ -18,27 +53,106 @@
         font-size: 24px;
         font-weight: 700;
         color: var(--gray-900);
+        margin: 0;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 40px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
         display: flex;
         align-items: center;
         gap: 8px;
+        min-height: 44px;
+        white-space: nowrap;
     }
 
-    .page-title p {
+    .btn-toggle-view {
+        background: var(--gray-100);
+        color: var(--gray-700);
+        border: 1px solid var(--gray-300);
+        padding: 12px 20px;
+        border-radius: 40px;
+        font-weight: 600;
         font-size: 13px;
-        color: var(--gray-600);
-        margin-top: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
     }
 
-    /* Tabs */
+    /* ===== STATS EN LIGNE ===== */
+    .stats-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+
+    .stat-box {
+        flex: 1;
+        background: white;
+        border-radius: 16px;
+        padding: 14px 12px;
+        border: 1px solid var(--gray-200);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 100px;
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+
+    .stat-icon.blue { background: var(--primary-light); }
+    .stat-icon.green { background: var(--success-light); }
+    .stat-icon.orange { background: var(--warning-light); }
+    .stat-icon.purple { background: #f3e8ff; }
+
+    .stat-number {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--gray-900);
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 11px;
+        color: var(--gray-600);
+    }
+
+    /* ===== TABS ===== */
     .tabs-container {
         margin-bottom: 24px;
         border-bottom: 1px solid var(--gray-200);
         display: flex;
         gap: 4px;
+        overflow-x: auto;
     }
 
     .tab-btn {
-        padding: 10px 24px;
+        padding: 10px 20px;
         background: none;
         border: none;
         font-size: 14px;
@@ -46,15 +160,8 @@
         color: var(--gray-600);
         cursor: pointer;
         border-radius: 12px 12px 0 0;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .tab-btn:hover {
-        background: var(--gray-100);
-        color: var(--gray-800);
+        white-space: nowrap;
+        min-height: 44px;
     }
 
     .tab-btn.active {
@@ -77,121 +184,250 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
-    .btn-primary {
-        background: var(--primary);
-        color: white;
-        border: none;
-        padding: 10px 24px;
-        border-radius: 40px;
-        font-weight: 600;
-        font-size: 13px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.2s;
-        box-shadow: 0 2px 8px rgba(79,70,229,0.2);
-    }
-
-    .btn-primary:hover {
-        background: var(--primary-dark);
-        transform: translateY(-1px);
-    }
-
-    /* Stats */
-    .stats-row {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-        margin-bottom: 28px;
-    }
-
-    .stat-box {
-        background: white;
-        border-radius: 16px;
-        padding: 16px;
-        border: 1px solid var(--gray-200);
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        transition: all 0.2s;
-    }
-
-    .stat-box:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-    }
-
-    .stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .stat-icon.blue { background: var(--primary-light); color: var(--primary); }
-    .stat-icon.green { background: var(--success-light); color: var(--success); }
-    .stat-icon.orange { background: var(--warning-light); color: var(--warning); }
-    .stat-icon.purple { background: #f3e8ff; color: #9333ea; }
-
-    .stat-number {
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--gray-900);
-    }
-
-    .stat-label {
-        font-size: 12px;
-        color: var(--gray-600);
-        margin-top: 2px;
-    }
-
-    /* Filtres */
+    /* ===== FILTRES ===== */
     .filters-bar {
         background: white;
         border-radius: 16px;
-        padding: 16px 20px;
+        padding: 12px 16px;
         margin-bottom: 24px;
         border: 1px solid var(--gray-200);
         display: flex;
-        flex-wrap: nowrap;
         gap: 12px;
-        align-items: flex-end;
+        align-items: center;
+        flex-wrap: wrap;
     }
 
     .filter-group {
+        flex: 2;
+        min-width: 180px;
+    }
+
+    .filter-group.search {
+        flex: 3;
+    }
+
+    .filter-group.status {
         flex: 1;
-        min-width: 0;
     }
 
     .filter-group label {
         display: block;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 600;
-        color: var(--gray-600);
-        margin-bottom: 5px;
-        white-space: nowrap;
+        color: var(--gray-500);
+        margin-bottom: 4px;
+        text-transform: uppercase;
     }
 
-    .filter-group input, .filter-group select {
+    .filter-group input,
+    .filter-group select {
         width: 100%;
-        padding: 8px 10px;
+        padding: 8px 12px;
         border: 1px solid var(--gray-300);
         border-radius: 10px;
         font-size: 13px;
         background: white;
+    }
+
+    .btn-action-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-add-fonds,
+    .btn-remove-fonds,
+    .btn-history {
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+        border: none;
+        min-height: 38px;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-add-fonds { background: var(--success); color: white; }
+    .btn-remove-fonds { background: var(--danger); color: white; }
+    .btn-history { background: var(--info); color: white; text-decoration: none; }
+
+    /* ===== VUE CARTES (GRILLE) ===== */
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+
+    .agent-card, .assistant-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
         transition: all 0.2s;
     }
 
-    .filter-group input:focus, .filter-group select:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px var(--primary-light);
+    .agent-card:hover, .assistant-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
     }
 
-    /* Tableau */
+    .card-header {
+        padding: 14px 16px;
+        background: var(--gray-50);
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .card-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--gray-900);
+        cursor: pointer;
+    }
+
+    .card-name:hover {
+        color: var(--primary);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 30px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .status-active { background: var(--success-light); color: var(--success); }
+    .status-inactive { background: var(--danger-light); color: var(--danger); }
+
+    .card-body {
+        padding: 16px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--gray-100);
+    }
+
+    .info-label {
+        font-size: 12px;
+        color: var(--gray-500);
+        font-weight: 500;
+    }
+
+    .info-value {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+
+    /* Version desktop (verticale) - par défaut */
+    /* Version PC - soldes en HORIZONTAL */
+.soldes-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 12px;
+    margin: 12px 0;
+    padding: 8px 0;
+}
+
+.solde-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: var(--gray-50);
+    padding: 10px 8px;
+    border-radius: 12px;
+}
+
+.solde-label img {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.solde-amount {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+    /* Version desktop (boutons en bas) */
+    .actions-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .card-btn {
+        width: 100%;
+        padding: 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        text-align: center;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+/* Version PC - boutons en HORIZONTAL */
+.actions-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.card-btn {
+    flex: 1;
+    padding: 10px 6px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    text-align: center;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+    .card-btn-profile { background: var(--primary-light); color: var(--primary); }
+    .card-btn-edit { background: var(--warning-light); color: var(--warning); }
+    .card-btn-password { background: #e0e7ff; color: #4f46e5; }
+
+    /* ===== VUE TABLEAU (LISTE) ===== */
+    .table-view {
+        display: none;
+    }
+
+    .table-view.active {
+        display: block;
+    }
+
     .table-container {
         background: white;
         border-radius: 20px;
@@ -213,8 +449,6 @@
         font-weight: 600;
         color: var(--gray-700);
         border-bottom: 1px solid var(--gray-200);
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
     }
 
     .data-table td {
@@ -228,85 +462,30 @@
         background: var(--gray-50);
     }
 
-    .name-cell {
-        font-weight: 600;
-        color: var(--gray-900);
-    }
-
-    .phone-cell {
-        color: var(--gray-600);
-        font-family: monospace;
-        font-size: 12px;
-    }
-
-    .status-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 30px;
-        font-size: 11px;
-        font-weight: 600;
-    }
-
-    .status-active {
-        background: var(--success-light);
-        color: var(--success);
-    }
-
-    .status-inactive {
-        background: var(--danger-light);
-        color: var(--danger);
-    }
-
-    .solde-value {
-        font-weight: 600;
-        color: var(--gray-900);
-        font-size: 13px;
-    }
-
-    .action-buttons {
+    .table-actions {
         display: flex;
-        gap: 6px;
+        gap: 8px;
         flex-wrap: wrap;
     }
 
-    .btn-icon {
-        padding: 6px 12px;
-        border-radius: 30px;
+    .table-btn {
+        padding: 5px 12px;
+        border-radius: 20px;
         font-size: 11px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.2s;
         border: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
     }
 
-    .btn-view {
-        background: var(--primary-light);
-        color: var(--primary);
+    .empty-state {
+        text-align: center;
+        padding: 50px;
+        color: var(--gray-500);
+        background: white;
+        border-radius: 20px;
     }
-    .btn-view:hover { background: #e0e7ff; transform: translateY(-1px); }
 
-    .btn-edit {
-        background: var(--warning-light);
-        color: var(--warning);
-    }
-    .btn-edit:hover { background: #fde68a; transform: translateY(-1px); }
-
-    .btn-caisse {
-        background: #ccfbf1;
-        color: #0f766e;
-    }
-    .btn-caisse:hover { background: #99f6e4; transform: translateY(-1px); }
-
-    .btn-password {
-        background: #e0e7ff;
-        color: #4f46e5;
-    }
-    .btn-password:hover { background: #c7d2fe; transform: translateY(-1px); }
-
-    /* Modal */
+    /* ===== MODALS ===== */
     .modal {
         display: none;
         position: fixed;
@@ -314,7 +493,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0,0,0,0.5);
+        background: rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(4px);
         z-index: 1000;
         justify-content: center;
@@ -328,12 +507,6 @@
         max-width: 500px;
         max-height: 90vh;
         overflow-y: auto;
-        animation: modalIn 0.3s ease;
-    }
-
-    @keyframes modalIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
     }
 
     .modal-header {
@@ -347,25 +520,18 @@
     .modal-header h3 {
         font-size: 18px;
         font-weight: 700;
-        color: var(--gray-900);
+        margin: 0;
     }
 
     .modal-close {
         background: none;
         border: none;
-        font-size: 24px;
+        font-size: 28px;
         cursor: pointer;
         color: var(--gray-500);
-        width: 32px;
-        height: 32px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .modal-close:hover {
-        background: var(--gray-100);
     }
 
     .modal-body {
@@ -378,28 +544,23 @@
 
     .form-group label {
         display: block;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 600;
-        color: var(--gray-800);
         margin-bottom: 6px;
     }
 
-    .form-group input, .form-group select {
+    .form-group input,
+    .form-group select {
         width: 100%;
-        padding: 10px 14px;
+        padding: 12px 14px;
         border: 1px solid var(--gray-300);
         border-radius: 12px;
         font-size: 14px;
     }
 
-    .form-group input:focus, .form-group select:focus {
-        outline: none;
-        border-color: var(--primary);
-    }
-
     .btn-submit {
         width: 100%;
-        padding: 12px;
+        padding: 14px;
         background: var(--primary);
         color: white;
         border: none;
@@ -408,245 +569,346 @@
         font-size: 14px;
         cursor: pointer;
         margin-top: 8px;
-        transition: all 0.2s;
     }
 
-    .btn-submit:hover {
-        background: var(--primary-dark);
-        transform: translateY(-1px);
+    .btn-submit-danger { background: #dc2626; }
+    .btn-submit-success { background: #059669; }
+
+    .agent-solde-preview {
+        background: var(--gray-50);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 16px;
+        display: none;
     }
 
-    .empty-state {
+    .solde-preview-grid {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+    }
+    
+    .solde-preview-grid img {
+        width: 18px;
+        height: 18px;
+        vertical-align: middle;
+        margin-right: 4px;
+    }
+
+    .history-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .history-item {
+        padding: 12px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .history-stats {
+        background: var(--gray-50);
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    /* ===== RESPONSIVE MOBILE UNIQUEMENT ===== */
+   @media (max-width: 768px) {
+    /* Stats */
+    .stats-row {
+        flex-wrap: wrap;
+    }
+    .stat-box {
+        min-width: calc(33% - 8px);
+    }
+    
+    /* FILTRES */
+    .filters-bar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+    .filter-group.search {
+        flex: 2;
+        min-width: 140px;
+    }
+    .filter-group.status {
+        flex: 1;
+        min-width: 100px;
+    }
+    .btn-action-group {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 6px;
+        width: 100%;
+    }
+    .btn-add-fonds, .btn-remove-fonds, .btn-history {
+        flex: 1 !important;
+        justify-content: center;
+        font-size: 10px;
+        padding: 8px 4px;
+        white-space: nowrap;
         text-align: center;
-        padding: 50px;
-        color: var(--gray-500);
     }
-
-    /* Responsive */
-    @media (max-width: 1100px) {
-        .filters-bar {
-            flex-wrap: wrap;
-        }
-        .filter-group {
-            min-width: 160px;
-        }
+    
+    /* Cartes */
+    .cards-grid {
+        grid-template-columns: 1fr;
     }
-
-    @media (max-width: 768px) {
-        .stats-row {
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-        .filters-bar {
-            flex-direction: column;
-        }
-        .filter-group {
-            width: 100%;
-        }
-        .action-buttons {
-            flex-direction: column;
-        }
-        .btn-icon {
-            width: 100%;
-            justify-content: center;
-        }
-        .page-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        .btn-primary {
-            width: 100%;
-            justify-content: center;
-        }
-        .data-table th, .data-table td {
-            padding: 10px 8px;
-            font-size: 11px;
-        }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: flex-end;
     }
+    .btn-primary {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    /* Cacher le bouton Mode liste sur mobile */
+    .header-actions .btn-toggle-view {
+        display: none !important;
+    }
+    
+    /* 3 SOLDES en HORIZONTAL */
+    .soldes-row {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+    }
+    .solde-item {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        text-align: center !important;
+        padding: 8px 4px !important;
+    }
+    .solde-label {
+        font-size: 10px !important;
+        margin-bottom: 4px !important;
+    }
+    .solde-amount {
+        font-size: 12px !important;
+    }
+    
+    /* 3 BOUTONS en HORIZONTAL */
+    .actions-row {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+    }
+    .card-btn {
+        flex: 1 !important;
+        font-size: 11px !important;
+        padding: 8px 4px !important;
+    }
+    
+    /* Stats mobile */
+    .stat-box {
+        padding: 8px;
+    }
+    .stat-number {
+        font-size: 16px;
+    }
+    .stat-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div class="page-title">
-        <h1>👥 Gestion des utilisateurs</h1>
-        <p>Gérez les agents et assistants de votre système</p>
+        <h1>📋 Gestion des utilisateurs</h1>
     </div>
-    <button class="btn-primary" id="newUserBtn" onclick="openAddModalByTab()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <path d="M12 5v14M5 12h14"/>
-        </svg>
-        <span id="newUserBtnText">Nouvel agent</span>
-    </button>
+    <div class="header-actions">
+        <button class="btn-toggle-view" id="toggleViewBtn" onclick="toggleView()">
+            📋 Mode liste
+        </button>
+        <button class="btn-primary" onclick="openAddModalByTab()">
+            ➕ <span id="newUserBtnText">Nouvel agent</span>
+        </button>
+    </div>
 </div>
 
-<!-- Onglets -->
 <div class="tabs-container">
-    <button class="tab-btn active" data-tab="agents" onclick="switchTab('agents')">
-        👤 Agents
-    </button>
-    <button class="tab-btn" data-tab="assistants" onclick="switchTab('assistants')">
-        🤝 Assistants
-    </button>
+    <button class="tab-btn active" data-tab="agents" onclick="switchTab('agents')">👥 Agents</button>
+    <button class="tab-btn" data-tab="assistants" onclick="switchTab('assistants')">🤝 Assistants</button>
 </div>
 
-<!-- Section AGENTS -->
+<!-- ==================== SECTION AGENTS ==================== -->
 <div id="tab-agents" class="tab-content active">
-    <!-- Stats Agents -->
+    <!-- STATS -->
     <div class="stats-row">
         <div class="stat-box">
-            <div class="stat-icon blue">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-            </div>
+            <div class="stat-icon blue">👥</div>
             <div>
                 <div class="stat-number">{{ agents|length }}</div>
                 <div class="stat-label">Total agents</div>
             </div>
         </div>
         <div class="stat-box">
-            <div class="stat-icon green">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="9"/>
-                    <path d="M12 8v8M8 12h8"/>
-                </svg>
-            </div>
+            <div class="stat-icon green">✅</div>
             <div>
                 <div class="stat-number">{{ agents_actifs|default:0 }}</div>
-                <div class="stat-label">Agents actifs</div>
+                <div class="stat-label">Actifs</div>
             </div>
         </div>
         <div class="stat-box">
-            <div class="stat-icon orange">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="9"/>
-                    <path d="M12 8v4M12 16h.01"/>
-                </svg>
-            </div>
+            <div class="stat-icon orange">⛔</div>
             <div>
                 <div class="stat-number">{{ agents_inactifs|default:0 }}</div>
-                <div class="stat-label">Agents inactifs</div>
+                <div class="stat-label">Inactifs</div>
             </div>
         </div>
     </div>
 
-    <!-- Filtres -->
+    <!-- FILTRES -->
     <div class="filters-bar">
-        <div class="filter-group">
-            <label>Rechercher</label>
+        <div class="filter-group search">
+            <label>🔍 RECHERCHER</label>
             <input type="text" id="search-agents" placeholder="Nom ou téléphone..." onkeyup="filterAgents()">
         </div>
-        <div class="filter-group">
-            <label>Statut</label>
+        <div class="filter-group status">
+            <label>📊 STATUT</label>
             <select id="status-agents" onchange="filterAgents()">
                 <option value="all">Tous</option>
                 <option value="actif">Actifs</option>
                 <option value="inactif">Inactifs</option>
             </select>
         </div>
+        <div class="btn-action-group">
+            <button class="btn-add-fonds" onclick="openDecaissementModal()">➕ Ajouter fonds</button>
+            <button class="btn-remove-fonds" onclick="openEncaissementModal()">➖ Retirer fonds</button>
+            <a href="{% url 'historique_operations' %}" class="btn-history" style="text-decoration: none;">📜 Historique</a>
+        </div>
     </div>
 
-    <!-- Tableau Agents -->
-    <div class="table-container">
-        <table class="data-table" id="agents-table">
-            <thead>
-                <tr>
-                    <th>Agent</th>
-                    <th>Contact</th>
-                    <th>Statut</th>
-                    <th>Cash</th>
-                    <th>UV Touchpiont</th>
-                    <th>UV Wave</th>
-                    <th>Inscription</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="agents-table-body">
-                {% for agent in agents %}
-                <tr data-name="{{ agent.nom|lower }}" data-phone="{{ agent.telephone }}" data-status="{% if agent.est_actif %}actif{% else %}inactif{% endif %}">
-                    <td class="name-cell">{{ agent.nom }}</td>
-                    <td class="phone-cell">{{ agent.telephone }}</td>
-                    <td>
-                        <span class="status-badge {% if agent.est_actif %}status-active{% else %}status-inactive{% endif %}">
-                            {{ agent.est_actif|yesno:"Actif,Inactif" }}
-                        </span>
-                    </td>
-                    <td class="solde-value">{{ agent.user.caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</span></td>
-                    <td class="solde-value">{{ agent.user.caisse.solde_uv|floatformat:0|default:"0"|intcomma }} </span></td>
-                    <td class="solde-value">{{ agent.user.caisse.solde_wave|floatformat:0|default:"0"|intcomma }} </span></td>
-                    <td style="font-size: 11px; color: var(--gray-500);">{{ agent.created_at|date:"d/m/Y" }} </span></td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon btn-view" onclick="window.location.href='{% url 'detail_agent' agent.id %}'">Profil</button>
-                            <button class="btn-icon btn-edit" onclick="openEditAgentModal({{ agent.id }}, '{{ agent.nom }}', '{{ agent.telephone }}', '{{ agent.email }}', {{ agent.est_actif|lower }})">Modifier</button>
-                            <button class="btn-icon btn-caisse" onclick="openCaisseModal({{ agent.id }}, '{{ agent.nom }}')">Caisse</button>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="empty-state">Aucun agent enregistré</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- VUE CARTES -->
+    <div id="agents-cards-view" class="cards-grid">
+        {% for agent in agents %}
+        <div class="agent-card" data-name="{{ agent.nom|lower }}" data-phone="{{ agent.telephone }}" data-status="{% if agent.est_actif %}actif{% else %}inactif{% endif %}">
+            <div class="card-header">
+                <span class="card-name" onclick="window.location.href='{% url 'detail_agent' agent.id %}'">{{ agent.nom }}</span>
+                <span class="status-badge {% if agent.est_actif %}status-active{% else %}status-inactive{% endif %}">
+                    {{ agent.est_actif|yesno:"Actif,Inactif" }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="info-row">
+                    <span class="info-label">📞 Téléphone</span>
+                    <span class="info-value">{{ agent.telephone }}</span>
+                </div>
+                <div class="soldes-row">
+                    <div class="solde-item">
+                        <span class="solde-label"><img src="{% static 'image/inco_cash.webp' %}" alt="Cash" style="width:16px;height:16px;"> Cash</span>
+                        <span class="solde-amount">{{ agent.user.caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</span>
+                    </div>
+                    <div class="solde-item">
+                        <span class="solde-label"><img src="{% static 'image/inco_touchpiont.png' %}" alt="UV" style="width:16px;height:16px;"> UV Touchpoint</span>
+                        <span class="solde-amount">{{ agent.user.caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</span>
+                    </div>
+                    <div class="solde-item">
+                        <span class="solde-label"><img src="{% static 'image/inco_wave1.webp' %}" alt="Wave" style="width:16px;height:16px;"> UV Wave</span>
+                        <span class="solde-amount">{{ agent.user.caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</span>
+                    </div>
+                </div>
+                <div class="actions-row">
+                    <button class="card-btn card-btn-profile" onclick="window.location.href='{% url 'detail_agent' agent.id %}'">👤 Profil</button>
+                    <button class="card-btn card-btn-edit" onclick="openEditAgentModal({{ agent.id }}, '{{ agent.nom|escapejs }}', '{{ agent.telephone }}', '{{ agent.email|default:''|escapejs }}', {{ agent.est_actif|lower }})">✏️ Modifier</button>
+                    <button class="card-btn card-btn-password" onclick="openPasswordAgentModal({{ agent.user.id }}, '{{ agent.nom|escapejs }}', '{{ agent.user.username }}')">🔑 Mot de passe</button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">Aucun agent enregistré</div>
+        {% endfor %}
+    </div>
+
+    <!-- VUE TABLEAU -->
+    <div id="agents-table-view" class="table-view">
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Agent</th>
+                        <th>Contact</th>
+                        <th>Statut</th>
+                        <th>Cash</th>
+                        <th>UV Touchpoint</th>
+                        <th>UV Wave</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for agent in agents %}
+                    <tr data-name="{{ agent.nom|lower }}" data-phone="{{ agent.telephone }}" data-status="{% if agent.est_actif %}actif{% else %}inactif{% endif %}">
+                        <td class="name-cell" style="cursor:pointer;color:var(--primary);font-weight:600;" onclick="window.location.href='{% url 'detail_agent' agent.id %}'">{{ agent.nom }}</td>
+                        <td>{{ agent.telephone }}</td>
+                        <td><span class="status-badge {% if agent.est_actif %}status-active{% else %}status-inactive{% endif %}">{{ agent.est_actif|yesno:"Actif,Inactif" }}</span></td>
+                        <td>{{ agent.user.caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</span></td>
+                        <td>{{ agent.user.caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</span></td>
+                        <td>{{ agent.user.caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</span></td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="table-btn" style="background:var(--primary-light);color:var(--primary);" onclick="window.location.href='{% url 'detail_agent' agent.id %}'">Profil</button>
+                                <button class="table-btn" style="background:var(--warning-light);color:var(--warning);" onclick="openEditAgentModal({{ agent.id }}, '{{ agent.nom|escapejs }}', '{{ agent.telephone }}', '{{ agent.email|default:''|escapejs }}', {{ agent.est_actif|lower }})">Modifier</button>
+                                <button class="table-btn" style="background:#e0e7ff;color:#4f46e5;" onclick="openPasswordAgentModal({{ agent.user.id }}, '{{ agent.nom|escapejs }}', '{{ agent.user.username }}')">Mot de passe</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="empty-state">Aucun agent enregistré</span></td>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<!-- Section ASSISTANTS -->
+<!-- ==================== SECTION ASSISTANTS ==================== -->
 <div id="tab-assistants" class="tab-content">
-    <!-- Stats Assistants -->
     <div class="stats-row">
         <div class="stat-box">
-            <div class="stat-icon purple">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2a10 10 0 1 0 10 10 10 10 0 0 0-10-10z"/>
-                    <path d="M12 6v6l4 2"/>
-                </svg>
-            </div>
+            <div class="stat-icon purple">🤝</div>
             <div>
                 <div class="stat-number">{{ assistants|length }}</div>
                 <div class="stat-label">Total assistants</div>
             </div>
         </div>
         <div class="stat-box">
-            <div class="stat-icon green">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="9"/>
-                    <path d="M12 8v8M8 12h8"/>
-                </svg>
-            </div>
+            <div class="stat-icon green">✅</div>
             <div>
                 <div class="stat-number">{{ assistants_actifs|default:0 }}</div>
-                <div class="stat-label">Assistants actifs</div>
+                <div class="stat-label">Actifs</div>
             </div>
         </div>
         <div class="stat-box">
-            <div class="stat-icon orange">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="9"/>
-                    <path d="M12 8v4M12 16h.01"/>
-                </svg>
-            </div>
+            <div class="stat-icon orange">⛔</div>
             <div>
                 <div class="stat-number">{{ assistants_inactifs|default:0 }}</div>
-                <div class="stat-label">Assistants inactifs</div>
+                <div class="stat-label">Inactifs</div>
             </div>
         </div>
     </div>
 
-    <!-- Filtres -->
     <div class="filters-bar">
-        <div class="filter-group">
-            <label>Rechercher</label>
+        <div class="filter-group search">
+            <label>🔍 RECHERCHER</label>
             <input type="text" id="search-assistants" placeholder="Nom ou téléphone..." onkeyup="filterAssistants()">
         </div>
-        <div class="filter-group">
-            <label>Statut</label>
+        <div class="filter-group status">
+            <label>📊 STATUT</label>
             <select id="status-assistants" onchange="filterAssistants()">
                 <option value="all">Tous</option>
                 <option value="actif">Actifs</option>
@@ -655,48 +917,75 @@
         </div>
     </div>
 
-    <!-- Tableau Assistants -->
-    <div class="table-container">
-        <table class="data-table" id="assistants-table">
-            <thead>
-                <tr>
-                    <th>Assistant</th>
-                    <th>Contact</th>
-                    <th>Admin</th>
-                    <th>Statut</th>
-                    <th>Inscription</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="assistants-table-body">
-                {% for assistant in assistants %}
-                <tr data-name="{{ assistant.nom|lower }}" data-phone="{{ assistant.telephone }}" data-status="{% if assistant.est_actif %}actif{% else %}inactif{% endif %}">
-                    <td class="name-cell">{{ assistant.nom }}</td>
-                    <td class="phone-cell">{{ assistant.telephone }}</td>
-                    <td class="phone-cell">{{ assistant.admin.nom }}</td>
-                    <td>
-                        <span class="status-badge {% if assistant.est_actif %}status-active{% else %}status-inactive{% endif %}">
-                            {{ assistant.est_actif|yesno:"Actif,Inactif" }}
-                        </span>
-                    </td>
-                    <td style="font-size: 11px; color: var(--gray-500);">{{ assistant.created_at|date:"d/m/Y" }}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon btn-view" onclick="window.location.href='{% url 'detail_assistant' assistant.id %}'">Profil</button>
-                            <button class="btn-icon btn-edit" onclick="openEditAssistantModal({{ assistant.id }}, '{{ assistant.nom }}', '{{ assistant.telephone }}', '{{ assistant.email|default:'' }}', {{ assistant.est_actif|lower }})">Modifier</button>
-                            <button class="btn-icon btn-password" onclick="openPasswordAssistantModal({{ assistant.id }}, '{{ assistant.nom }}')">🔑 Mot de passe</button>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="empty-state">Aucun assistant enregistré</span></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- VUE CARTES ASSISTANTS -->
+    <div id="assistants-cards-view" class="cards-grid">
+        {% for assistant in assistants %}
+        <div class="assistant-card" data-name="{{ assistant.nom|lower }}" data-phone="{{ assistant.telephone }}" data-status="{% if assistant.est_actif %}actif{% else %}inactif{% endif %}">
+            <div class="card-header">
+                <span class="card-name" onclick="window.location.href='{% url 'detail_assistant' assistant.id %}'">{{ assistant.nom }}</span>
+                <span class="status-badge {% if assistant.est_actif %}status-active{% else %}status-inactive{% endif %}">
+                    {{ assistant.est_actif|yesno:"Actif,Inactif" }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="info-row">
+                    <span class="info-label">📞 Téléphone</span>
+                    <span class="info-value">{{ assistant.telephone }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">👔 Admin référent</span>
+                    <span class="info-value">{{ assistant.admin.nom|default:"-" }}</span>
+                </div>
+                <div class="actions-row">
+                    <button class="card-btn card-btn-profile" onclick="window.location.href='{% url 'detail_assistant' assistant.id %}'">👤 Profil</button>
+                    <button class="card-btn card-btn-edit" onclick="openEditAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}', '{{ assistant.telephone }}', '{{ assistant.email|default:''|escapejs }}', {{ assistant.est_actif|lower }})">✏️ Modifier</button>
+                    <button class="card-btn card-btn-password" onclick="openPasswordAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}')">🔑 Mot de passe</button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">Aucun assistant enregistré</div>
+        {% endfor %}
+    </div>
+
+    <!-- VUE TABLEAU ASSISTANTS -->
+    <div id="assistants-table-view" class="table-view">
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Assistant</th>
+                        <th>Contact</th>
+                        <th>Admin référent</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assistant in assistants %}
+                    <tr data-name="{{ assistant.nom|lower }}" data-phone="{{ assistant.telephone }}" data-status="{% if assistant.est_actif %}actif{% else %}inactif{% endif %}">
+                        <td style="cursor:pointer;color:var(--primary);font-weight:600;" onclick="window.location.href='{% url 'detail_assistant' assistant.id %}'">{{ assistant.nom }}</td>
+                        <td>{{ assistant.telephone }}</td>
+                        <td>{{ assistant.admin.nom|default:"-" }}</td>
+                        <td><span class="status-badge {% if assistant.est_actif %}status-active{% else %}status-inactive{% endif %}">{{ assistant.est_actif|yesno:"Actif,Inactif" }}</span></td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="table-btn" style="background:var(--primary-light);color:var(--primary);" onclick="window.location.href='{% url 'detail_assistant' assistant.id %}'">Profil</button>
+                                <button class="table-btn" style="background:var(--warning-light);color:var(--warning);" onclick="openEditAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}', '{{ assistant.telephone }}', '{{ assistant.email|default:''|escapejs }}', {{ assistant.est_actif|lower }})">Modifier</button>
+                                <button class="table-btn" style="background:#e0e7ff;color:#4f46e5;" onclick="openPasswordAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}')">Mot de passe</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="empty-state">Aucun assistant enregistré</span></td>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+<!-- ==================== MODALS ==================== -->
 
 <!-- Modal Agent -->
 <div id="agentModal" class="modal">
@@ -711,19 +1000,19 @@
                 <input type="hidden" name="agent_id" id="agent_id">
                 <div class="form-group">
                     <label>Nom complet</label>
-                    <input type="text" name="nom" id="agent_nom" required placeholder="Jean Dupont">
+                    <input type="text" name="nom" id="agent_nom" required>
                 </div>
                 <div class="form-group">
                     <label>Téléphone</label>
-                    <input type="tel" name="telephone" id="agent_telephone" required placeholder="70 00 00 00">
+                    <input type="tel" name="telephone" id="agent_telephone" required>
                 </div>
                 <div class="form-group">
                     <label>Email</label>
-                    <input type="email" name="email" id="agent_email" placeholder="jean@example.com">
+                    <input type="email" name="email" id="agent_email">
                 </div>
                 <div class="form-group" id="password-group">
                     <label>Mot de passe</label>
-                    <input type="password" name="password" id="agent_password" placeholder="8 caractères minimum">
+                    <input type="password" name="password" id="agent_password" required>
                 </div>
                 <div class="form-group">
                     <label>Statut</label>
@@ -738,8 +1027,35 @@
     </div>
 </div>
 
+<!-- Modal Password Agent -->
+<div id="passwordAgentModal" class="modal">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>🔑 Modifier le mot de passe</h3>
+            <button class="modal-close" onclick="closePasswordAgentModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form method="post" action="" id="passwordAgentForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Agent</label>
+                    <input type="text" id="password_agent_nom" readonly style="background:#f3f4f6;">
+                </div>
+                <div class="form-group">
+                    <label>Identifiant (login)</label>
+                    <input type="text" id="password_agent_username" readonly style="background:#f3f4f6;">
+                </div>
+                <div class="form-group">
+                    <label>Nouveau mot de passe</label>
+                    <input type="password" name="nouveau_password" id="nouveau_password_agent" required minlength="4" placeholder="4 caractères minimum">
+                </div>
+                <button type="submit" class="btn-submit">Modifier le mot de passe</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Assistant -->
-<!-- Modal Assistant - CORRIGÉ (ajout du champ identifiant) -->
 <div id="assistantModal" class="modal">
     <div class="modal-container">
         <div class="modal-header">
@@ -751,24 +1067,24 @@
                 {% csrf_token %}
                 <input type="hidden" name="assistant_id" id="assistant_id">
                 <div class="form-group">
-                    <label>Nom complet <span style="color:red;">*</span></label>
-                    <input type="text" name="nom" id="assistant_nom" required placeholder="Jean Dupont">
+                    <label>Nom complet</label>
+                    <input type="text" name="nom" id="assistant_nom" required>
                 </div>
                 <div class="form-group">
-                    <label>Téléphone <span style="color:red;">*</span></label>
-                    <input type="tel" name="telephone" id="assistant_telephone" required placeholder="70 00 00 00">
+                    <label>Téléphone</label>
+                    <input type="tel" name="telephone" id="assistant_telephone" required>
                 </div>
                 <div class="form-group">
-                    <label>Identifiant <span style="color:red;">*</span></label>
-                    <input type="text" name="username" id="assistant_username" required placeholder="identifiant">
+                    <label>Identifiant</label>
+                    <input type="text" name="username" id="assistant_username" required>
                 </div>
                 <div class="form-group">
                     <label>Email</label>
-                    <input type="email" name="email" id="assistant_email" placeholder="jean@example.com">
+                    <input type="email" name="email" id="assistant_email">
                 </div>
                 <div class="form-group" id="assistant-password-group">
-                    <label>Mot de passe <span style="color:red;">*</span></label>
-                    <input type="password" name="password" id="assistant_password" required placeholder="8 caractères minimum">
+                    <label>Mot de passe</label>
+                    <input type="password" name="password" id="assistant_password" required>
                 </div>
                 <div class="form-group">
                     <label>Statut</label>
@@ -783,11 +1099,11 @@
     </div>
 </div>
 
-<!-- Modal Mot de passe Assistant -->
+<!-- Modal Password Assistant -->
 <div id="passwordModal" class="modal">
     <div class="modal-container">
         <div class="modal-header">
-            <h3 id="passwordModalTitle">Modifier le mot de passe</h3>
+            <h3>🔑 Modifier le mot de passe</h3>
             <button class="modal-close" onclick="closePasswordModal()">&times;</button>
         </div>
         <div class="modal-body">
@@ -795,88 +1111,151 @@
                 {% csrf_token %}
                 <div class="form-group">
                     <label>Assistant</label>
-                    <input type="text" id="password_assistant_nom" class="form-control" readonly style="background: #f3f4f6;">
+                    <input type="text" id="password_assistant_nom" readonly style="background:#f3f4f6;">
+                </div>
+                <div class="form-group">
+                    <label>Identifiant (login)</label>
+                    <input type="text" id="password_assistant_username" readonly style="background:#f3f4f6;">
                 </div>
                 <div class="form-group">
                     <label>Nouveau mot de passe</label>
                     <input type="password" name="nouveau_password" id="nouveau_password" required minlength="4" placeholder="4 caractères minimum">
                 </div>
-                <button type="submit" class="btn-submit">Modifier</button>
+                <button type="submit" class="btn-submit">Modifier le mot de passe</button>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal Caisse -->
-<div id="caisseModal" class="modal">
+<!-- ==================== MODAL HISTORIQUE (SUPPRIMÉ - REDIRECTION VERS PAGE DÉDIÉE) ==================== -->
+
+<!-- ==================== MODAL OPÉRATION CAISSE ==================== -->
+<div id="operationModal" class="modal">
     <div class="modal-container">
         <div class="modal-header">
-            <h3 id="caisseModalTitle">Gérer la caisse</h3>
-            <button class="modal-close" onclick="closeCaisseModal()">&times;</button>
+            <h3 id="operationModalTitle">💰 Opération sur caisse</h3>
+            <button class="modal-close" onclick="closeOperationModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <form method="post" action="{% url 'modifier_caisse' %}" id="caisseForm">
+            <form method="post" action="{% url 'operation_agent' %}" id="operationForm">
                 {% csrf_token %}
-                <input type="hidden" name="agent_id" id="caisse_agent_id">
+                <input type="hidden" name="agent_id" id="operation_agent_id">
+                <input type="hidden" name="operation_type" id="operation_type">
                 <div class="form-group">
-                    <label>Argent Cash (FCFA)</label>
-                    <input type="number" name="solde_cash" id="caisse_cash" step="1000" required placeholder="0">
+                    <label>Sélectionner l'agent</label>
+                    <select name="agent_id" id="operation_agent_select" required onchange="updateAgentSoldePreview()">
+                        <option value="">-- Choisir un agent --</option>
+                        {% for agent in agents %}
+                        <option value="{{ agent.id }}" 
+                                data-cash="{{ agent.user.caisse.solde_cash|floatformat:2|default:'0' }}"
+                                data-uv="{{ agent.user.caisse.solde_uv|floatformat:2|default:'0' }}"
+                                data-wave="{{ agent.user.caisse.solde_wave|floatformat:2|default:'0' }}">
+                            {{ agent.nom }} - {{ agent.telephone }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="agent-solde-preview" class="agent-solde-preview">
+                    <div class="solde-preview-grid">
+                        <div><img src="{% static 'image/inco_cash.webp' %}" alt="Cash" style="width:18px;height:18px;"> Cash: <span id="preview-cash">0 F</span></div>
+                        <div><img src="{% static 'image/inco_touchpiont.png' %}" alt="UV" style="width:18px;height:18px;"> UV: <span id="preview-uv">0 F</span></div>
+                        <div><img src="{% static 'image/inco_wave1.webp' %}" alt="Wave" style="width:18px;height:18px;"> Wave: <span id="preview-wave">0 F</span></div>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>UV Touchpiont (FCFA)</label>
-                    <input type="number" name="solde_uv" id="caisse_uv" step="1000" required placeholder="0">
+                    <label>Type de fonds</label>
+                    <select name="type_fonds" id="operation_type_fonds" class="form-select" required>
+                        <option value="cash">💰 Cash</option>
+                        <option value="uv">📱 UV Touchpoint</option>
+                        <option value="wave">🌊 UV Wave</option>
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label>UV Wave (FCFA)</label>
-                    <input type="number" name="solde_wave" id="caisse_wave" step="1000" required placeholder="0">
+                    <label>Montant (FCFA)</label>
+                    <input type="number" name="montant" id="operation_montant" class="form-input" required min="0" step="any" placeholder="Ex: 50000">
                 </div>
-                <button type="submit" class="btn-submit">Enregistrer</button>
+                <div class="form-group">
+                    <label>Description (optionnel)</label>
+                    <input type="text" name="description" id="operation_description" class="form-input" placeholder="Motif de l'opération">
+                </div>
+                <button type="submit" class="btn-submit" id="operationSubmitBtn">Valider</button>
             </form>
         </div>
     </div>
 </div>
 
 <script>
-// Variable pour suivre l'onglet actif
 let currentTab = 'agents';
+let currentView = 'cards';
 
-// ==================== CHANGEMENT D'ONGLET ====================
-function switchTab(tabId) {
-    currentTab = tabId;
-    
-    // Mettre à jour les boutons d'onglets
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
-    
-    // Mettre à jour le contenu
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    document.getElementById(`tab-${tabId}`).classList.add('active');
-    
-    // Mettre à jour le texte du bouton "Nouvel utilisateur"
-    const btnText = document.getElementById('newUserBtnText');
-    if (tabId === 'agents') {
-        btnText.textContent = 'Nouvel agent';
+function toggleView() {
+    const btn = document.getElementById('toggleViewBtn');
+    if (currentView === 'cards') {
+        currentView = 'table';
+        btn.innerHTML = '🎴 Mode cartes';
+        document.getElementById('agents-cards-view').style.display = 'none';
+        document.getElementById('agents-table-view').classList.add('active');
+        document.getElementById('assistants-cards-view').style.display = 'none';
+        document.getElementById('assistants-table-view').classList.add('active');
     } else {
-        btnText.textContent = 'Nouvel assistant';
+        currentView = 'cards';
+        btn.innerHTML = '📋 Mode liste';
+        document.getElementById('agents-cards-view').style.display = 'grid';
+        document.getElementById('agents-table-view').classList.remove('active');
+        document.getElementById('assistants-cards-view').style.display = 'grid';
+        document.getElementById('assistants-table-view').classList.remove('active');
     }
 }
 
-// ==================== OUVERTURE MODAL SELON L'ONGLET ACTIF ====================
-function openAddModalByTab() {
-    if (currentTab === 'agents') {
-        openAddAgentModal();
+function updateAgentSoldePreview() {
+    const select = document.getElementById('operation_agent_select');
+    const opt = select.options[select.selectedIndex];
+    const preview = document.getElementById('agent-solde-preview');
+    const agentId = document.getElementById('operation_agent_id');
+    if (opt && opt.value) {
+        agentId.value = opt.value;
+        document.getElementById('preview-cash').innerHTML = (parseFloat(opt.dataset.cash) || 0).toLocaleString() + ' F';
+        document.getElementById('preview-uv').innerHTML = (parseFloat(opt.dataset.uv) || 0).toLocaleString() + ' F';
+        document.getElementById('preview-wave').innerHTML = (parseFloat(opt.dataset.wave) || 0).toLocaleString() + ' F';
+        preview.style.display = 'block';
     } else {
-        openAddAssistantModal();
+        agentId.value = '';
+        preview.style.display = 'none';
     }
 }
 
-// ==================== MODAL AGENT ====================
+// ==================== HISTORIQUE REDIRIGE VERS PAGE DEDIEE ====================
+function openHistoriqueModal() {
+    window.location.href = "{% url 'historique_operations' %}";
+}
+
+function closeOperationModal() { document.getElementById('operationModal').style.display = 'none'; }
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    document.getElementById('newUserBtnText').innerText = tab === 'agents' ? 'Nouvel agent' : 'Nouvel assistant';
+    
+    if (currentView === 'cards') {
+        document.getElementById('agents-cards-view').style.display = 'grid';
+        document.getElementById('agents-table-view').classList.remove('active');
+        document.getElementById('assistants-cards-view').style.display = 'grid';
+        document.getElementById('assistants-table-view').classList.remove('active');
+    } else {
+        document.getElementById('agents-cards-view').style.display = 'none';
+        document.getElementById('agents-table-view').classList.add('active');
+        document.getElementById('assistants-cards-view').style.display = 'none';
+        document.getElementById('assistants-table-view').classList.add('active');
+    }
+}
+
+function openAddModalByTab() { currentTab === 'agents' ? openAddAgentModal() : openAddAssistantModal(); }
+
 function openAddAgentModal() {
-    document.getElementById('agentModalTitle').textContent = 'Ajouter un agent';
+    document.getElementById('agentModalTitle').innerText = 'Ajouter un agent';
     document.getElementById('agent_id').value = '';
     document.getElementById('agent_nom').value = '';
     document.getElementById('agent_telephone').value = '';
@@ -887,29 +1266,34 @@ function openAddAgentModal() {
     document.getElementById('agentModal').style.display = 'flex';
 }
 
-function openEditAgentModal(id, nom, telephone, email, estActif) {
-    document.getElementById('agentModalTitle').textContent = "Modifier l'agent";
+function openEditAgentModal(id, nom, tel, email, actif) {
+    document.getElementById('agentModalTitle').innerText = "Modifier l'agent";
     document.getElementById('agent_id').value = id;
     document.getElementById('agent_nom').value = nom;
-    document.getElementById('agent_telephone').value = telephone;
+    document.getElementById('agent_telephone').value = tel;
     document.getElementById('agent_email').value = email;
-    document.getElementById('agent_actif').value = estActif ? 'true' : 'false';
+    document.getElementById('agent_actif').value = actif ? 'true' : 'false';
     document.getElementById('password-group').style.display = 'none';
     document.getElementById('agentModal').style.display = 'flex';
 }
 
-function closeAgentModal() { 
-    document.getElementById('agentModal').style.display = 'none'; 
+function closeAgentModal() { document.getElementById('agentModal').style.display = 'none'; }
+
+function openPasswordAgentModal(userId, nom, username) {
+    document.getElementById('password_agent_nom').value = nom;
+    document.getElementById('password_agent_username').value = username;
+    document.getElementById('passwordAgentForm').action = `/modifier-mot-de-passe-agent/${userId}/`;
+    document.getElementById('passwordAgentModal').style.display = 'flex';
 }
 
-// ==================== MODAL ASSISTANT ====================
-// ==================== MODAL ASSISTANT ====================
+function closePasswordAgentModal() { document.getElementById('passwordAgentModal').style.display = 'none'; }
+
 function openAddAssistantModal() {
-    document.getElementById('assistantModalTitle').textContent = 'Ajouter un assistant';
+    document.getElementById('assistantModalTitle').innerText = 'Ajouter un assistant';
     document.getElementById('assistant_id').value = '';
     document.getElementById('assistant_nom').value = '';
     document.getElementById('assistant_telephone').value = '';
-    document.getElementById('assistant_username').value = '';  // ← AJOUTÉ
+    document.getElementById('assistant_username').value = '';
     document.getElementById('assistant_email').value = '';
     document.getElementById('assistant_password').value = '';
     document.getElementById('assistant_actif').value = 'true';
@@ -917,113 +1301,131 @@ function openAddAssistantModal() {
     document.getElementById('assistantModal').style.display = 'flex';
 }
 
-function openEditAssistantModal(id, nom, telephone, email, estActif) {
-    document.getElementById('assistantModalTitle').textContent = "Modifier l'assistant";
+function openEditAssistantModal(id, nom, tel, email, actif) {
+    document.getElementById('assistantModalTitle').innerText = "Modifier l'assistant";
     document.getElementById('assistant_id').value = id;
     document.getElementById('assistant_nom').value = nom;
-    document.getElementById('assistant_telephone').value = telephone;
-    document.getElementById('assistant_username').value = '';  // ← AJOUTÉ (non modifiable)
+    document.getElementById('assistant_telephone').value = tel;
+    document.getElementById('assistant_username').value = '';
     document.getElementById('assistant_email').value = email;
-    document.getElementById('assistant_actif').value = estActif ? 'true' : 'false';
+    document.getElementById('assistant_actif').value = actif ? 'true' : 'false';
     document.getElementById('assistant-password-group').style.display = 'none';
     document.getElementById('assistantModal').style.display = 'flex';
 }
 
-function closeAssistantModal() { 
-    document.getElementById('assistantModal').style.display = 'none'; 
-}
+function closeAssistantModal() { document.getElementById('assistantModal').style.display = 'none'; }
 
-// ==================== MODAL MOT DE PASSE ASSISTANT ====================
 function openPasswordAssistantModal(id, nom) {
-    document.getElementById('passwordModalTitle').textContent = `Mot de passe - ${nom}`;
-    document.getElementById('password_assistant_nom').value = nom;
-    document.getElementById('passwordForm').action = `/modifier-mot-de-passe-assistant/${id}/`;
-    document.getElementById('passwordModal').style.display = 'flex';
-}
-
-function closePasswordModal() { 
-    document.getElementById('passwordModal').style.display = 'none'; 
-}
-
-// ==================== MODAL CAISSE ====================
-function openCaisseModal(agentId, agentNom) {
-    document.getElementById('caisseModalTitle').textContent = `Caisse - ${agentNom}`;
-    document.getElementById('caisse_agent_id').value = agentId;
-    
-    fetch(`/api/agent-caisse/${agentId}/`)
-        .then(response => response.json())
+    fetch(`/api/assistant/${id}/infos/`)
+        .then(r => r.json())
         .then(data => {
-            document.getElementById('caisse_cash').value = data.solde_cash;
-            document.getElementById('caisse_uv').value = data.solde_uv;
-            document.getElementById('caisse_wave').value = data.solde_wave;
+            document.getElementById('password_assistant_nom').value = nom;
+            document.getElementById('password_assistant_username').value = data.username || '';
+            document.getElementById('passwordForm').action = `/modifier-mot-de-passe-assistant/${id}/`;
+            document.getElementById('passwordModal').style.display = 'flex';
         })
-        .catch(error => {
-            console.error('Erreur:', error);
-            document.getElementById('caisse_cash').value = 0;
-            document.getElementById('caisse_uv').value = 0;
-            document.getElementById('caisse_wave').value = 0;
+        .catch(() => {
+            document.getElementById('password_assistant_nom').value = nom;
+            document.getElementById('passwordForm').action = `/modifier-mot-de-passe-assistant/${id}/`;
+            document.getElementById('passwordModal').style.display = 'flex';
         });
-    
-    document.getElementById('caisseModal').style.display = 'flex';
 }
 
-function closeCaisseModal() { 
-    document.getElementById('caisseModal').style.display = 'none'; 
+function closePasswordModal() { document.getElementById('passwordModal').style.display = 'none'; }
+
+function openDecaissementModal() {
+    document.getElementById('operationModalTitle').innerHTML = '💰 Ajouter des fonds à un agent';
+    document.getElementById('operation_type').value = 'ajout';
+    document.getElementById('operation_montant').value = '';
+    document.getElementById('operation_description').value = '';
+    document.getElementById('operation_agent_select').value = '';
+    document.getElementById('operation_agent_id').value = '';
+    document.getElementById('agent-solde-preview').style.display = 'none';
+    document.getElementById('operation_type_fonds').value = 'cash';
+    const btn = document.getElementById('operationSubmitBtn');
+    btn.innerHTML = '➕ Ajouter les fonds';
+    btn.classList.remove('btn-submit-danger');
+    btn.classList.add('btn-submit-success');
+    document.getElementById('operationModal').style.display = 'flex';
 }
 
-// ==================== FILTRES ====================
+function openEncaissementModal() {
+    document.getElementById('operationModalTitle').innerHTML = '💰 Retirer des fonds d\'un agent';
+    document.getElementById('operation_type').value = 'retrait';
+    document.getElementById('operation_montant').value = '';
+    document.getElementById('operation_description').value = '';
+    document.getElementById('operation_agent_select').value = '';
+    document.getElementById('operation_agent_id').value = '';
+    document.getElementById('agent-solde-preview').style.display = 'none';
+    document.getElementById('operation_type_fonds').value = 'cash';
+    const btn = document.getElementById('operationSubmitBtn');
+    btn.innerHTML = '➖ Retirer les fonds';
+    btn.classList.remove('btn-submit-success');
+    btn.classList.add('btn-submit-danger');
+    document.getElementById('operationModal').style.display = 'flex';
+}
+
 function filterAgents() {
     const search = document.getElementById('search-agents').value.toLowerCase();
     const status = document.getElementById('status-agents').value;
-    const rows = document.querySelectorAll('#agents-table-body tr');
     
-    rows.forEach(row => {
+    document.querySelectorAll('.agent-card').forEach(card => {
+        const name = card.dataset.name;
+        const phone = card.dataset.phone;
+        const cardStatus = card.dataset.status;
+        let show = true;
+        if (search && !name.includes(search) && !phone.includes(search)) show = false;
+        if (status !== 'all' && cardStatus !== status) show = false;
+        card.style.display = show ? '' : 'none';
+    });
+    
+    document.querySelectorAll('#agents-table-view tbody tr').forEach(row => {
         if (row.querySelector('.empty-state')) return;
-        
-        const name = row.dataset.name;
-        const phone = row.dataset.phone;
+        const name = row.cells[0]?.innerText.toLowerCase() || '';
+        const phone = row.cells[1]?.innerText || '';
         const rowStatus = row.dataset.status;
-        let match = true;
-        
-        if (search && !name.includes(search) && !phone.includes(search)) {
-            match = false;
-        }
-        if (status !== 'all' && rowStatus !== status) {
-            match = false;
-        }
-        row.style.display = match ? '' : 'none';
+        let show = true;
+        if (search && !name.includes(search) && !phone.includes(search)) show = false;
+        if (status !== 'all' && rowStatus !== status) show = false;
+        row.style.display = show ? '' : 'none';
     });
 }
 
 function filterAssistants() {
     const search = document.getElementById('search-assistants').value.toLowerCase();
     const status = document.getElementById('status-assistants').value;
-    const rows = document.querySelectorAll('#assistants-table-body tr');
     
-    rows.forEach(row => {
+    document.querySelectorAll('.assistant-card').forEach(card => {
+        const name = card.dataset.name;
+        const phone = card.dataset.phone;
+        const cardStatus = card.dataset.status;
+        let show = true;
+        if (search && !name.includes(search) && !phone.includes(search)) show = false;
+        if (status !== 'all' && cardStatus !== status) show = false;
+        card.style.display = show ? '' : 'none';
+    });
+    
+    document.querySelectorAll('#assistants-table-view tbody tr').forEach(row => {
         if (row.querySelector('.empty-state')) return;
-        
-        const name = row.dataset.name;
-        const phone = row.dataset.phone;
+        const name = row.cells[0]?.innerText.toLowerCase() || '';
+        const phone = row.cells[1]?.innerText || '';
         const rowStatus = row.dataset.status;
-        let match = true;
-        
-        if (search && !name.includes(search) && !phone.includes(search)) {
-            match = false;
-        }
-        if (status !== 'all' && rowStatus !== status) {
-            match = false;
-        }
-        row.style.display = match ? '' : 'none';
+        let show = true;
+        if (search && !name.includes(search) && !phone.includes(search)) show = false;
+        if (status !== 'all' && rowStatus !== status) show = false;
+        row.style.display = show ? '' : 'none';
     });
 }
 
-// Fermer les modals en cliquant à l'extérieur
-window.onclick = function(event) {
-    if (event.target === document.getElementById('agentModal')) closeAgentModal();
-    if (event.target === document.getElementById('assistantModal')) closeAssistantModal();
-    if (event.target === document.getElementById('passwordModal')) closePasswordModal();
-    if (event.target === document.getElementById('caisseModal')) closeCaisseModal();
+window.onclick = function(e) {
+    if (e.target.classList.contains('modal')) e.target.style.display = 'none';
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('agents-cards-view').style.display = 'grid';
+    document.getElementById('agents-table-view').classList.remove('active');
+    document.getElementById('assistants-cards-view').style.display = 'grid';
+    document.getElementById('assistants-table-view').classList.remove('active');
+});
 </script>
 {% endblock %}

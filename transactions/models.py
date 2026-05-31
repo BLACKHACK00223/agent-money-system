@@ -38,6 +38,7 @@ class Agent(models.Model):
     est_actif = models.BooleanField(default=True)
     created_by = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, related_name='agents_crees')
     created_at = models.DateTimeField(auto_now_add=True)
+    mot_de_passe_clair = models.CharField(max_length=100, blank=True, null=True)  
     
     def __str__(self):
         return f"{self.nom} - {self.telephone}"
@@ -130,8 +131,8 @@ class Caisse(models.Model):
     
     # Limites par compte
     limite_cash = models.DecimalField(max_digits=12, decimal_places=2, default=10000000)
-    limite_uv = models.DecimalField(max_digits=12, decimal_places=2, default=50000000)
-    limite_wave = models.DecimalField(max_digits=12, decimal_places=2, default=50000000)
+    limite_uv = models.DecimalField(max_digits=12, decimal_places=2, default=500000000)
+    limite_wave = models.DecimalField(max_digits=12, decimal_places=2, default=500000000)
     
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -158,22 +159,44 @@ class Caisse(models.Model):
         verbose_name_plural = "Caisses"
 
 
+OPERATEUR_CHOICES = (
+    ('orange', 'Orange Money'),
+    ('wave', 'Wave'),
+    ('malitel', 'Malitel'),
+    ('telecel', 'Telecel'),
+)
+TYPE_TRANSACTION_CHOICES = (
+    ('depot', 'Dépôt'),
+    ('retrait', 'Retrait'),
+    ('credit', 'Crédit/Recharge'),
+)
+
+
+class CommissionRate(models.Model):
+    """
+    Taux de commission configurables par opérateur et type de transaction
+    """
+    operateur = models.CharField(max_length=10, choices=OPERATEUR_CHOICES)
+    type_transaction = models.CharField(max_length=10, choices=TYPE_TRANSACTION_CHOICES)
+    taux = models.DecimalField(max_digits=6, decimal_places=4, help_text="Taux en décimal (ex: 0.0014 = 0.14%)")
+
+    class Meta:
+        verbose_name = "Taux de commission"
+        verbose_name_plural = "Taux de commission"
+        unique_together = ('operateur', 'type_transaction')
+
+    def __str__(self):
+        return f"{self.get_operateur_display()} - {self.get_type_transaction_display()}: {float(self.taux)*100:.2f}%"
+
+
 class Transaction(models.Model):
     """
     Transaction - Pour ADMIN, AGENTS et ASSISTANTS
     L'ASSISTANT utilise la caisse de son ADMIN
     """
-    OPERATEUR_CHOICES = (
-        ('orange', 'Orange Money'),
-        ('wave', 'Wave'),
-        ('malitel', 'Malitel'),
-        ('telecel', 'Telecel'),
-    )
-    TYPE_CHOICES = (
-        ('depot', 'Dépôt'),
-        ('retrait', 'Retrait'),
-        ('credit', 'Crédit/Recharge'),
-    )
+    # Opérateurs et types (définis au niveau module pour CommissionRate)
+    OPERATEUR_CHOICES = OPERATEUR_CHOICES
+    TYPE_CHOICES = TYPE_TRANSACTION_CHOICES
     
     # Qui a fait la transaction (User: Admin, Agent ou Assistant)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
@@ -213,37 +236,50 @@ class Transaction(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Annulation
+    est_annule = models.BooleanField(default=False)
+    date_annulation = models.DateTimeField(null=True, blank=True)
+    annule_par = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='annulations')
+    motif_annulation = models.TextField(blank=True)
+    
     # Notes
     notes = models.TextField(blank=True)
     
     def calculer_commission(self):
         montant = Decimal(str(self.montant))
-        
-        taux = {
-            'orange': {
-                'depot': Decimal('0.0014'),
-                'retrait': Decimal('0.0028'),
-                'credit': Decimal('0.005'),
-            },
-            'wave': {
-                'depot': Decimal('0.01'),
-                'retrait': Decimal('0.01'),
-                'credit': Decimal('0'),
-            },
-            'malitel': {
-                'depot': Decimal('0.0014'),
-                'retrait': Decimal('0.0028'),
-                'credit': Decimal('0.005'),
-            },
-            'telecel': {
-                'depot': Decimal('0'),
-                'retrait': Decimal('0'),
-                'credit': Decimal('0.005'),
+
+        try:
+            rate = CommissionRate.objects.get(
+                operateur=self.operateur,
+                type_transaction=self.type_transaction
+            )
+            taux_commission = rate.taux
+        except CommissionRate.DoesNotExist:
+            taux = {
+                'orange': {
+                    'depot': Decimal('0.0014'),
+                    'retrait': Decimal('0.0028'),
+                    'credit': Decimal('0.005'),
+                },
+                'wave': {
+                    'depot': Decimal('0.01'),
+                    'retrait': Decimal('0.01'),
+                    'credit': Decimal('0'),
+                },
+                'malitel': {
+                    'depot': Decimal('0.0014'),
+                    'retrait': Decimal('0.0028'),
+                    'credit': Decimal('0.005'),
+                },
+                'telecel': {
+                    'depot': Decimal('0'),
+                    'retrait': Decimal('0'),
+                    'credit': Decimal('0.005'),
+                }
             }
-        }
-        
-        taux_commission = taux.get(self.operateur, {}).get(self.type_transaction, Decimal('0'))
-        return (montant * taux_commission).quantize(Decimal('0.01'))
+            taux_commission = taux.get(self.operateur, {}).get(self.type_transaction, Decimal('0'))
+
+        return (montant * Decimal(str(taux_commission))).quantize(Decimal('0.01'))
     
     def calculer_frais_operateur(self):
         montant = Decimal(str(self.montant))
@@ -296,6 +332,38 @@ class Transaction(models.Model):
         
         return Decimal('0')
     
+    def annuler(self, user, motif=""):
+        if self.est_annule:
+            return False
+        if self.role == 'assistant' and self.assistant_admin:
+            caisse = self.assistant_admin.user.caisse
+        else:
+            caisse = self.user.caisse
+        if self.operateur in ['orange', 'malitel', 'telecel']:
+            if self.type_transaction == 'depot':
+                caisse.solde_cash -= self.montant
+                caisse.solde_uv += self.montant
+            elif self.type_transaction == 'retrait':
+                caisse.solde_cash += self.montant
+                caisse.solde_uv -= self.montant
+            elif self.type_transaction == 'credit':
+                caisse.solde_cash -= self.montant
+                caisse.solde_uv += self.montant
+        elif self.operateur == 'wave':
+            if self.type_transaction == 'depot':
+                caisse.solde_cash -= self.montant
+                caisse.solde_wave += self.montant
+            elif self.type_transaction == 'retrait':
+                caisse.solde_cash += self.montant
+                caisse.solde_wave -= self.montant
+        caisse.save()
+        self.est_annule = True
+        self.date_annulation = timezone.now()
+        self.annule_par = user
+        self.motif_annulation = motif
+        self.save(update_fields=['est_annule', 'date_annulation', 'annule_par', 'motif_annulation'])
+        return True
+
     def save(self, *args, **kwargs):
         if not self.reference:
             prefix = {
@@ -304,60 +372,37 @@ class Transaction(models.Model):
                 'malitel': 'ML',
                 'telecel': 'TC'
             }.get(self.operateur, 'TR')
-            
             type_prefix = {
                 'depot': 'D',
                 'retrait': 'R',
                 'credit': 'C',
             }.get(self.type_transaction, 'T')
-            
             self.reference = f"{prefix}{type_prefix}{uuid.uuid4().hex[:8].upper()}"
-        
-        self.commission = self.calculer_commission()
-        self.frais_operateur = self.calculer_frais_operateur()
-        
-        # ========== RÉCUPÉRER LA BONNE CAISSE ==========
-        # Si c'est un assistant, utiliser la caisse de son ADMIN
-        if self.role == 'assistant' and self.assistant_admin:
-            # L'assistant utilise la caisse de son admin
-            caisse = self.assistant_admin.user.caisse
-        else:
-            # Sinon, utiliser la caisse de l'utilisateur
-            caisse = self.user.caisse
-        
-        # ========== MISE À JOUR DES SOLDES ==========
-        # ORANGE, MALITEL, TELECEL (via UV Touspiont)
-        if self.operateur in ['orange', 'malitel', 'telecel']:
-            if self.type_transaction == 'depot':
-                # DÉPÔT: client donne cash → agent donne ses UV
-                caisse.solde_cash += self.montant
-                caisse.solde_uv -= self.montant
-                
-            elif self.type_transaction == 'retrait':
-                # RETRAIT: client prend cash → agent reçoit UV
-                caisse.solde_cash -= self.montant
-                caisse.solde_uv += self.montant
-                
-            elif self.type_transaction == 'credit':
-                # CRÉDIT: client recharge → agent donne ses UV
-                caisse.solde_cash += self.montant
-                caisse.solde_uv -= self.montant
-        
-        # WAVE
-        elif self.operateur == 'wave':
-            if self.type_transaction == 'depot':
-                # DÉPÔT WAVE: client donne cash → agent donne ses Wave
-                caisse.solde_cash += self.montant
-                caisse.solde_wave -= self.montant
-                
-            elif self.type_transaction == 'retrait':
-                # RETRAIT WAVE: client prend cash → agent reçoit Wave
-                caisse.solde_cash -= self.montant
-                caisse.solde_wave += self.montant
-        
-        # Sauvegarder la caisse
-        caisse.save()
-        
+        if self.pk is None:
+            self.commission = self.calculer_commission()
+            self.frais_operateur = self.calculer_frais_operateur()
+            if self.role == 'assistant' and self.assistant_admin:
+                caisse = self.assistant_admin.user.caisse
+            else:
+                caisse = self.user.caisse
+            if self.operateur in ['orange', 'malitel', 'telecel']:
+                if self.type_transaction == 'depot':
+                    caisse.solde_cash += self.montant
+                    caisse.solde_uv -= self.montant
+                elif self.type_transaction == 'retrait':
+                    caisse.solde_cash -= self.montant
+                    caisse.solde_uv += self.montant
+                elif self.type_transaction == 'credit':
+                    caisse.solde_cash += self.montant
+                    caisse.solde_uv -= self.montant
+            elif self.operateur == 'wave':
+                if self.type_transaction == 'depot':
+                    caisse.solde_cash += self.montant
+                    caisse.solde_wave -= self.montant
+                elif self.type_transaction == 'retrait':
+                    caisse.solde_cash -= self.montant
+                    caisse.solde_wave += self.montant
+            caisse.save()
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -538,7 +583,7 @@ class DemandeApprovisionnement(models.Model):
         verbose_name_plural = "Demandes d'approvisionnement"
         ordering = ['-date_demande']
 
- 
+
 class ApprovisionnementDirect(models.Model):
     """
     Approvisionnement direct ADMIN ou ASSISTANT → AGENT
@@ -602,7 +647,30 @@ class ApprovisionnementDirect(models.Model):
         verbose_name_plural = "Approvisionnements directs"
         ordering = ['-date']
 
-
+# models.py
+class HistoriqueAgent(models.Model):
+    """Historique des opérations entre Admin/Assistant et Agent"""
+    agent = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='historique_operations')
+    type_operation = models.CharField(max_length=20, choices=[
+        ('decaissement', 'Ajout (Donné à l\'agent)'),
+        ('encaissement', 'Retrait (Récupéré de l\'agent)')
+    ])
+    operateur_type = models.CharField(max_length=20, choices=[
+        ('admin', 'Administrateur'),
+        ('assistant', 'Assistant')
+    ])
+    operateur_nom = models.CharField(max_length=100)
+    montant_cash = models.DecimalField(max_digits=15, decimal_places=0, default=0)
+    montant_uv = models.DecimalField(max_digits=15, decimal_places=0, default=0)
+    montant_wave = models.DecimalField(max_digits=15, decimal_places=0, default=0)
+    description = models.TextField(blank=True, null=True)
+    date_operation = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-date_operation']
+    
+    def get_montant_total(self):
+        return (self.montant_cash or 0) + (self.montant_uv or 0) + (self.montant_wave or 0)
 # ==================== SIGNALS ====================
 
 @receiver(post_save, sender=User)
@@ -645,75 +713,146 @@ def init_soldes_hier(sender, instance, created, **kwargs):
 
 # ==================== MODÈLES POUR RAPPORTS ET GESTION ====================
 
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import datetime
+
+User = get_user_model()
+
+
 class Facture(models.Model):
-    TYPE_CHOICES = [
-        ('cliente', 'Facture Client - Client nous doit'),
-        ('fournisseur', 'Facture Fournisseur - Nous devons'),
-    ]
-    
+    """
+    Facture simple :
+    - Type de transaction = texte libre
+    - Nom du client / tiers
+    - Téléphone
+    - Montant
+    - Date d'échéance
+    """
+
     STATUT_CHOICES = [
         ('en_attente', 'En attente'),
         ('partiellement_payee', 'Partiellement payée'),
         ('payee', 'Payée'),
         ('annulee', 'Annulée'),
     ]
-    
-    type_facture = models.CharField(max_length=20, choices=TYPE_CHOICES, default='cliente')
-    
-    numero = models.CharField(max_length=50, unique=True)
-    
-    # Informations de la personne
-    personne_nom = models.CharField(max_length=200)
-    personne_email = models.EmailField(blank=True, null=True)
-    personne_telephone = models.CharField(max_length=50, blank=True)
-    
-    montant_total = models.DecimalField(max_digits=12, decimal_places=0)
-    montant_paye = models.DecimalField(max_digits=12, decimal_places=0, default=0)
-    
-    date_emission = models.DateField(auto_now_add=True)
-    date_echeance = models.DateField()
-    date_paiement_complet = models.DateField(null=True, blank=True)
-    
-    description = models.TextField(blank=True)
-    
-    statut = models.CharField(max_length=30, choices=STATUT_CHOICES, default='en_attente')
-    
-    cree_par = models.ForeignKey(User, on_delete=models.CASCADE)
-    cree_le = models.DateTimeField(auto_now_add=True)
-    
+
+    # Type libre (pas de choix)
+    type_facture = models.CharField(
+        max_length=255,
+        verbose_name="Type de transaction",
+        help_text="Ex: Client nous doit, Fournisseur, Partenaire, etc..."
+    )
+
+    # Numéro auto
+    numero = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True
+    )
+
+    # Nom du client / tiers
+    personne_nom = models.CharField(
+        max_length=200,
+        verbose_name="Nom du client / tiers"
+    )
+
+    # Téléphone
+    personne_telephone = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Téléphone"
+    )
+
+    # Montant total
+    montant_total = models.DecimalField(
+        max_digits=12,
+        decimal_places=0,
+        verbose_name="Montant (FCFA)"
+    )
+
+    # Montant payé
+    montant_paye = models.DecimalField(
+        max_digits=12,
+        decimal_places=0,
+        default=0
+    )
+
+    # Dates
+    date_emission = models.DateField(
+        auto_now_add=True
+    )
+
+    date_echeance = models.DateField(
+        verbose_name="Date d'échéance"
+    )
+
+    date_paiement_complet = models.DateField(
+        null=True,
+        blank=True
+    )
+
+    # Description libre
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Description"
+    )
+
+    # Statut
+    statut = models.CharField(
+        max_length=30,
+        choices=STATUT_CHOICES,
+        default='en_attente'
+    )
+
+    # Auteur
+    cree_par = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    cree_le = models.DateTimeField(
+        auto_now_add=True
+    )
+
     class Meta:
         ordering = ['-date_emission']
-    
+        verbose_name = "Facture"
+        verbose_name_plural = "Factures"
+
     @property
     def reste_a_payer(self):
         return self.montant_total - self.montant_paye
-    
+
     @property
     def sens_creance(self):
-        """Indique qui doit à qui"""
-        if self.type_facture == 'cliente':
-            return f"{self.personne_nom} nous doit {self.reste_a_payer:,.0f} FCFA"
-        else:
-            return f"Nous devons {self.reste_a_payer:,.0f} FCFA à {self.personne_nom}"
-    
+        return f"{self.personne_nom} - reste à payer : {self.reste_a_payer:,.0f} FCFA"
+
     def save(self, *args, **kwargs):
+        # Génération automatique du numéro
         if not self.numero:
-            from datetime import datetime
-            prefix = "FACT-C" if self.type_facture == 'cliente' else "FACT-F"
-            self.numero = f"{prefix}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            self.numero = f"FACT-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+        # Gestion automatique du statut
         if self.montant_paye >= self.montant_total and self.montant_total > 0:
             self.statut = 'payee'
+
             if not self.date_paiement_complet:
-                from django.utils import timezone
                 self.date_paiement_complet = timezone.now().date()
+
         elif self.montant_paye > 0:
             self.statut = 'partiellement_payee'
-        super().save(*args, **kwargs)
-    
-    def __str__(self):
-        sens = "→" if self.type_facture == 'cliente' else "←"
-        return f"{self.numero} {sens} {self.personne_nom} ({self.montant_total:,.0f} FCFA)"
 
+        else:
+            self.statut = 'en_attente'
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.numero} - {self.personne_nom} ({self.montant_total:,.0f} FCFA)"
 
 class PaiementFacture(models.Model):
     MODE_CHOICES = [
@@ -736,13 +875,33 @@ class PaiementFacture(models.Model):
         return f"Paiement {self.facture.numero} - {self.montant} FCFA"
 
 
+# models.py
+from django.db import models
+from django.contrib.auth.models import User
+
+class Debiteur(models.Model):
+    """Modèle simple pour tout type de débiteur (particulier, agent, client, etc.)"""
+    nom = models.CharField(max_length=200)
+    telephone = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    adresse = models.TextField(blank=True, null=True)
+    
+    date_creation = models.DateTimeField(auto_now_add=True)
+    cree_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        ordering = ['nom']
+    
+    def __str__(self):
+        return self.nom
+
 class Dette(models.Model):
     STATUT_CHOICES = [
         ('active', 'Active'),
         ('payee', 'Payée'),
     ]
     
-    debiteur = models.ForeignKey('Agent', on_delete=models.CASCADE, related_name='dettes')
+    debiteur = models.ForeignKey(Debiteur, on_delete=models.CASCADE, related_name='dettes')
     montant = models.DecimalField(max_digits=12, decimal_places=0)
     montant_rembourse = models.DecimalField(max_digits=12, decimal_places=0, default=0)
     
@@ -774,7 +933,6 @@ class Dette(models.Model):
     def __str__(self):
         return f"Dette de {self.debiteur.nom} - {self.montant} FCFA"
 
-
 class RemboursementDette(models.Model):
     MODE_CHOICES = [
         ('cash', 'Espèces'),
@@ -793,8 +951,7 @@ class RemboursementDette(models.Model):
     
     def __str__(self):
         return f"Remboursement {self.dette.id} - {self.montant} FCFA"
-
-
+    
 class CompteEpargne(models.Model):
     titulaire = models.CharField(max_length=200)
     numero_compte = models.CharField(max_length=50, unique=True)
@@ -906,3 +1063,10 @@ class OperationEpargne(models.Model):
     
     class Meta:
         ordering = ['-date_operation']
+
+
+# models.py
+class PrintQueue(models.Model):
+    data = models.JSONField()
+    printed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)

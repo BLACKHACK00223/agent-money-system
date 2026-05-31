@@ -4,18 +4,50 @@
 
 {% block extra_css %}
 <style>
-    /* Styles spécifiques à la page historique */
     .page-header {
         margin-bottom: 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
     }
 
     .page-header h1 {
         font-size: 24px;
         font-weight: 700;
         color: var(--gray-900);
+        margin: 0;
     }
 
-    /* Filtres - tous alignés sur une seule ligne */
+    /* Bouton imprimante dans le header */
+    .printer-header-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-md);
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        font-weight: 500;
+        font-size: 13px;
+        color: var(--gray-700);
+    }
+
+    .printer-header-btn:hover {
+        background: var(--primary-light);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+
+    .printer-header-btn svg {
+        width: 18px;
+        height: 18px;
+        stroke: var(--primary);
+    }
+
     .filters-card {
         background: white;
         border-radius: 16px;
@@ -100,7 +132,6 @@
         transform: translateY(-1px);
     }
 
-    /* Stats */
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -151,7 +182,6 @@
         margin-top: 4px;
     }
 
-    /* Table - sans contours */
     .table-card {
         background: white;
         border-radius: 16px;
@@ -197,7 +227,6 @@
     .badge-retrait { background: var(--danger-light); color: var(--danger); }
     .badge-credit { background: var(--warning-light); color: var(--warning); }
 
-    /* Badge rôle */
     .badge-role {
         display: inline-block;
         font-size: 11px;
@@ -216,6 +245,8 @@
         font-size: 11px;
         display: inline-block;
         transition: all 0.2s;
+        border: none;
+        cursor: pointer;
     }
 
     .btn-print:hover {
@@ -223,7 +254,11 @@
         color: white;
     }
 
-    /* Pagination */
+    .btn-print:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
     .pagination {
         display: flex;
         justify-content: center;
@@ -267,13 +302,150 @@
         color: var(--gray-500);
     }
 
-    /* Responsive */
+    .qz-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-size: 12px;
+        z-index: 9999;
+        color: white;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        animation: slideIn 0.3s ease-out;
+    }
+
+    .qz-notification.success { background: #10b981; }
+    .qz-notification.error { background: #ef4444; }
+    .qz-notification.info { background: #3b82f6; }
+
+    /* Styles pour le modal imprimante QZ Tray */
+    .printer-modal-content {
+        max-width: 450px;
+    }
+
+    .printer-list {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+    }
+
+    .printer-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    .printer-item:hover {
+        background: var(--gray-50);
+        border-color: var(--primary);
+        transform: translateX(4px);
+    }
+
+    .printer-item.selected {
+        background: var(--primary-light);
+        border-color: var(--primary);
+    }
+
+    .printer-item .printer-icon {
+        font-size: 24px;
+    }
+
+    .printer-item .printer-info {
+        flex: 1;
+    }
+
+    .printer-item .printer-name {
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .printer-item .printer-status {
+        font-size: 11px;
+        color: var(--gray-500);
+    }
+
+    .printer-status-badge {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+    }
+
+    .status-online { background: var(--success); }
+    .status-offline { background: var(--danger); }
+    .status-unknown { background: var(--warning); }
+
+    .check-icon {
+        color: var(--success);
+        font-weight: bold;
+        font-size: 18px;
+        margin-left: auto;
+    }
+
+    .refresh-printers-btn {
+        width: 100%;
+        padding: 10px;
+        background: var(--gray-100);
+        border: none;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-weight: 500;
+        transition: all var(--transition-fast);
+    }
+
+    .refresh-printers-btn:hover {
+        background: var(--gray-200);
+    }
+
+    .float-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: var(--radius-lg);
+        font-size: 13px;
+        font-weight: 500;
+        z-index: 10000;
+        animation: slideInRight 0.3s ease;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .float-notification.success { background: var(--success); color: white; }
+    .float-notification.error { background: var(--danger); color: white; }
+    .float-notification.warning { background: var(--warning); color: white; }
+    .float-notification.info { background: var(--info); color: white; }
+
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
     @media (max-width: 1100px) {
         .filters-grid {
             flex-wrap: wrap;
         }
         .filter-group {
-            min-width: 160px;
+            min-width: 140px;
+            flex: 1;
         }
     }
 
@@ -283,13 +455,19 @@
             gap: 12px;
         }
         .filters-grid {
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            align-items: end;
         }
         .filter-group {
             width: 100%;
         }
         .filter-actions {
-            flex-direction: row;
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
         }
         .btn-filter, .btn-reset {
             flex: 1;
@@ -299,6 +477,10 @@
             padding: 8px;
             font-size: 11px;
         }
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
     }
 </style>
 {% endblock %}
@@ -306,40 +488,45 @@
 {% block content %}
 <div class="page-header">
     <h1>Historique des transactions</h1>
+    <!-- Bouton imprimante dans le header -->
+    <button class="printer-header-btn" onclick="openPrinterModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <path d="M6 9V3h12v6" />
+            <rect x="6" y="15" width="12" height="6" rx="2" />
+        </svg>
+        Gestion imprimante
+    </button>
 </div>
 
-<!-- Filtres alignés sur une seule ligne -->
 <div class="filters-card">
     <div class="filters-grid">
         <div class="filter-group">
             <label>👤 Utilisateur</label>
             <select name="user_id" id="filter-user">
                 <option value="">Tous</option>
-
-                    {% for admin in admins %}
-                        <option value="{{ admin.user.id }}">{{ admin.nom }}</option>
-                    {% endfor %}
-
-                    {% for agent in agents %}
-                        <option value="{{ agent.user.id }}">{{ agent.nom }}</option>
-                    {% endfor %}
-                    {% for assistant in assistants %}
-                        <option value="{{ assistant.user.id }}">{{ assistant.nom }}</option>
-                    {% endfor %}
-                
+                {% for admin in admins %}
+                    <option value="{{ admin.user.id }}">{{ admin.nom }}</option>
+                {% endfor %}
+                {% for agent in agents %}
+                    <option value="{{ agent.user.id }}">{{ agent.nom }}</option>
+                {% endfor %}
+                {% for assistant in assistants %}
+                    <option value="{{ assistant.user.id }}">{{ assistant.nom }}</option>
+                {% endfor %}
             </select>
         </div>
         <div class="filter-group">
             <label>🔄 Type</label>
             <select name="type" id="filter-type">
                 <option value="">Tous</option>
-                <option value="depot">Dépôt</option>
+                <option value="depot">Depot</option>
                 <option value="retrait">Retrait</option>
-                <option value="credit">Crédit</option>
+                <option value="credit">Credit</option>
             </select>
         </div>
         <div class="filter-group">
-            <label>🏢 Opérateur</label>
+            <label>🏢 Operateur</label>
             <select name="operateur" id="filter-operateur">
                 <option value="">Tous</option>
                 <option value="orange">Orange Money</option>
@@ -349,7 +536,7 @@
             </select>
         </div>
         <div class="filter-group">
-            <label>📅 Début</label>
+            <label>📅 Debut</label>
             <input type="date" name="date_debut" id="filter-date-debut">
         </div>
         <div class="filter-group">
@@ -358,254 +545,482 @@
         </div>
         <div class="filter-actions">
             <button type="button" class="btn-filter" id="btn-apply">🔍 VALIDER</button>
-            <button type="button" class="btn-reset" id="btn-reset">🗑️ RÉINITIALISER</button>
+            <button type="button" class="btn-reset" id="btn-reset">🗑️ REINITIALISER</button>
         </div>
     </div>
 </div>
 
-<!-- Stats -->
 <div class="stats-grid" id="stats-container">
     <div class="stat-card">
-        <div class="icon primary">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/>
-            </svg>
-        </div>
-        <div class="info">
-            <div class="value" id="stat-count">0</div>
-            <div class="label">Transactions</div>
-        </div>
+        <div class="icon primary"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/></svg></div>
+        <div class="info"><div class="value" id="stat-count">0</div><div class="label">Transactions</div></div>
     </div>
     <div class="stat-card">
-        <div class="icon success">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="9"/>
-                <path d="M12 8v8M8 12h8"/>
-            </svg>
-        </div>
-        <div class="info">
-            <div class="value" id="stat-entree">0</div>
-            <div class="label">Total ENTREE</div>
-        </div>
+        <div class="icon success"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></div>
+        <div class="info"><div class="value" id="stat-entree">0</div><div class="label">Total ENTREE</div></div>
     </div>
     <div class="stat-card">
-        <div class="icon danger">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="9"/>
-                <path d="M8 12h8"/>
-            </svg>
-        </div>
-        <div class="info">
-            <div class="value" id="stat-sortie">0</div>
-            <div class="label">Total SORTIE</div>
-        </div>
+        <div class="icon danger"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg></div>
+        <div class="info"><div class="value" id="stat-sortie">0</div><div class="label">Total SORTIE</div></div>
     </div>
     <div class="stat-card">
-        <div class="icon warning">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/>
-            </svg>
-        </div>
-        <div class="info">
-            <div class="value" id="stat-commission">0</div>
-            <div class="label">Commission totale</div>
-        </div>
+        <div class="icon warning"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/></svg></div>
+        <div class="info"><div class="value" id="stat-commission">0</div><div class="label">Commission totale</div></div>
     </div>
 </div>
 
-<!-- Tableau des transactions - sans contours -->
 <div class="table-card">
-    <div id="table-container">
-        <div style="text-align: center; padding: 40px;">Chargement...</div>
-    </div>
+    <div id="table-container"><div style="text-align: center; padding: 40px;">Chargement...</div></div>
     <div id="pagination-container" class="pagination"></div>
+</div>
+
+<!-- MODAL IMPRIMANTE QZ TRAY -->
+<div id="printerModal" class="modal">
+    <div class="modal-content printer-modal-content">
+        <div class="modal-header"><h3>🖨️ Gestion imprimante</h3><p style="font-size: 12px; color: var(--gray-500); margin-top: 4px;">Sélectionnez votre imprimante</p></div>
+        <div class="modal-body">
+            <div class="printer-list" id="printerList"><div style="text-align: center; padding: 20px;">🔍 Recherche des imprimantes...</div></div>
+            <button class="refresh-printers-btn" onclick="refreshPrinters()">⟳ Actualiser la liste</button>
+            <div style="margin-top: 12px; padding: 10px; background: var(--gray-50); border-radius: var(--radius-md);">
+                <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">📐 Format ticket</div>
+                <label style="margin-right: 16px; cursor: pointer; font-size: 13px;"><input type="radio" name="printerWidth" value="58" onchange="setPrinterWidth(58)" id="pw58"> 58mm</label>
+                <label style="cursor: pointer; font-size: 13px;"><input type="radio" name="printerWidth" value="80" onchange="setPrinterWidth(80)" id="pw80"> 80mm</label>
+            </div>
+            <button class="btn-close-modal" onclick="closeModalById('printerModal')" style="margin-top: 12px;">Fermer</button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+{% load static %}
+<script src="/static/js/qz-tray.js"></script>
+
 <script>
-    let currentPage = 1;
+// ==================== VARIABLES ====================
+let PRINTER_NAME = null;
+let qzReady = false;
+let currentPrinter = localStorage.getItem('selected_printer') || null;
+let printerWidth = parseInt(localStorage.getItem('printer_width')) || 58;
 
-    function getFilters() {
-        return {
-            user_id: document.getElementById('filter-user').value,
-            type: document.getElementById('filter-type').value,
-            operateur: document.getElementById('filter-operateur').value,
-            date_debut: document.getElementById('filter-date-debut').value,
-            date_fin: document.getElementById('filter-date-fin').value,
-            page: currentPage
-        };
-    }
+// ==================== NETTOYAGE TEXTES ====================
+function cleanForPrinter(text) {
+    if (!text) return '';
+    text = String(text);
+    text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    text = text.replace(/[éèêë]/g, 'e');
+    text = text.replace(/[àâä]/g, 'a');
+    text = text.replace(/[ôö]/g, 'o');
+    text = text.replace(/[ùûü]/g, 'u');
+    text = text.replace(/[ç]/g, 'c');
+    text = text.replace(/[^\x20-\x7E\n\r]/g, '');
+    return text;
+}
 
-    function setFiltersFromURL() {
-        const urlParams = new URLSearchParams(window.location.search);
-        document.getElementById('filter-user').value = urlParams.get('user_id') || '';
-        document.getElementById('filter-type').value = urlParams.get('type') || '';
-        document.getElementById('filter-operateur').value = urlParams.get('operateur') || '';
-        document.getElementById('filter-date-debut').value = urlParams.get('date_debut') || '';
-        document.getElementById('filter-date-fin').value = urlParams.get('date_fin') || '';
-        currentPage = parseInt(urlParams.get('page')) || 1;
-    }
+function showNotification(message, type) {
+    var notification = document.createElement('div');
+    notification.className = 'qz-notification ' + type;
+    notification.innerHTML = message;
+    document.body.appendChild(notification);
+    setTimeout(function() { notification.remove(); }, 3000);
+}
 
-    function updateURL() {
-        const filters = getFilters();
-        const params = new URLSearchParams();
-        if (filters.user_id) params.set('user_id', filters.user_id);
-        if (filters.type) params.set('type', filters.type);
-        if (filters.operateur) params.set('operateur', filters.operateur);
-        if (filters.date_debut) params.set('date_debut', filters.date_debut);
-        if (filters.date_fin) params.set('date_fin', filters.date_fin);
-        if (currentPage > 1) params.set('page', currentPage);
-        const newURL = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-        window.history.pushState({}, '', newURL);
-    }
-
-    function getRoleIcon(userType) {
-        switch(userType) {
-            case 'admin': return '';
-            case 'agent': return '';
-            case 'assistant': return '';
-            default: return '❓';
+// ==================== FORMATAGE MONTANT ====================
+function formatNumberManual(montant) {
+    if (isNaN(montant)) return '0';
+    var montantStr = Math.floor(montant).toString();
+    var result = '';
+    var count = 0;
+    for (var i = montantStr.length - 1; i >= 0; i--) {
+        result = montantStr[i] + result;
+        count++;
+        if (count % 3 === 0 && i !== 0) {
+            result = ' ' + result;
         }
     }
+    return result;
+}
 
-    function loadTransactions() {
-        const loading = document.getElementById('loading');
-        if (loading) loading.style.display = 'block';
+// ==================== FORMATAGE TICKET ====================
+function formatReceipt(data, printerWidth) {
+    function clean(t) {
+        if (!t || t === null || t === undefined) return '-';
+        t = String(t);
+        if (t.trim() === '') return '-';
+        t = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        t = t.replace(/[éèêë]/g, 'e');
+        t = t.replace(/[àâä]/g, 'a');
+        t = t.replace(/[ôö]/g, 'o');
+        t = t.replace(/[ùûü]/g, 'u');
+        t = t.replace(/[ç]/g, 'c');
+        return t;
+    }
+    
+    var isWide = (printerWidth === 80);
+    var maxWidth = isWide ? 48 : 32;
+    var line = '='.repeat(maxWidth);
+    var sep = '-'.repeat(maxWidth);
+    var montant = parseInt(data.montant) || 0;
+    var montantFormatted = formatNumberManual(montant);
+    
+    function center(txt) {
+        txt = String(txt || '-');
+        if (txt.length > maxWidth) txt = txt.substring(0, maxWidth);
+        var spaces = Math.floor((maxWidth - txt.length) / 2);
+        return ' '.repeat(spaces) + txt;
+    }
+    
+    var operateur = clean(data.operateur);
+    var role = clean(data.role_operateur);
+    var type = clean(data.type).toUpperCase();
+    var operateurMoney = clean(data.operateur_money);
+    var client = clean(data.client);
+    var ref = clean(data.reference);
+    var date = clean(data.date);
+    var heure = clean(data.heure);
+    
+    var ticket = "";
+    
+    if (isWide) {
+        ticket += line + "\n";
+        ticket += center("KONE SERVICES") + "\n";
+        ticket += center("Services Transfert d'Argent") + "\n";
+        ticket += center("Tel: 76 89 77 31") + "\n";
+        ticket += line + "\n";
+        ticket += "AGENT : " + operateur + " (" + role + ")\n";
+        ticket += sep + "\n";
+        ticket += "TYPE : " + type + "\n";
+        ticket += "OPERATEUR : " + operateurMoney + "\n";
+        ticket += sep + "\n";
+        ticket += "CLIENT : " + client + "\n";
+        ticket += sep + "\n";
+        ticket += "MONTANT : " + montantFormatted + " FCFA\n";
+        ticket += sep + "\n";
+        ticket += "REFERENCE : " + ref + "\n";
+        ticket += "DATE : " + date + " " + heure + "\n";
+        ticket += sep + "\n";
+        ticket += center("MERCI POUR VOTRE CONFIANCE") + "\n";
+        ticket += line;
+    } else {
+        ticket += line + "\n";
+        ticket += center("KONE SERVICES") + "\n";
+        ticket += center("Services Transfert") + "\n";
+        ticket += center("Tel: 76 89 77 31") + "\n";
+        ticket += line + "\n";
+        ticket += "AGENT : " + operateur + " (" + role + ")" + "\n";
+        ticket += sep + "\n";
+        ticket += "TYPE : " + type + "\n";
+        ticket += "OPERATEUR : " + operateurMoney + "\n";
+        ticket += sep + "\n";
+        ticket += "CLIENT : " + client + "\n";
+        ticket += sep + "\n";
+        ticket += "MONTANT : " + montantFormatted + " FCFA\n";
+        ticket += sep + "\n";
+        ticket += "REF : " + ref + "\n";
+        ticket += "DATE : " + date + " " + heure + "\n";
+        ticket += sep + "\n";
+        ticket += center("MERCI POUR VOTRE CONFIANCE") + "\n";
+        ticket += line;
+    }
+    
+    return ticket;
+}
 
-        const filters = getFilters();
-        const params = new URLSearchParams();
-        if (filters.user_id) params.set('user_id', filters.user_id);
-        if (filters.type) params.set('type', filters.type);
-        if (filters.operateur) params.set('operateur', filters.operateur);
-        if (filters.date_debut) params.set('date_debut', filters.date_debut);
-        if (filters.date_fin) params.set('date_fin', filters.date_fin);
-        params.set('page', currentPage);
-        params.set('ajax', '1');
+// ==================== FONCTIONS QZ TRAY POUR IMPRESSION REELLE ====================
+function initQZ() {
+    if (typeof qz === "undefined") {
+        setTimeout(initQZ, 2000);
+        return;
+    }
+    qz.websocket.connect().then(function() {
+        qzReady = true;
+        return qz.printers.find();
+    }).then(function(printers) {
+        if (printers && printers.length > 0 && !currentPrinter) {
+            currentPrinter = printers[0];
+            localStorage.setItem('selected_printer', currentPrinter);
+        }
+    }).catch(function(err) {
+        qzReady = false;
+    });
+}
 
-        fetch(window.location.pathname + '?' + params.toString(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                renderTable(data.transactions);
-                renderPagination(data.pagination);
-                updateStats(data.stats);
-                updateURL();
+function setPrinterWidth(w) {
+    printerWidth = w;
+    localStorage.setItem('printer_width', w);
+}
+
+function loadRealPrinters() {
+    if (!qzReady) {
+        printerList.innerHTML = '<div style="text-align: center; padding: 20px;">⚠️ QZ Tray non connecté</div>';
+        return;
+    }
+    
+    if (qzReady) {
+        document.getElementById('pw' + printerWidth).checked = true;
+        qz.printers.find().then(function(printers) {
+            if (printers && printers.length > 0) {
+                let html = '';
+                printers.forEach(printer => {
+                    const isSelected = (currentPrinter === printer);
+                    html += `<div class="printer-item ${isSelected ? 'selected' : ''}" onclick="selectRealPrinter('${printer.replace(/'/g, "\\'")}')">
+                        <div class="printer-icon">🖨️</div>
+                        <div class="printer-info">
+                            <div class="printer-name">${printer}</div>
+                            <div class="printer-status"><span class="printer-status-badge status-online"></span>Prête</div>
+                        </div>
+                        ${isSelected ? '<div class="check-icon">✓</div>' : ''}
+                    </div>`;
+                });
+                printerList.innerHTML = html;
             } else {
-                document.getElementById('table-container').innerHTML = '<div class="empty-state">📭 Erreur de chargement</div>';
+                printerList.innerHTML = '<div style="text-align: center; padding: 20px;">❌ Aucune imprimante trouvée</div>';
             }
-            if (loading) loading.style.display = 'none';
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            document.getElementById('table-container').innerHTML = '<div class="empty-state">📭 Erreur de connexion</div>';
-            if (loading) loading.style.display = 'none';
+        }).catch(function() {
+            printerList.innerHTML = '<div style="text-align: center; padding: 20px;">❌ Erreur de connexion à QZ Tray</div>';
         });
+    } else {
+        printerList.innerHTML = '<div style="text-align: center; padding: 20px;">⚠️ QZ Tray non connecté<br><small>Téléchargez et installez QZ Tray depuis <a href="https://qz.io/download/" target="_blank">qz.io</a></small></div>';
+    }
+}
+
+function selectRealPrinter(printerName) {
+    currentPrinter = printerName;
+    localStorage.setItem('selected_printer', printerName);
+    showNotification(`🖨️ Imprimante sélectionnée: ${printerName}`, 'success');
+    closeModalById('printerModal');
+}
+
+function refreshPrinters() {
+    loadRealPrinters();
+}
+
+function openPrinterModal() { 
+    const modal = document.getElementById('printerModal');
+    if (modal) modal.style.display = 'flex';
+    loadRealPrinters();
+}
+
+function closeModalById(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+}
+
+function openPrintPopup(ticket) {
+    const win = window.open('', '_blank', 'width=400,height=600');
+    win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Impression Ticket</title>
+            <style>body{font-family:monospace;padding:20px;}pre{white-space:pre-wrap;font-size:12px;}@media print{button{display:none;}}</style>
+        </head>
+        <body>
+            <pre>${escapeHtml(ticket)}</pre>
+            <button onclick="window.print();window.close();" style="margin-top:20px;padding:10px;">🖨️ Imprimer</button>
+        </body>
+        </html>
+    `);
+    win.document.close();
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ==================== IMPRESSION AVEC DETECTION REELLE ====================
+function imprimer(reference, btn) {
+    if (!reference) {
+        showNotification('Erreur reference', 'error');
+        return;
     }
 
-    function renderTable(transactions) {
-        if (!transactions || transactions.length === 0) {
-            document.getElementById('table-container').innerHTML = '<div class="empty-state">📭 Aucune transaction trouvée</div>';
-            return;
+    if (!currentPrinter) {
+        showNotification('❌ Veuillez d\'abord sélectionner une imprimante', 'warning');
+        openPrinterModal();
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = "🖨️";
         }
+        return;
+    }
 
-        let html = `<table class="data-table"><thead><tr>
-            <th>Référence</th><th>Utilisateur</th><th>Rôle</th><th>Date</th>
-            <th>Type</th><th>Opérateur</th><th>Client</th>
-            <th>Montant</th><th>Commission</th><th>Action</th>
-        </tr></thead><tbody>`;
+    var originalText = btn.innerHTML;
+    btn.innerHTML = "⏳";
+    btn.disabled = true;
 
-        for (const t of transactions) {
-            const badgeClass = `badge-${t.type}`;
-            const typeLabel = t.type === 'depot' ? 'Dépôt' : (t.type === 'retrait' ? 'Retrait' : 'Crédit');
-            const roleIcon = getRoleIcon(t.user_type);
-            const roleClass = `badge-role ${t.user_type}`;
+    var url = '/impression-recu/' + reference + '/?format=json';
+
+    fetch(url)
+        .then(function(response) {
+            if (!response.ok) throw new Error();
+            return response.json();
+        })
+        .then(function(data) {
+            var ticket = formatReceipt(data, printerWidth);
+            console.log("Ticket a imprimer:\n" + ticket);
             
-            html += `<tr>
-                <td><small>${t.reference}</small></td>
-                <td>${t.user_name}</td>
-                <td><span class="${roleClass}">${roleIcon} ${t.user_type === 'admin' ? 'Admin' : (t.user_type === 'agent' ? 'Agent' : 'Assistant')}</span></td>
-                <td><small>${t.date}</small></td>
-                <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
-                <td>${t.operateur_label}</td>
-                <td>${t.numero_client}</td>
-                <td><strong>${formatNumber(t.montant)} FCFA</strong></td>
-                <td>${formatNumber(t.commission)} FCFA</span></td>
-                <td><a href="/impression/${t.reference}/" target="_blank" class="btn-print">🖨️</a></td>
-            </tr>`;
-        }
-        html += `</tbody></table>`;
-        document.getElementById('table-container').innerHTML = html;
-    }
-
-    function renderPagination(pagination) {
-        if (!pagination || pagination.total_pages <= 1) {
-            document.getElementById('pagination-container').innerHTML = '';
-            return;
-        }
-
-        let html = '';
-        if (pagination.has_previous) {
-            html += `<button class="page-btn" data-page="${pagination.previous_page}">← Précédent</button>`;
-        } else {
-            html += `<span class="page-btn disabled">← Précédent</span>`;
-        }
-
-        for (let i = pagination.start_page; i <= pagination.end_page; i++) {
-            if (i === pagination.current_page) {
-                html += `<span class="page-btn active">${i}</span>`;
+            if (qzReady && currentPrinter) {
+                var config = qz.configs.create(currentPrinter);
+                var fullCommand = "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00";
+                var printData = [{ type: 'raw', format: 'plain', data: fullCommand }];
+                
+                return qz.print(config, printData);
             } else {
-                html += `<button class="page-btn" data-page="${i}">${i}</button>`;
+                openPrintPopup(ticket);
+                return Promise.resolve();
             }
-        }
-
-        if (pagination.has_next) {
-            html += `<button class="page-btn" data-page="${pagination.next_page}">Suivant →</button>`;
-        } else {
-            html += `<span class="page-btn disabled">Suivant →</span>`;
-        }
-
-        document.getElementById('pagination-container').innerHTML = html;
-
-        document.querySelectorAll('.page-btn[data-page]').forEach(btn => {
-            btn.addEventListener('click', function() {
-                currentPage = parseInt(this.dataset.page);
-                loadTransactions();
-            });
+        })
+        .then(function() {
+            showNotification('✅ Impression OK sur ' + currentPrinter, 'success');
+        })
+        .catch(function(err) {
+            console.error(err);
+            showNotification('❌ Erreur impression', 'error');
+        })
+        .finally(function() {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         });
-    }
+}
 
-    function updateStats(stats) {
-        document.getElementById('stat-count').textContent = stats.count || 0;
-        document.getElementById('stat-entree').textContent = formatNumber(stats.total_entree || 0);
-        document.getElementById('stat-sortie').textContent = formatNumber(stats.total_sortie || 0);
-        document.getElementById('stat-commission').textContent = formatNumber(stats.total_commission || 0);
-    }
+// ==================== GESTION TRANSACTIONS ====================
+let currentPage = 1;
 
-    function formatNumber(num) {
-        return new Intl.NumberFormat('fr-FR').format(num);
-    }
+function getFilters() {
+    return {
+        user_id: document.getElementById('filter-user').value,
+        type: document.getElementById('filter-type').value,
+        operateur: document.getElementById('filter-operateur').value,
+        date_debut: document.getElementById('filter-date-debut').value,
+        date_fin: document.getElementById('filter-date-fin').value,
+        page: currentPage
+    };
+}
 
-    // Événements
-    document.getElementById('btn-apply').addEventListener('click', function() {
-        currentPage = 1;
-        loadTransactions();
+function setFiltersFromURL() {
+    var params = new URLSearchParams(window.location.search);
+    document.getElementById('filter-user').value = params.get('user_id') || '';
+    document.getElementById('filter-type').value = params.get('type') || '';
+    document.getElementById('filter-operateur').value = params.get('operateur') || '';
+    document.getElementById('filter-date-debut').value = params.get('date_debut') || '';
+    document.getElementById('filter-date-fin').value = params.get('date_fin') || '';
+    currentPage = parseInt(params.get('page')) || 1;
+}
+
+function updateURL() {
+    var filters = getFilters();
+    var params = new URLSearchParams();
+    if (filters.user_id) params.set('user_id', filters.user_id);
+    if (filters.type) params.set('type', filters.type);
+    if (filters.operateur) params.set('operateur', filters.operateur);
+    if (filters.date_debut) params.set('date_debut', filters.date_debut);
+    if (filters.date_fin) params.set('date_fin', filters.date_fin);
+    if (currentPage > 1) params.set('page', currentPage);
+    var newURL = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.pushState({}, '', newURL);
+}
+
+function loadTransactions() {
+    var filters = getFilters();
+    var params = new URLSearchParams();
+    if (filters.user_id) params.set('user_id', filters.user_id);
+    if (filters.type) params.set('type', filters.type);
+    if (filters.operateur) params.set('operateur', filters.operateur);
+    if (filters.date_debut) params.set('date_debut', filters.date_debut);
+    if (filters.date_fin) params.set('date_fin', filters.date_fin);
+    params.set('page', currentPage);
+    params.set('ajax', '1');
+
+    fetch(window.location.pathname + '?' + params.toString(), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            renderTable(data.transactions);
+            renderPagination(data.pagination);
+            updateStats(data.stats);
+            updateURL();
+        } else {
+            document.getElementById('table-container').innerHTML = '<div class="empty-state">Erreur</div>';
+        }
     });
+}
 
-    document.getElementById('btn-reset').addEventListener('click', function() {
-        document.getElementById('filter-user').value = '';
-        document.getElementById('filter-type').value = '';
-        document.getElementById('filter-operateur').value = '';
-        document.getElementById('filter-date-debut').value = '';
-        document.getElementById('filter-date-fin').value = '';
-        currentPage = 1;
-        loadTransactions();
+function renderTable(transactions) {
+    if (!transactions || transactions.length === 0) {
+        document.getElementById('table-container').innerHTML = '<div class="empty-state">Aucune transaction</div>';
+        return;
+    }
+    var html = '<table class="data-table"><thead><tr><th>Reference</th><th>Utilisateur</th><th>Role</th><th>Date</th><th>Type</th><th>Operateur</th><th>Client</th><th>Montant</th><th>Commission</th><th>Action</th></thead><tbody>';
+    for (var i = 0; i < transactions.length; i++) {
+        var t = transactions[i];
+        var typeLabel = t.type === 'depot' ? 'Depot' : (t.type === 'retrait' ? 'Retrait' : 'Credit');
+        var roleLabel = t.user_type === 'admin' ? 'Admin' : (t.user_type === 'agent' ? 'Agent' : 'Assistant');
+        html += '<tr>';
+        html += '<td>' + t.reference + '</td>';
+        html += '<td>' + t.user_name + '</td>';
+        html += '<td>' + roleLabel + '</td>';
+        html += '<td>' + t.date + '</td>';
+        html += '<td>' + typeLabel + (t.est_annule ? ' <span class="badge badge-cancelled">Annulée</span>' : '') + '</td>';
+        html += '<td>' + t.operateur_label + '</td>';
+        html += '<td>' + t.numero_client + '</td>';
+        html += '<td>' + formatNumberManual(t.montant) + ' FCFA' + '</td>';
+        html += '<td>' + formatNumberManual(t.commission) + ' FCFA' + '</td>';
+        html += '<td><button class="btn-print" onclick="imprimer(\'' + t.reference + '\', this)">🖨️</button></td>';
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    document.getElementById('table-container').innerHTML = html;
+}
+
+function renderPagination(pagination) {
+    if (!pagination || pagination.total_pages <= 1) {
+        document.getElementById('pagination-container').innerHTML = '';
+        return;
+    }
+    var html = '';
+    if (pagination.has_previous) html += '<button class="page-btn" data-page="' + pagination.previous_page + '">← Precedent</button>';
+    else html += '<span class="page-btn disabled">← Precedent</span>';
+    for (var i = pagination.start_page; i <= pagination.end_page; i++) {
+        if (i === pagination.current_page) html += '<span class="page-btn active">' + i + '</span>';
+        else html += '<button class="page-btn" data-page="' + i + '">' + i + '</button>';
+    }
+    if (pagination.has_next) html += '<button class="page-btn" data-page="' + pagination.next_page + '">Suivant →</button>';
+    else html += '<span class="page-btn disabled">Suivant →</span>';
+    document.getElementById('pagination-container').innerHTML = html;
+    document.querySelectorAll('.page-btn[data-page]').forEach(function(btn) {
+        btn.addEventListener('click', function() { currentPage = parseInt(this.dataset.page); loadTransactions(); });
     });
+}
 
-    // Initialisation
+function updateStats(stats) {
+    document.getElementById('stat-count').textContent = stats.count || 0;
+    document.getElementById('stat-entree').textContent = formatNumberManual(stats.total_entree || 0);
+    document.getElementById('stat-sortie').textContent = formatNumberManual(stats.total_sortie || 0);
+    document.getElementById('stat-commission').textContent = formatNumberManual(stats.total_commission || 0);
+}
+
+// ==================== EVENEMENTS ====================
+document.getElementById('btn-apply').addEventListener('click', function() { currentPage = 1; loadTransactions(); });
+document.getElementById('btn-reset').addEventListener('click', function() {
+    document.getElementById('filter-user').value = '';
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-operateur').value = '';
+    document.getElementById('filter-date-debut').value = '';
+    document.getElementById('filter-date-fin').value = '';
+    currentPage = 1;
+    loadTransactions();
+});
+
+// ==================== INITIALISATION ====================
+document.addEventListener("DOMContentLoaded", function() {
     setFiltersFromURL();
     loadTransactions();
+    setTimeout(initQZ, 1000);
+});
 </script>
 {% endblock %}

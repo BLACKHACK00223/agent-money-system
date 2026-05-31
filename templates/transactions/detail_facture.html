@@ -549,7 +549,7 @@
         </div>
     </div>
     <div class="assistant-right">
-        <button class="btn-back" onclick="window.location.href='{% url 'gestion_agents' %}'">
+        <button class="btn-back" onclick="window.location.href='{% url 'gestion_agents' %}' ">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
@@ -624,9 +624,9 @@
             <div class="yesterday">
                 📉 Hier: {{ solde_cash_hier|floatformat:0|default:"0"|intcomma }} F
                 {% if evolution_cash > 0 %}
-                    <span class="evolution-up">▲ +{{ evolution_cash|floatformat:0 }}</span>
+                    <span class="evolution-up">▲ +{{ evolution_cash|floatformat:0|intcomma }}</span>
                 {% elif evolution_cash < 0 %}
-                    <span class="evolution-down">▼ {{ evolution_cash|floatformat:0 }}</span>
+                    <span class="evolution-down">▼ {{ evolution_cash|floatformat:0|intcomma }}</span>
                 {% endif %}
             </div>
         </div>
@@ -636,9 +636,9 @@
             <div class="yesterday">
                 📉 Hier: {{ solde_uv_hier|floatformat:0|default:"0"|intcomma }} F
                 {% if evolution_uv > 0 %}
-                    <span class="evolution-up">▲ +{{ evolution_uv|floatformat:0 }}</span>
+                    <span class="evolution-up">▲ +{{ evolution_uv|floatformat:0|intcomma }}</span>
                 {% elif evolution_uv < 0 %}
-                    <span class="evolution-down">▼ {{ evolution_uv|floatformat:0 }}</span>
+                    <span class="evolution-down">▼ {{ evolution_uv|floatformat:0|intcomma }}</span>
                 {% endif %}
             </div>
         </div>
@@ -648,9 +648,9 @@
             <div class="yesterday">
                 📉 Hier: {{ solde_wave_hier|floatformat:0|default:"0"|intcomma }} F
                 {% if evolution_wave > 0 %}
-                    <span class="evolution-up">▲ +{{ evolution_wave|floatformat:0 }}</span>
+                    <span class="evolution-up">▲ +{{ evolution_wave|floatformat:0|intcomma }}</span>
                 {% elif evolution_wave < 0 %}
-                    <span class="evolution-down">▼ {{ evolution_wave|floatformat:0 }}</span>
+                    <span class="evolution-down">▼ {{ evolution_wave|floatformat:0|intcomma }}</span>
                 {% endif %}
             </div>
         </div>
@@ -812,7 +812,7 @@
                 {% for t in transactions %}
                 <tr>
                     <td><small>{{ t.reference|slice:":12" }}</small></td>
-                    <td><span class="badge-{{ t.type_transaction }}">{{ t.get_type_transaction_display }}</span></td>
+                    <td><span class="badge-{{ t.type_transaction }}">{{ t.get_type_transaction_display }}</span>{% if t.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}</td>
                     <td>{{ t.get_operateur_display }}</td>
                     <td>{{ t.numero_client }}</span></td>
                     <td><strong>{{ t.montant|floatformat:0|intcomma }} F</strong></td>

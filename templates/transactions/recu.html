@@ -1,356 +1,83 @@
 <!-- templates/transactions/recu.html -->
-{% load humanize %}
-{% load static %}
+{% load humanize %}{% load app_filters %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Reçu - {{ transaction.reference }}</title>
+    <title>Impression - {{ transaction.reference }}</title>
     <style>
         @media print {
-            body {
-                margin: 0;
-                padding: 0;
-                background: white;
-            }
-            .no-print {
-                display: none;
-            }
-            .receipt {
-                margin: 0;
-                padding: 8px;
-                box-shadow: none;
-                border-radius: 0;
-                min-height: auto;
-                max-width: 100%;
-            }
-            .signature-line {
-                border-top: 1px solid #000;
-            }
-            .watermark {
-                display: none;
-            }
-            .footer {
-                position: static;
-            }
+            body { margin: 0; padding: 0; }
+            .no-print { display: none; }
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
-            font-family: 'Courier New', 'Inter', -apple-system, BlinkMacSystemFont, monospace;
-            background: #e8eaed;
+            font-family: 'Courier New', monospace;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             padding: 20px;
         }
-        
         .receipt {
-            max-width: 300px;
-            width: 100%;
+            width: 58mm;
+            padding: 10px;
             background: white;
-            padding: 14px;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
-            border-radius: 12px;
-            position: relative;
-        }
-        
-        /* Header */
-        .header {
-            text-align: center;
-            border-bottom: 1px dashed #ccc;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
-        
-        .header h2 {
-            font-size: 14px;
-            font-weight: 700;
-            color: #1a73e8;
-            margin-bottom: 4px;
-        }
-        
-        .header p {
-            font-size: 9px;
-            color: #666;
-            margin: 2px 0;
-        }
-        
-        .header .agent-name {
-            font-weight: 600;
-            color: #333;
-            margin-top: 6px;
             font-size: 10px;
+            line-height: 1.4;
         }
-        
-        /* Type de transaction */
-        .transaction-badge {
-            text-align: center;
-            margin-bottom: 10px;
+        .receipt pre {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            white-space: pre-wrap;
         }
-        
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 9px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .badge-depot {
-            background: #e6f4ea;
-            color: #137333;
-        }
-        
-        .badge-retrait {
-            background: #fce8e6;
-            color: #c5221f;
-        }
-        
-        .badge-credit {
-            background: #fef7e0;
-            color: #e37400;
-        }
-        
-        /* Informations */
-        .info-section {
-            margin-bottom: 10px;
-        }
-        
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-            font-size: 10px;
-        }
-        
-        .info-row .label {
-            font-weight: 600;
-            color: #666;
-        }
-        
-        .info-row .value {
-            color: #333;
-            font-weight: 500;
-        }
-        
-        .info-row .value small {
-            font-family: monospace;
-            font-size: 9px;
-        }
-        
-        /* Montant */
-        .montant-section {
-            text-align: center;
-            margin: 10px 0;
-            padding: 10px;
-            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
-            border-radius: 10px;
-        }
-        
-        .montant-label {
-            font-size: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: rgba(255,255,255,0.8);
-            margin-bottom: 4px;
-        }
-        
-        .montant-value {
-            font-size: 18px;
-            font-weight: 800;
-            color: white;
-        }
-        
-        .montant-currency {
-            font-size: 10px;
-            margin-left: 2px;
-        }
-        
-        /* Footer */
-        .footer {
-            text-align: center;
-            font-size: 8px;
-            color: #999;
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px dashed #ccc;
-        }
-        
-        .footer .merci {
-            font-weight: 600;
-            color: #1a73e8;
-            margin-bottom: 4px;
-        }
-        
-        /* Signature */
-        .signature {
-            margin-top: 12px;
-            text-align: center;
-        }
-        
-        .signature-line {
-            border-top: 1px solid #333;
-            width: 100px;
-            margin: 4px auto 0;
-        }
-        
-        .signature p {
-            font-size: 8px;
-            color: #666;
-            margin-bottom: 2px;
-        }
-        
-        /* Watermark */
-        .watermark {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            opacity: 0.03;
-            font-size: 30px;
-            pointer-events: none;
-        }
-        
-        /* Bouton impression */
-        .btn-print {
-            display: block;
-            width: 100%;
-            max-width: 300px;
-            margin: 20px auto 0;
-            padding: 10px;
-            background: #1a73e8;
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            background: #4f46e5;
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 600;
+            border-radius: 8px;
             cursor: pointer;
-            font-family: inherit;
-        }
-        
-        .btn-print:hover {
-            background: #1557b0;
-        }
-        
-        /* Responsive */
-        @media (max-width: 400px) {
-            body {
-                padding: 10px;
-            }
-            
-            .receipt {
-                padding: 10px;
-            }
-            
-            .montant-value {
-                font-size: 16px;
-            }
         }
     </style>
 </head>
 <body>
-    <div>
-        <div class="receipt">
-            <!-- Filigrane -->
-            <div class="watermark">💰</div>
-            
-            <!-- En-tête -->
-            <div class="header">
-                <h2>🏦 {{ transaction.sous_agent.agent_principal.point_service|default:"KONE SERVICES" }}</h2>
-                <p>{{ transaction.sous_agent.agent_principal.adresse|default:"Services Transfert d'argent" }}</p>
-                <p>📞 {{ transaction.sous_agent.agent_principal.telephone|default:"76 89 77 31" }}</p>
-                <div class="agent-name">👤 {{ transaction.sous_agent.nom |default:"ABOUBACAR KONE" }}</div>
-            </div>
-            
-            <!-- Badge type de transaction -->
-            <div class="transaction-badge">
-                {% if transaction.type_transaction == 'depot' %}
-                    <span class="badge badge-depot">📥 DÉPÔT</span>
-                {% elif transaction.type_transaction == 'retrait' %}
-                    <span class="badge badge-retrait">📤 RETRAIT</span>
-                {% else %}
-                    <span class="badge badge-credit">💳 CRÉDIT</span>
-                {% endif %}
-            </div>
-            
-            <!-- Informations client -->
-            <div class="info-section">
-                <div class="info-row">
-                    <span class="label">TYPE</span>
-                    <span class="value">{{ transaction.get_operateur_display }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">CLIENT</span>
-                    <span class="value">{{ transaction.numero_client }}</span>
-                </div>
-                {% if transaction.nom_client %}
-                <div class="info-row">
-                    <span class="label">NOM</span>
-                    <span class="value">{{ transaction.nom_client }}</span>
-                </div>
-                {% endif %}
-            </div>
-            
-            <!-- Montant -->
-            <div class="montant-section">
-                <div class="montant-label">MONTANT</div>
-                <div class="montant-value">
-                    {{ transaction.montant|floatformat:0|intcomma }}<span class="montant-currency">FCFA</span>
-                </div>
-            </div>
-            
-            <!-- Références -->
-            <div class="info-section">
-                <div class="info-row">
-                    <span class="label">REFERENCE</span>
-                    <span class="value"><small>{{ transaction.reference }}</small></span>
-                </div>
-                {% if transaction.reference_operateur %}
-                <div class="info-row">
-                    <span class="label">RÉF OPÉRATEUR</span>
-                    <span class="value"><small>{{ transaction.reference_operateur }}</small></span>
-                </div>
-                {% endif %}
-                <div class="info-row">
-                    <span class="label">DATE</span>
-                    <span class="value">{{ transaction.date|date:"d/m/Y H:i" }}</span>
-                </div>
-            </div>
-            
-            <!-- Pied de page -->
-            <div class="footer">
-                <p class="merci"> Merci Pour Votre Confiance </p>
-                <p>{{ date_impression|date:"d/m/Y H:i:s" }}</p>
-            </div>
-            
-            <!-- Signature -->
-            <div class="signature">
-                <p>Signature </p>
-                <div class="signature-line"></div>
-            </div>
-        </div>
-        
-        <button class="btn-print no-print" onclick="window.print()">
-            🖨️ Imprimer
-        </button>
+    <div class="receipt">
+        <pre>
+================================
+       KONE SERVICES
+    Services Transfert
+     Tel: 76 89 77 31
+================================
+
+     OPERATEUR: {{ data.operateur }} ({{ data.role_operateur }})
+--------------------------------
+        TYPE: {{ data.type|upper }}
+  OPERATEUR: {{ data.operateur_money }}
+--------------------------------
+      CLIENT: {{ data.client }}
+        NOM: {{ data.nom_client|default:"-" }}
+--------------------------------
+     MONTANT: {{ data.montant|intspace }} FCFA
+--------------------------------
+        REF: {{ data.reference }}
+       DATE: {{ data.date }} {{ data.heure }}
+--------------------------------
+   MERCI POUR VOTRE CONFIANCE
+================================
+        </pre>
     </div>
-    
+    <div class="no-print">
+        <button onclick="window.print()">🖨️ Imprimer</button>
+        <button onclick="window.close()">✖ Fermer</button>
+    </div>
     <script>
-        // Impression automatique au chargement
         window.onload = function() {
             setTimeout(function() {
                 window.print();
-            }, 300);
-        }
+                setTimeout(function() { window.close(); }, 1000);
+            }, 500);
+        };
     </script>
 </body>
 </html>

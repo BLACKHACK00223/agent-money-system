@@ -1,0 +1,24 @@
+<!-- MODAL OPERATION -->
+ {% load humanize %}
+<div id="modalOperation" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3 id="modalOperationTitle">Opération</h3><button class="modal-close" onclick="closeModal('modalOperation')">&times;</button></div>
+        <div class="modal-body">
+            <form method="post" action="{% url 'rapports_admin' %}" id="operationForm">
+                {% csrf_token %}
+                <div class="form-group"><label>Compte concerné</label>
+                    <div class="compte-selector">
+                        <div class="compte-card" data-compte="cash"><div class="compte-icon">💰</div><div class="compte-name">Espèces</div><div class="compte-solde">Solde: {{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} F</div></div>
+                        <div class="compte-card" data-compte="uv_touchpoint"><div class="compte-icon">📱</div><div class="compte-name">UV Touchpoint</div><div class="compte-solde">Solde: {{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }} F</div></div>
+                        <div class="compte-card" data-compte="uv_wave"><div class="compte-icon">💳</div><div class="compte-name">UV Wave</div><div class="compte-solde">Solde: {{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }} F</div></div>
+                        <div class="compte-card" data-compte="epargne"><div class="compte-icon">🏦</div><div class="compte-name">Epargne</div><div class="compte-solde">Solde: {{ compte_epargne.solde|default:0|floatformat:0|intcomma }} F</div></div>
+                    </div>
+                </div>
+                <div class="form-group"><label>Montant (FCFA)</label><input type="number" name="montant" id="operationMontant" required min="1" class="form-control"></div>
+                <div class="form-group"><label>Description</label><input type="text" name="description" id="operationDescription" placeholder="Motif de l'opération" class="form-control"></div>
+                <button type="submit" class="btn-submit" id="operationSubmitBtn">Valider</button>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modalOperation')">Annuler</button>
+            </form>
+        </div>
+    </div>
+</div>

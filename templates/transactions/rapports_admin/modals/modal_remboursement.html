@@ -1,0 +1,27 @@
+<!-- MODAL REMBOURSEMENT -->
+<div id="modalRemboursement" class="modal">
+    <div class="modal-content">
+        <div class="modal-header"><h3>💰 Enregistrer un remboursement</h3><button class="modal-close" onclick="closeModal('modalRemboursement')">&times;</button></div>
+        <div class="modal-body">
+            <form method="post" id="remboursementForm">
+                {% csrf_token %}
+                <input type="hidden" name="dette_id" id="remboursement_dette_id">
+                <div class="form-group"><label>Débiteur</label><input type="text" id="remboursement_debiteur_nom" class="form-control" readonly disabled style="background:var(--gray-100);"></div>
+                <div class="form-group"><label>Reste à payer</label><input type="text" id="remboursement_reste" class="form-control" readonly disabled style="background:var(--gray-100); font-weight:bold; color:var(--danger);"></div>
+                <div class="form-group"><label>Montant à rembourser (FCFA) *</label><input type="number" name="montant" id="remboursement_montant" class="form-control" required min="1"></div>
+                <div class="form-group">
+                    <label>Mode de paiement</label>
+                    <select name="mode_paiement" id="remboursement_mode" class="form-control">
+                        <option value="cash">💰 Espèces</option>
+                        <option value="uv">📱 UV Touchpoint</option>
+                        <option value="wave">🌊 UV Wave</option>
+                    </select>
+                </div>
+                <div class="form-group"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" name="generer_recu" id="generer_recu" checked style="width:18px; height:18px;"> 📄 Générer et télécharger le reçu PDF</label></div>
+                <div class="form-group"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" name="ajouter_caisse" id="ajouter_caisse" checked style="width:18px; height:18px;"> 💰 Ajouter ce montant à la caisse</label></div>
+                <button type="submit" class="btn-submit">Enregistrer le paiement</button>
+                <button type="button" class="btn-close-modal" onclick="closeModal('modalRemboursement')">Annuler</button>
+            </form>
+        </div>
+    </div>
+</div>

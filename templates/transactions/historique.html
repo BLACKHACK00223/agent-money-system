@@ -1,4 +1,5 @@
 <!-- templates/transactions/historique.html -->
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -261,11 +262,11 @@
                 </div>
                 <div class="total-item">
                     <div class="label">Montant total</div>
-                    <div class="value">{{ total_montant|floatformat:0 }} FCFA</div>
+                    <div class="value">{{ total_montant|floatformat:0|intcomma }} FCFA</div>
                 </div>
                 <div class="total-item">
                     <div class="label">Commission totale</div>
-                    <div class="value">{{ total_commission|floatformat:0 }} FCFA</div>
+                    <div class="value">{{ total_commission|floatformat:0|intcomma }} FCFA</div>
                 </div>
             </div>
             
@@ -294,12 +295,12 @@
                         <td>
                             <span class="badge badge-{{ trans.type_transaction }}">
                                 {{ trans.get_type_transaction_display }}
-                            </span>
+                            </span>{% if trans.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}
                         </td>
                         <td>{{ trans.get_operateur_display }}</td>
                         <td>{{ trans.numero_client }}</td>
-                        <td><strong>{{ trans.montant|floatformat:0 }}</strong></td>
-                        <td>{{ trans.commission|floatformat:0 }}</td>
+                        <td><strong>{{ trans.montant|floatformat:0|intcomma }}</strong></td>
+                        <td>{{ trans.commission|floatformat:0|intcomma }}</td>
                         <td>
                             <a href="{% url 'impression_recu' trans.reference %}" target="_blank" class="btn-print">
                                 🖨️

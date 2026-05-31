@@ -1,4 +1,5 @@
 <!-- templates/transactions/demande_approvisionnement.html -->
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -34,7 +35,7 @@
             <div class="card-header"><h2>🔄 Demande d'approvisionnement</h2><p>Échangez vos fonds</p></div>
             <div class="card-body">
                 {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}
-                <div class="soldes-actuels"><div class="solde-item"><div class="label">💰 Cash</div><div class="value">{{ caisse.solde_cash|floatformat:0 }} FCFA</div></div><div class="solde-item"><div class="label">📱 UV</div><div class="value" style="color:#fd7e14;">{{ caisse.solde_uv|floatformat:0 }} FCFA</div></div><div class="solde-item"><div class="label">💳 Wave</div><div class="value" style="color:#17a2b8;">{{ caisse.solde_wave|floatformat:0 }} FCFA</div></div></div>
+                <div class="soldes-actuels"><div class="solde-item"><div class="label">💰 Cash</div><div class="value">{{ caisse.solde_cash|floatformat:0|intcomma }} FCFA</div></div><div class="solde-item"><div class="label">📱 UV</div><div class="value" style="color:#fd7e14;">{{ caisse.solde_uv|floatformat:0|intcomma }} FCFA</div></div><div class="solde-item"><div class="label">💳 Wave</div><div class="value" style="color:#17a2b8;">{{ caisse.solde_wave|floatformat:0|intcomma }} FCFA</div></div></div>
                 <form method="post" id="demande-form">
                     {% csrf_token %}
                     <div class="form-group"><label>Type d'échange <span style="color:#dc3545;">*</span></label><select name="type_echange" id="id_type_echange" class="form-control" required><option value="">-- Choisir --</option><option value="uv_to_cash">📱 UV → Cash (J'ai trop d'UV)</option><option value="wave_to_cash">💳 Wave → Cash (J'ai trop de Wave)</option><option value="cash_to_uv">💰 Cash → UV (Je manque d'UV)</option><option value="cash_to_wave">💰 Cash → Wave (Je manque de Wave)</option></select></div>

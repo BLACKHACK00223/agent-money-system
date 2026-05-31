@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test QZ Tray</title>
+</head>
+<body>
+
+<h2>Test QZ Tray</h2>
+
+<button onclick="connectQZ()">1 - Connecter QZ</button>
+<button onclick="printTest()">2 - Imprimer</button>
+
+<!-- ⚠️ IMPORTANT : chemin local -->
+<script src="qz-tray.js"></script>
+
+<script>
+// 🔥 Vérifie si chargé
+if (typeof qz === "undefined") {
+    alert("❌ qz-tray.js NON chargé !");
+} else {
+    console.log("✅ qz-tray chargé");
+}
+
+// 🔐 DEV MODE
+qz.security.setCertificatePromise(resolve => resolve());
+qz.security.setSignaturePromise(toSign => resolve => resolve());
+
+// 🔌 Connexion
+function connectQZ() {
+    qz.websocket.connect()
+        .then(() => {
+            console.log("✅ CONNECTÉ");
+            alert("QZ connecté !");
+        })
+        .catch(err => {
+            console.error(err);
+        });
+}
+
+// 🖨️ Impression
+function printTest() {
+
+    const printerName = "XP-58-BLACK"; // ⚠️ adapte si besoin
+
+    qz.printers.find().then(function(printers) {
+        console.log("🖨️ Imprimantes détectées :", printers);
+
+        if (!printers.includes(printerName)) {
+            alert("❌ Imprimante non trouvée !");
+            return;
+        }
+
+        const config = qz.configs.create(printerName);
+
+        const data = [{
+            type: 'raw',
+            format: 'command',
+            data: "\x1B\x40" + // reset
+                  "====================\n" +
+                  "   TEST QZ TRAY     \n" +
+                  "====================\n" +
+                  "OK impression ✔\n" +
+                  "Date: " + new Date().toLocaleString() + "\n" +
+                  "--------------------\n" +
+                  "Merci\n\n\n"
+        }];
+
+        qz.print(config, data)
+            .then(() => {
+                console.log("🖨️ Impression envoyée");
+                alert("✅ Impression OK !");
+            })
+            .catch(err => {
+                console.error("❌ Erreur impression :", err);
+            });
+
+    }).catch(err => {
+        console.error(err);
+    });
+}
+</script>
+
+</body>
+</html>
