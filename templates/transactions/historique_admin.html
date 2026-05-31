@@ -457,11 +457,21 @@
         .filters-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
             align-items: end;
+        }
+        .filters-grid .filter-group:first-child {
+            grid-column: 1 / -1;
         }
         .filter-group {
             width: 100%;
+        }
+        .filter-group label {
+            font-size: 10px;
+        }
+        .filter-group input, .filter-group select {
+            font-size: 12px;
+            padding: 6px 8px;
         }
         .filter-actions {
             grid-column: 1 / -1;
