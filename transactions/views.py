@@ -6962,6 +6962,29 @@ def api_analyse_stats(request):
             # Convertir en millions (avec 1 décimale)
             evolution_12_mois.append(round(float(volume_mois / 1000000), 1))
         
+        # ========== TOP 5 USERS ==========
+        top_5_users = []
+        for us in user_stats[:5]:
+            user_obj = User.objects.filter(
+                username__icontains=us['nom'].split()[-1] if ' ' in us['nom'] else us['nom']
+            ).first()
+            if user_obj:
+                if hasattr(user_obj, 'admin_profile') and user_obj.admin_profile:
+                    role = 'admin'
+                elif hasattr(user_obj, 'agent_profile') and user_obj.agent_profile:
+                    role = 'agent'
+                elif hasattr(user_obj, 'assistant_profile') and user_obj.assistant_profile:
+                    role = 'assistant'
+                else:
+                    role = 'agent'
+            else:
+                role = 'agent'
+            top_5_users.append({
+                'nom': us['nom'],
+                'volume': us['volume'],
+                'type': role
+            })
+        
         return JsonResponse({
             'success': True,
             'performance_journaliere': {
@@ -6972,7 +6995,8 @@ def api_analyse_stats(request):
             'meilleur_agent': meilleur_agent,
             'operateur_prefere': operateur_prefere,
             'prevision_mensuelle': int(prevision_mensuelle),
-            'evolution_12_mois': evolution_12_mois
+            'evolution_12_mois': evolution_12_mois,
+            'top_5_users': top_5_users
         })
         
     except Exception as e:

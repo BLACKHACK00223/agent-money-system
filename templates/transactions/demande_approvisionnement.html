@@ -1,69 +1,616 @@
-<!-- templates/transactions/demande_approvisionnement.html -->
 {% load humanize %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - Agent Money</title>
+    <title>{{ title }} - KONE SERVICES</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #17a2b8 0%, #0f6c7c 100%); min-height: 100vh; padding: 20px; }
-        .container { max-width: 550px; margin: 0 auto; }
-        .card { background: white; border-radius: 20px; overflow: hidden; }
-        .card-header { background: linear-gradient(135deg, #17a2b8 0%, #0f6c7c 100%); color: white; padding: 30px; text-align: center; }
-        .card-header h2 { font-size: 28px; }
-        .card-body { padding: 30px; }
-        .soldes-actuels { background: #f8f9fa; border-radius: 12px; padding: 20px; margin-bottom: 25px; display: flex; justify-content: space-around; text-align: center; }
-        .solde-item .label { font-size: 12px; color: #6c757d; }
-        .solde-item .value { font-size: 20px; font-weight: bold; color: #17a2b8; }
-        .form-group { margin-bottom: 25px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
-        .form-control { width: 100%; padding: 12px 15px; border: 2px solid #e1e5e9; border-radius: 12px; font-size: 16px; }
-        .form-control:focus { outline: none; border-color: #17a2b8; }
-        .info-box { background: #fff3cd; padding: 15px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #ffc107; }
-        .btn-submit { width: 100%; padding: 14px; background: linear-gradient(135deg, #17a2b8 0%, #0f6c7c 100%); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-        .btn-back { display: inline-block; margin-top: 15px; padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 10px; }
-        .alert { padding: 15px; border-radius: 12px; margin-bottom: 20px; }
-        .alert-success { background: #d4edda; color: #155724; }
-        .loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; z-index: 1000; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f6;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: #1a1a2e;
+            color: white;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .navbar-container {
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-brand {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar-brand svg { width: 24px; height: 24px; }
+
+        .navbar-menu {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .navbar-menu a {
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .navbar-menu a:hover { background: rgba(255,255,255,0.1); color: white; }
+        .navbar-menu a svg { width: 16px; height: 16px; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 12px 6px 6px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .user-avatar {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 13px;
+            color: white;
+        }
+
+        .user-info .name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.9); }
+
+        .user-info .logout-link {
+            color: rgba(255,255,255,0.5);
+            text-decoration: none;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.15s;
+        }
+
+        .user-info .logout-link:hover { background: rgba(255,255,255,0.1); color: #fca5a5; }
+
+        .container {
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 32px 16px;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title svg { width: 22px; height: 22px; color: #1a1a2e; }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 28px 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            border: 1px solid #f1f5f9;
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .card-header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .card-header h2 svg { width: 22px; height: 22px; color: #4f46e5; }
+
+        .card-header p {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .balance-summary {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .balance-item {
+            flex: 1;
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            border-radius: 12px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+
+        .balance-item .icon {
+            width: 24px; height: 24px;
+            margin: 0 auto 6px auto;
+        }
+
+        .balance-item .label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 4px;
+        }
+
+        .balance-item .value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .balance-item .value small {
+            font-size: 9px;
+            font-weight: 500;
+            color: #94a3b8;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-group label svg {
+            width: 14px; height: 14px;
+            color: #64748b;
+        }
+
+        .form-group label .required {
+            color: #ef4444;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 11px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+            color: #0f172a;
+            transition: all 0.15s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4f46e5;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+
+        .form-control::placeholder {
+            color: #cbd5e1;
+        }
+
+        .form-control-small {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+            display: block;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #1e40af;
+            line-height: 1.6;
+        }
+
+        .info-box svg {
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        .info-box hr {
+            border: none;
+            border-top: 1px solid #bfdbfe;
+            margin: 8px 0;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #059669, #047857);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.15s;
+        }
+
+        .btn-submit:hover {
+            background: linear-gradient(135deg, #047857, #065f46);
+            transform: translateY(-1px);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 16px;
+            padding: 10px 18px;
+            background: #f1f5f9;
+            color: #475569;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+
+        .btn-back:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-back svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .btn-wrapper {
+            text-align: center;
+        }
+
+        .alert {
+            padding: 14px 18px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .alert-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 14px 24px;
+            border-radius: 40px;
+            z-index: 1100;
+            font-size: 14px;
+            backdrop-filter: blur(8px);
+            align-items: center;
+            gap: 10px;
+        }
+
+        .loading svg {
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            .navbar { height: auto; padding: 12px 16px; }
+            .navbar-container { flex-direction: column; gap: 10px; }
+            .navbar-menu { flex-wrap: wrap; justify-content: center; }
+            .container { padding: 16px; }
+            .card { padding: 20px 16px; }
+            .balance-summary { flex-direction: column; gap: 8px; }
+            .balance-item { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; }
+            .balance-item .icon { margin: 0; }
+            .page-title { font-size: 18px; }
+        }
     </style>
 </head>
 <body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
+                KONE SERVICES
+            </div>
+            <div class="navbar-menu">
+                <a href="{% url 'home' %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/></svg>
+                    Accueil
+                </a>
+                <a href="{% url 'historique' %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+                    Historique
+                </a>
+                <a href="{% url 'rapport' %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M10 7h4"/><path d="M10 11h4"/><path d="M10 15h4"/></svg>
+                    Rapports
+                </a>
+                <div class="user-info">
+                    <div class="user-avatar">{{ user.username|slice:":2"|upper }}</div>
+                    <span class="name">{{ user.username }}</span>
+                    <a href="{% url 'logout' %}" class="logout-link">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l4-4-4-4M12 3h8v8"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="page-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Demande d'approvisionnement
+        </div>
+
         <div class="card">
-            <div class="card-header"><h2>🔄 Demande d'approvisionnement</h2><p>Échangez vos fonds</p></div>
-            <div class="card-body">
-                {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}
-                <div class="soldes-actuels"><div class="solde-item"><div class="label">💰 Cash</div><div class="value">{{ caisse.solde_cash|floatformat:0|intcomma }} FCFA</div></div><div class="solde-item"><div class="label">📱 UV</div><div class="value" style="color:#fd7e14;">{{ caisse.solde_uv|floatformat:0|intcomma }} FCFA</div></div><div class="solde-item"><div class="label">💳 Wave</div><div class="value" style="color:#17a2b8;">{{ caisse.solde_wave|floatformat:0|intcomma }} FCFA</div></div></div>
-                <form method="post" id="demande-form">
-                    {% csrf_token %}
-                    <div class="form-group"><label>Type d'échange <span style="color:#dc3545;">*</span></label><select name="type_echange" id="id_type_echange" class="form-control" required><option value="">-- Choisir --</option><option value="uv_to_cash">📱 UV → Cash (J'ai trop d'UV)</option><option value="wave_to_cash">💳 Wave → Cash (J'ai trop de Wave)</option><option value="cash_to_uv">💰 Cash → UV (Je manque d'UV)</option><option value="cash_to_wave">💰 Cash → Wave (Je manque de Wave)</option></select></div>
-                    <div class="form-group"><label>Montant (FCFA) <span style="color:#dc3545;">*</span></label><input type="number" name="montant" id="id_montant" class="form-control" min="1000" step="1000" placeholder="Ex: 50000" required><small style="color:#6c757d;">Minimum: 1 000 FCFA</small></div>
-                    <div class="form-group"><label>Motif</label><textarea name="motif" id="id_motif" class="form-control" rows="2" placeholder="Optionnel"></textarea></div>
-                    <div class="info-box" id="info-box"><p>💡 Sélectionnez le type et entrez le montant</p></div>
-                    <button type="submit" class="btn-submit" id="btn-submit">📤 Envoyer la demande</button>
-                </form>
-                <div style="text-align:center;"><a href="{% url 'dashboard_agent' %}" class="btn-back">← Retour</a></div>
+            <div class="card-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="1.8"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    Demande d'approvisionnement
+                </h2>
+                <p>Échangez vos fonds entre comptes</p>
+            </div>
+
+            <div class="balance-summary">
+                <div class="balance-item">
+                    <div class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M6 12h12"/></svg>
+                    </div>
+                    <div class="label">Cash</div>
+                    <div class="value">{{ caisse.solde_cash|floatformat:0|intcomma }} <small>FCFA</small></div>
+                </div>
+                <div class="balance-item">
+                    <div class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                    </div>
+                    <div class="label">UV</div>
+                    <div class="value" style="color:#d97706;">{{ caisse.solde_uv|floatformat:0|intcomma }} <small>FCFA</small></div>
+                </div>
+                <div class="balance-item">
+                    <div class="icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    </div>
+                    <div class="label">Wave</div>
+                    <div class="value" style="color:#0d9488;">{{ caisse.solde_wave|floatformat:0|intcomma }} <small>FCFA</small></div>
+                </div>
+            </div>
+
+            <form method="post" id="demande-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M8 2v4M16 2v4M2 10h20"/></svg>
+                        Type d'échange <span class="required">*</span>
+                    </label>
+                    <select name="type_echange" id="id_type_echange" class="form-control" required>
+                        <option value="">-- Choisir --</option>
+                        <option value="uv_to_cash">UV &rarr; Cash (J'ai trop d'UV)</option>
+                        <option value="wave_to_cash">Wave &rarr; Cash (J'ai trop de Wave)</option>
+                        <option value="cash_to_uv">Cash &rarr; UV (Je manque d'UV)</option>
+                        <option value="cash_to_wave">Cash &rarr; Wave (Je manque de Wave)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M6 12h12"/></svg>
+                        Montant (FCFA) <span class="required">*</span>
+                    </label>
+                    <input type="number" name="montant" id="id_montant" class="form-control" min="1000" step="1000" placeholder="Ex: 50000" required>
+                    <small class="form-control-small">Minimum: 1 000 FCFA</small>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        Motif
+                    </label>
+                    <textarea name="motif" id="id_motif" class="form-control" rows="2" placeholder="Optionnel"></textarea>
+                </div>
+                <div class="info-box" id="info-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle;margin-right:6px;"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>Sélectionnez le type et entrez le montant</span>
+                </div>
+                <button type="submit" class="btn-submit" id="btn-submit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    Envoyer la demande
+                </button>
+            </form>
+
+            <div class="btn-wrapper">
+                <a href="{% url 'dashboard_agent' %}" class="btn-back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    Retour
+                </a>
             </div>
         </div>
     </div>
-    <div class="loading" id="loading">⏳ Envoi en cours...</div>
+
+    <div class="loading" id="loading">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></svg>
+        Envoi en cours...
+    </div>
+
     <script>
-        const typeSelect=document.getElementById('id_type_echange');
-        const montantInput=document.getElementById('id_montant');
-        const infoBox=document.getElementById('info-box');
-        const btnSubmit=document.getElementById('btn-submit');
-        const soldeUV={{ caisse.solde_uv|default:0 }};
-        const soldeWave={{ caisse.solde_wave|default:0 }};
-        const soldeCash={{ caisse.solde_cash|default:0 }};
-        function formatNumber(n){return new Intl.NumberFormat('fr-FR').format(n);}
-        function updateInfo(){const type=typeSelect.value;const montant=parseFloat(montantInput.value);if(!type){infoBox.innerHTML='<p>💡 Sélectionnez le type et entrez le montant</p>';btnSubmit.disabled=false;return;}if(!montant||montant<1000){infoBox.innerHTML='<p>⚠️ Montant minimum 1 000 FCFA</p>';btnSubmit.disabled=true;return;}
-        if(type==='uv_to_cash'){if(montant>soldeUV){infoBox.innerHTML=`<p style="color:#dc3545;">❌ Solde UV insuffisant (${formatNumber(soldeUV)} FCFA)</p>`;btnSubmit.disabled=true;}else{infoBox.innerHTML=`<p>✅ Échange UV → Cash</p><p>📱 UV: ${formatNumber(montant)} FCFA → 💰 Cash: ${formatNumber(montant)} FCFA</p><hr><p>📊 Après: UV: ${formatNumber(soldeUV-montant)} FCFA | Cash: ${formatNumber(soldeCash+montant)} FCFA</p>`;btnSubmit.disabled=false;}}
-        else if(type==='wave_to_cash'){if(montant>soldeWave){infoBox.innerHTML=`<p style="color:#dc3545;">❌ Solde Wave insuffisant (${formatNumber(soldeWave)} FCFA)</p>`;btnSubmit.disabled=true;}else{infoBox.innerHTML=`<p>✅ Échange Wave → Cash</p><p>💳 Wave: ${formatNumber(montant)} FCFA → 💰 Cash: ${formatNumber(montant)} FCFA</p><hr><p>📊 Après: Wave: ${formatNumber(soldeWave-montant)} FCFA | Cash: ${formatNumber(soldeCash+montant)} FCFA</p>`;btnSubmit.disabled=false;}}
-        else if(type==='cash_to_uv'){if(montant>soldeCash){infoBox.innerHTML=`<p style="color:#dc3545;">❌ Solde Cash insuffisant (${formatNumber(soldeCash)} FCFA)</p>`;btnSubmit.disabled=true;}else{infoBox.innerHTML=`<p>✅ Échange Cash → UV</p><p>💰 Cash: ${formatNumber(montant)} FCFA → 📱 UV: ${formatNumber(montant)} FCFA</p><hr><p>📊 Après: Cash: ${formatNumber(soldeCash-montant)} FCFA | UV: ${formatNumber(soldeUV+montant)} FCFA</p>`;btnSubmit.disabled=false;}}
-        else if(type==='cash_to_wave'){if(montant>soldeCash){infoBox.innerHTML=`<p style="color:#dc3545;">❌ Solde Cash insuffisant (${formatNumber(soldeCash)} FCFA)</p>`;btnSubmit.disabled=true;}else{infoBox.innerHTML=`<p>✅ Échange Cash → Wave</p><p>💰 Cash: ${formatNumber(montant)} FCFA → 💳 Wave: ${formatNumber(montant)} FCFA</p><hr><p>📊 Après: Cash: ${formatNumber(soldeCash-montant)} FCFA | Wave: ${formatNumber(soldeWave+montant)} FCFA</p>`;btnSubmit.disabled=false;}}}
-        typeSelect.addEventListener('change',updateInfo);montantInput.addEventListener('input',updateInfo);
+        var SVG_INFO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle;margin-right:6px;"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+        var SVG_WARN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle;margin-right:6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        var SVG_ERROR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle;margin-right:6px;"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+        var SVG_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle;margin-right:6px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+        var SVG_UV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:middle;margin-right:2px;"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>';
+        var SVG_CASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:middle;margin-right:2px;"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M6 12h12"/></svg>';
+        var SVG_WAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:middle;margin-right:2px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
+        var SVG_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:middle;margin-right:2px;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';
+
+        var typeSelect = document.getElementById('id_type_echange');
+        var montantInput = document.getElementById('id_montant');
+        var infoBox = document.getElementById('info-box');
+        var btnSubmit = document.getElementById('btn-submit');
+        var soldeUV = {{ caisse.solde_uv|default:0 }};
+        var soldeWave = {{ caisse.solde_wave|default:0 }};
+        var soldeCash = {{ caisse.solde_cash|default:0 }};
+
+        function formatNumber(n) {
+            return new Intl.NumberFormat('fr-FR').format(n);
+        }
+
+        function updateInfo() {
+            var type = typeSelect.value;
+            var montant = parseFloat(montantInput.value);
+
+            if (!type) {
+                infoBox.innerHTML = SVG_INFO + '<span>S\u00e9lectionnez le type et entrez le montant</span>';
+                btnSubmit.disabled = false;
+                return;
+            }
+
+            if (!montant || montant < 1000) {
+                infoBox.innerHTML = SVG_WARN + '<span style="color:#d97706;">Montant minimum 1 000 FCFA</span>';
+                btnSubmit.disabled = true;
+                return;
+            }
+
+            if (type === 'uv_to_cash') {
+                if (montant > soldeUV) {
+                    infoBox.innerHTML = SVG_ERROR + '<span style="color:#dc2626;">Solde UV insuffisant (' + formatNumber(soldeUV) + ' FCFA)</span>';
+                    btnSubmit.disabled = true;
+                } else {
+                    infoBox.innerHTML = SVG_OK + ' <span>\u00c9change UV \u2192 Cash</span><br>' +
+                        SVG_UV + ' UV: ' + formatNumber(montant) + ' FCFA \u2192 ' + SVG_CASH + ' Cash: ' + formatNumber(montant) + ' FCFA<hr>' +
+                        SVG_CHART + ' Apr\u00e8s: UV: ' + formatNumber(soldeUV - montant) + ' FCFA | Cash: ' + formatNumber(soldeCash + montant) + ' FCFA';
+                    btnSubmit.disabled = false;
+                }
+            } else if (type === 'wave_to_cash') {
+                if (montant > soldeWave) {
+                    infoBox.innerHTML = SVG_ERROR + '<span style="color:#dc2626;">Solde Wave insuffisant (' + formatNumber(soldeWave) + ' FCFA)</span>';
+                    btnSubmit.disabled = true;
+                } else {
+                    infoBox.innerHTML = SVG_OK + ' <span>\u00c9change Wave \u2192 Cash</span><br>' +
+                        SVG_WAVE + ' Wave: ' + formatNumber(montant) + ' FCFA \u2192 ' + SVG_CASH + ' Cash: ' + formatNumber(montant) + ' FCFA<hr>' +
+                        SVG_CHART + ' Apr\u00e8s: Wave: ' + formatNumber(soldeWave - montant) + ' FCFA | Cash: ' + formatNumber(soldeCash + montant) + ' FCFA';
+                    btnSubmit.disabled = false;
+                }
+            } else if (type === 'cash_to_uv') {
+                if (montant > soldeCash) {
+                    infoBox.innerHTML = SVG_ERROR + '<span style="color:#dc2626;">Solde Cash insuffisant (' + formatNumber(soldeCash) + ' FCFA)</span>';
+                    btnSubmit.disabled = true;
+                } else {
+                    infoBox.innerHTML = SVG_OK + ' <span>\u00c9change Cash \u2192 UV</span><br>' +
+                        SVG_CASH + ' Cash: ' + formatNumber(montant) + ' FCFA \u2192 ' + SVG_UV + ' UV: ' + formatNumber(montant) + ' FCFA<hr>' +
+                        SVG_CHART + ' Apr\u00e8s: Cash: ' + formatNumber(soldeCash - montant) + ' FCFA | UV: ' + formatNumber(soldeUV + montant) + ' FCFA';
+                    btnSubmit.disabled = false;
+                }
+            } else if (type === 'cash_to_wave') {
+                if (montant > soldeCash) {
+                    infoBox.innerHTML = SVG_ERROR + '<span style="color:#dc2626;">Solde Cash insuffisant (' + formatNumber(soldeCash) + ' FCFA)</span>';
+                    btnSubmit.disabled = true;
+                } else {
+                    infoBox.innerHTML = SVG_OK + ' <span>\u00c9change Cash \u2192 Wave</span><br>' +
+                        SVG_CASH + ' Cash: ' + formatNumber(montant) + ' FCFA \u2192 ' + SVG_WAVE + ' Wave: ' + formatNumber(montant) + ' FCFA<hr>' +
+                        SVG_CHART + ' Apr\u00e8s: Cash: ' + formatNumber(soldeCash - montant) + ' FCFA | Wave: ' + formatNumber(soldeWave + montant) + ' FCFA';
+                    btnSubmit.disabled = false;
+                }
+            }
+        }
+
+        typeSelect.addEventListener('change', updateInfo);
+        montantInput.addEventListener('input', updateInfo);
+
+        document.querySelectorAll('form').forEach(function(form) {
+            form.addEventListener('submit', function() {
+                document.getElementById('loading').style.display = 'flex';
+            });
+        });
     </script>
 </body>
 </html>

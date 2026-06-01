@@ -1,31 +1,35 @@
-<!-- templates/transactions/historique.html -->
 {% load humanize %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - Agent Money</title>
+    <title>{{ title }} - KONE SERVICES</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f6;
+            min-height: 100vh;
         }
 
         .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1a1a2e;
             color: white;
-            padding: 1rem 2rem;
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 50;
         }
 
         .navbar-container {
             max-width: 1400px;
+            width: 100%;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
@@ -33,69 +37,194 @@
         }
 
         .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar-brand svg { width: 24px; height: 24px; }
+
+        .navbar-menu {
+            display: flex;
+            gap: 4px;
+            align-items: center;
         }
 
         .navbar-menu a {
-            color: white;
+            color: rgba(255,255,255,0.75);
             text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 5px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .navbar-menu a:hover {
-            background: rgba(255,255,255,0.1);
+        .navbar-menu a:hover { background: rgba(255,255,255,0.1); color: white; }
+
+        .navbar-menu a svg { width: 16px; height: 16px; }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 12px 6px 6px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+            margin-left: 8px;
         }
+
+        .user-avatar {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 13px;
+            color: white;
+        }
+
+        .user-info .name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.9); }
+
+        .user-info .logout-link {
+            color: rgba(255,255,255,0.5);
+            text-decoration: none;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.15s;
+        }
+
+        .user-info .logout-link:hover { background: rgba(255,255,255,0.1); color: #fca5a5; }
 
         .container {
             max-width: 1400px;
-            margin: 20px auto;
-            padding: 0 20px;
+            margin: 0 auto;
+            padding: 24px;
         }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .page-title svg { width: 22px; height: 22px; color: #1a1a2e; }
 
         .card {
             background: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            border: 1px solid #f1f5f9;
         }
 
         .filters {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+            align-items: end;
         }
 
         .filter-group label {
             display: block;
             margin-bottom: 5px;
-            color: #666;
-            font-size: 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
 
-        .filter-group input, .filter-group select {
+        .filter-group input,
+        .filter-group select {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 9px 12px;
+            font-size: 13px;
+            font-family: inherit;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #0f172a;
+            transition: border 0.15s;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: #4f46e5;
+            background: white;
         }
 
         .btn-filter {
-            background: #667eea;
+            padding: 9px 20px;
+            background: #1a1a2e;
             color: white;
             border: none;
-            padding: 8px 20px;
-            border-radius: 5px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
             cursor: pointer;
-            margin-top: 20px;
+            transition: background 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-family: inherit;
+            width: 100%;
+            justify-content: center;
         }
 
-        .btn-filter:hover {
-            background: #5a67d8;
+        .btn-filter:hover { background: #2d2d4a; }
+        .btn-filter svg { width: 15px; height: 15px; }
+
+        .totals {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
         }
+
+        .total-item {
+            background: white;
+            padding: 18px;
+            border-radius: 14px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            border: 1px solid #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .total-item .label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .total-item .label svg { width: 14px; height: 14px; }
+
+        .total-item .value { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+
+        .table-wrapper { overflow-x: auto; }
 
         .table {
             width: 100%;
@@ -103,109 +232,149 @@
         }
 
         .table th, .table td {
-            padding: 12px;
+            padding: 11px 12px;
             text-align: left;
-            border-bottom: 1px solid #e1e5e9;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            white-space: nowrap;
         }
 
         .table th {
-            background: #f8f9fa;
             font-weight: 600;
+            color: #64748b;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            background: #f8fafc;
         }
+
+        .table tr:hover td { background: #fafbfc; }
 
         .badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 11px;
             font-weight: 600;
+            display: inline-block;
         }
-
-        .badge-depot { background: #d4edda; color: #155724; }
-        .badge-retrait { background: #f8d7da; color: #721c24; }
-        .badge-credit { background: #fff3cd; color: #856404; }
-
-        .totals {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .total-item {
-            text-align: center;
-        }
-
-        .total-item .label {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .total-item .value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #667eea;
-        }
+        .badge-depot { background: #ecfdf5; color: #059669; }
+        .badge-retrait { background: #fef2f2; color: #dc2626; }
+        .badge-credit { background: #fffbeb; color: #d97706; }
+        .badge-cancelled { background: #fef2f2; color: #dc2626; text-decoration: line-through; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
 
         .btn-print {
-            background: #17a2b8;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
+            padding: 6px 12px;
+            background: #f1f5f9;
+            color: #475569;
+            border-radius: 8px;
             text-decoration: none;
             font-size: 12px;
+            font-weight: 500;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
+
+        .btn-print:hover { background: #e2e8f0; }
+        .btn-print svg { width: 14px; height: 14px; }
 
         .pagination {
             margin-top: 20px;
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 6px;
+        }
+
+        .pagination a, .pagination span {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.15s;
         }
 
         .pagination a {
-            padding: 8px 12px;
-            background: #f8f9fa;
-            text-decoration: none;
-            color: #667eea;
-            border-radius: 5px;
+            background: #f1f5f9;
+            color: #475569;
         }
 
-        .pagination a:hover {
-            background: #667eea;
+        .pagination a:hover { background: #e2e8f0; }
+        .pagination .active {
+            background: #1a1a2e;
             color: white;
         }
 
-        @media (max-width: 768px) {
-            .table {
-                font-size: 12px;
-            }
-            .table th, .table td {
-                padding: 8px;
-            }
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #94a3b8;
+            font-size: 14px;
         }
-        .badge-cancelled { background: #fee2e2; color: #dc2626; text-decoration: line-through; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+
+        .empty-state svg {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 12px;
+            color: #cbd5e1;
+        }
+
+        .ref-cell { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: #64748b; }
+        .montant-cell { font-weight: 600; color: #0f172a; }
+
+        @media (max-width: 768px) {
+            .navbar { height: auto; padding: 12px 16px; }
+            .navbar-container { flex-direction: column; gap: 10px; }
+            .navbar-menu { flex-wrap: wrap; justify-content: center; }
+            .container { padding: 16px; }
+            .card { padding: 16px; }
+            .filters { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .totals { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .total-item .value { font-size: 16px; }
+            .table th, .table td { padding: 8px 6px; font-size: 12px; }
+            .table { font-size: 12px; }
+        }
     </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="navbar-container">
-            <div class="navbar-brand">🏦 Agent Money System</div>
+            <div class="navbar-brand">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
+                KONE SERVICES
+            </div>
             <div class="navbar-menu">
-                <a href="{% url 'home' %}">🏠 Accueil</a>
-                <a href="{% url 'historique' %}">📜 Historique</a>
-                <a href="{% url 'rapport' %}">📊 Rapports</a>
-                <a href="{% url 'logout' %}">🚪 Déconnexion</a>
+                <a href="{% url 'home' %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-5v-7H9v7H5a2 2 0 0 1-2-2z"/></svg>
+                    Accueil
+                </a>
+                <a href="{% url 'historique' %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+                    Historique
+                </a>
+                <a href="{% url 'rapport' %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M10 7h4"/><path d="M10 11h4"/><path d="M10 15h4"/></svg>
+                    Rapports
+                </a>
+                <div class="user-info">
+                    <div class="user-avatar">{{ user.username|slice:":2"|upper }}</div>
+                    <span class="name">{{ user.username }}</span>
+                    <a href="{% url 'logout' %}" class="logout-link">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l4-4-4-4M12 3h8v8"/></svg>
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
 
     <div class="container">
+        <div class="page-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+            Historique des transactions
+        </div>
+
         <div class="card">
-            <h2>Historique des transactions</h2>
-            
-            <!-- Filtres -->
             <form method="get" class="filters">
                 <div class="filter-group">
                     <label>Sous-agent</label>
@@ -218,17 +387,17 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <div class="filter-group">
                     <label>Date début</label>
                     <input type="date" name="date_debut" value="{{ filtres.date_debut }}">
                 </div>
-                
+
                 <div class="filter-group">
                     <label>Date fin</label>
                     <input type="date" name="date_fin" value="{{ filtres.date_fin }}">
                 </div>
-                
+
                 <div class="filter-group">
                     <label>Opérateur</label>
                     <select name="operateur">
@@ -239,7 +408,7 @@
                         <option value="telecel" {% if filtres.operateur == 'telecel' %}selected{% endif %}>Telecel</option>
                     </select>
                 </div>
-                
+
                 <div class="filter-group">
                     <label>Type</label>
                     <select name="type">
@@ -249,72 +418,86 @@
                         <option value="credit" {% if filtres.type == 'credit' %}selected{% endif %}>Crédit</option>
                     </select>
                 </div>
-                
+
                 <div class="filter-group">
-                    <button type="submit" class="btn-filter">🔍 Filtrer</button>
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn-filter">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                        Filtrer
+                    </button>
                 </div>
             </form>
-            
-            <!-- Totaux -->
+
             <div class="totals">
                 <div class="total-item">
-                    <div class="label">Total transactions</div>
+                    <div class="label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+                        Transactions
+                    </div>
                     <div class="value">{{ transactions|length }}</div>
                 </div>
                 <div class="total-item">
-                    <div class="label">Montant total</div>
+                    <div class="label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M6 12h12"/></svg>
+                        Montant total
+                    </div>
                     <div class="value">{{ total_montant|floatformat:0|intcomma }} FCFA</div>
                 </div>
                 <div class="total-item">
-                    <div class="label">Commission totale</div>
+                    <div class="label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        Commission totale
+                    </div>
                     <div class="value">{{ total_commission|floatformat:0|intcomma }} FCFA</div>
                 </div>
             </div>
-            
-            <!-- Tableau des transactions -->
+
             {% if transactions %}
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Référence</th>
-                        <th>Date</th>
-                        <th>Sous-agent</th>
-                        <th>Type</th>
-                        <th>Opérateur</th>
-                        <th>Client</th>
-                        <th>Montant</th>
-                        <th>Commission</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for trans in transactions %}
-                    <tr>
-                        <td><small>{{ trans.reference }}</small></td>
-                        <td><small>{{ trans.date|date:"d/m/Y H:i" }}</small></td>
-                        <td>{{ trans.sous_agent.nom }}</td>
-                        <td>
-                            <span class="badge badge-{{ trans.type_transaction }}">
-                                {{ trans.get_type_transaction_display }}
-                            </span>{% if trans.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}
-                        </td>
-                        <td>{{ trans.get_operateur_display }}</td>
-                        <td>{{ trans.numero_client }}</td>
-                        <td><strong>{{ trans.montant|floatformat:0|intcomma }}</strong></td>
-                        <td>{{ trans.commission|floatformat:0|intcomma }}</td>
-                        <td>
-                            <a href="{% url 'impression_recu' trans.reference %}" target="_blank" class="btn-print">
-                                🖨️
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Référence</th>
+                            <th>Date</th>
+                            <th>Sous-agent</th>
+                            <th>Type</th>
+                            <th>Opérateur</th>
+                            <th>Client</th>
+                            <th>Montant</th>
+                            <th>Commission</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trans in transactions %}
+                        <tr>
+                            <td><span class="ref-cell">{{ trans.reference }}</span></td>
+                            <td><small>{{ trans.date|date:"d/m/Y H:i" }}</small></td>
+                            <td>{{ trans.sous_agent.nom }}</td>
+                            <td>
+                                <span class="badge badge-{{ trans.type_transaction }}">
+                                    {{ trans.get_type_transaction_display }}
+                                </span>{% if trans.est_annule %} <span class="badge badge-cancelled">Annulée</span>{% endif %}
+                            </td>
+                            <td>{{ trans.get_operateur_display }}</td>
+                            <td>{{ trans.numero_client }}</td>
+                            <td class="montant-cell">{{ trans.montant|floatformat:0|intcomma }}</td>
+                            <td>{{ trans.commission|floatformat:0|intcomma }}</td>
+                            <td>
+                                <a href="{% url 'impression_recu' trans.reference %}" target="_blank" class="btn-print">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% else %}
-            <p style="text-align: center; color: #999; padding: 40px;">
-                Aucune transaction trouvée pour cette période
-            </p>
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+                <div>Aucune transaction trouvée pour cette période</div>
+            </div>
             {% endif %}
         </div>
     </div>
