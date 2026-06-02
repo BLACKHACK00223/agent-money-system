@@ -1,3 +1,8 @@
+"""
+ATTENTION: Ce fichier utilise Win32Raw (python-escpos) qui est WINDOWS-UNIQUEMENT.
+Il ne peut PAS fonctionner sur Railway (Linux). Gardé pour usage local.
+Pour l'impression sur Railway, utiliser l'API Web Bluetooth (bluetooth-print.js).
+"""
 from flask import Flask, request, jsonify
 import requests
 from escpos.printer import Win32Raw

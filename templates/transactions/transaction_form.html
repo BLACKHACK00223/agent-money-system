@@ -740,6 +740,12 @@
                     </svg>
                     Imprimer le reçu
                 </button>
+                <button class="btn-success-print" id="btPrintBtn" style="display:none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 7h12v12H6z"/><path d="M9 9h6v6H9z"/><path d="M15 2v5M9 2v5M6 16h12v2a2 2 0 01-2 2H8a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    <span id="btPrintText">Imprimer Bluetooth</span>
+                </button>
                 <button class="btn-success-close" id="closeSuccessBtn">Terminer</button>
             </div>
         </div>
@@ -751,6 +757,7 @@
     </div>
 
     <script src="/static/js/qz-tray.js"></script>
+    <script src="/static/js/bluetooth-print.js"></script>
     <script>
         function getCookie(name) {
             let cookieValue = null;
@@ -997,9 +1004,22 @@
 
         function printReceipt() {
             if (!lastReference) return;
-
             document.getElementById('loading').classList.add('active');
 
+            // Sur Android avec Bluetooth disponible
+            if (KONEPrint.isSupported()) {
+                KONEPrint.printReceipt(lastReference).then(result => {
+                    document.getElementById('loading').classList.remove('active');
+                    document.getElementById('successModal').classList.remove('active');
+                    window.location.href = redirectUrl;
+                }).catch(() => {
+                    // Fallback normal
+                    doPrintFallback();
+                });
+                return;
+            }
+
+            // QZ Tray (desktop)
             fetch(`/impression-recu/${lastReference}/?format=json`)
                 .then(response => response.json())
                 .then(data => {
@@ -1045,13 +1065,7 @@
                             return qz.print(config, printData);
                         });
                     } else {
-                        let printWindow = window.open(`/impression-recu/${lastReference}/`, '_blank');
-                        if (printWindow) {
-                            printWindow.onload = function() {
-                                printWindow.print();
-                                setTimeout(() => printWindow.close(), 1000);
-                            };
-                        }
+                        doPrintFallback();
                         return Promise.resolve();
                     }
                 })
@@ -1062,20 +1076,51 @@
                 })
                 .catch(err => {
                     console.error(err);
-                    document.getElementById('loading').classList.remove('active');
-                    let printWindow = window.open(`/impression-recu/${lastReference}/`, '_blank');
-                    if (printWindow) {
-                        printWindow.onload = function() {
-                            printWindow.print();
-                            setTimeout(() => printWindow.close(), 1000);
-                        };
-                    }
+                    doPrintFallback();
+                });
+        }
+
+        function doPrintFallback() {
+            document.getElementById('loading').classList.remove('active');
+            if (!lastReference) return;
+            let printWindow = window.open(`/impression-recu/${lastReference}/`, '_blank');
+            if (printWindow) {
+                printWindow.onload = function() {
+                    printWindow.print();
+                    setTimeout(() => printWindow.close(), 1000);
+                };
+            }
+            setTimeout(() => {
+                document.getElementById('successModal').classList.remove('active');
+                window.location.href = redirectUrl;
+            }, 2000);
+        }
+
+        // Impression Bluetooth via bouton dédié
+        document.getElementById('btPrintBtn')?.addEventListener('click', async function() {
+            if (!lastReference) return;
+            const btn = this;
+            const text = document.getElementById('btPrintText');
+            btn.disabled = true;
+            text.textContent = 'Connexion Bluetooth...';
+
+            try {
+                const result = await KONEPrint.printReceipt(lastReference);
+                if (result.success) {
+                    text.textContent = '✓ Imprimé!';
                     setTimeout(() => {
                         document.getElementById('successModal').classList.remove('active');
                         window.location.href = redirectUrl;
-                    }, 2000);
-                });
-        }
+                    }, 1500);
+                }
+            } catch (e) {
+                text.textContent = 'Erreur Bluetooth';
+                setTimeout(() => {
+                    text.textContent = 'Imprimer Bluetooth';
+                    btn.disabled = false;
+                }, 2000);
+            }
+        });
 
         function submitTransaction() {
             const cleanNumber = getRawPhoneNumber();
@@ -1130,6 +1175,11 @@
         document.getElementById('confirmBtn').addEventListener('click', submitTransaction);
         document.getElementById('printBtn').addEventListener('click', printReceipt);
         document.getElementById('closeSuccessBtn').addEventListener('click', closeSuccessModal);
+
+        // Afficher le bouton Bluetooth si supporté (Android Chrome)
+        if (KONEPrint.isSupported()) {
+            document.getElementById('btPrintBtn').style.display = '';
+        }
 
         numeroInput.focus();
         updateValidationUI();

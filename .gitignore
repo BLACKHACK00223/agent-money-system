@@ -13,6 +13,11 @@ build/
 db.sqlite3
 .DS_Store
 .env
+.env.local
 *.log
 staticfiles/
 media/
+private-key.pem
+certs/
+*.pem
+*.key

@@ -608,6 +608,7 @@
 {% block extra_js %}
 {% load static %}
 <script src="/static/js/qz-tray.js"></script>
+<script src="/static/js/bluetooth-print.js"></script>
 
 <script>
 // ==================== VARIABLES ====================
@@ -862,19 +863,34 @@ function imprimer(reference, btn) {
         return;
     }
 
-    if (!currentPrinter) {
-        showNotification('❌ Veuillez d\'abord sélectionner une imprimante', 'warning');
-        openPrinterModal();
-        if (btn) {
+    var originalText = btn.innerHTML;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:middle;animation:spin 0.8s linear infinite;"><circle cx="12" cy="12" r="9" stroke-opacity="0.3"/><path d="M12 3a9 9 0 0 1 9 9"/></svg>';
+    btn.disabled = true;
+
+    // Bluetooth (Android)
+    if (typeof KONEPrint !== 'undefined' && KONEPrint.isSupported()) {
+        KONEPrint.printReceipt(reference).then(function(result) {
+            if (result.success) showNotification('Impression Bluetooth réussie', 'success');
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
             btn.disabled = false;
-            btn.innerHTML = "🖨️";
-        }
+        }).catch(function() {
+            // Fallback QZ Tray
+            doQZPrint(reference, btn, originalText);
+        });
         return;
     }
 
-    var originalText = btn.innerHTML;
-    btn.innerHTML = "⏳";
-    btn.disabled = true;
+    doQZPrint(reference, btn, originalText);
+}
+
+function doQZPrint(reference, btn, originalText) {
+    if (!currentPrinter) {
+        showNotification('Veuillez d\'abord sélectionner une imprimante', 'warning');
+        openPrinterModal();
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        return;
+    }
 
     var url = '/impression-recu/' + reference + '/?format=json';
 
@@ -885,13 +901,11 @@ function imprimer(reference, btn) {
         })
         .then(function(data) {
             var ticket = formatReceipt(data, printerWidth);
-            console.log("Ticket a imprimer:\n" + ticket);
             
             if (qzReady && currentPrinter) {
                 var config = qz.configs.create(currentPrinter);
                 var fullCommand = "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00";
                 var printData = [{ type: 'raw', format: 'plain', data: fullCommand }];
-                
                 return qz.print(config, printData);
             } else {
                 openPrintPopup(ticket);
@@ -899,11 +913,11 @@ function imprimer(reference, btn) {
             }
         })
         .then(function() {
-            showNotification('✅ Impression OK sur ' + currentPrinter, 'success');
+            showNotification('Impression OK sur ' + currentPrinter, 'success');
         })
         .catch(function(err) {
             console.error(err);
-            showNotification('❌ Erreur impression', 'error');
+            showNotification('Erreur impression', 'error');
         })
         .finally(function() {
             btn.innerHTML = originalText;
@@ -994,7 +1008,7 @@ function renderTable(transactions) {
         html += '<td>' + t.numero_client + '</td>';
         html += '<td>' + formatNumberManual(t.montant) + ' FCFA' + '</td>';
         html += '<td>' + formatNumberManual(t.commission) + ' FCFA' + '</td>';
-        html += '<td><button class="btn-print" onclick="imprimer(\'' + t.reference + '\', this)">🖨️</button></td>';
+        html += '<td><button class="btn-print" onclick="imprimer(\'' + t.reference + '\', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button></td>';
         html += '</tr>';
     }
     html += '</tbody></table>';
