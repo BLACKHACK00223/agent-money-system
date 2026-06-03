@@ -867,11 +867,11 @@ function imprimer(reference, btn) {
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" style="vertical-align:middle;animation:spin 0.8s linear infinite;"><circle cx="12" cy="12" r="9" stroke-opacity="0.3"/><path d="M12 3a9 9 0 0 1 9 9"/></svg>';
     btn.disabled = true;
 
-    // Bluetooth (Android)
+    // Impression via KONEPrint (Bluetooth BLE, USB, Serial)
     if (typeof KONEPrint !== 'undefined' && KONEPrint.isSupported()) {
         KONEPrint.printReceipt(reference).then(function(result) {
-            if (result.success) showNotification('Impression Bluetooth réussie', 'success');
-            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+            if (result.success) showNotification('Impression reussie', 'success');
+            btn.innerHTML = originalText;
             btn.disabled = false;
         }).catch(function() {
             // Fallback QZ Tray

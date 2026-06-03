@@ -1006,7 +1006,7 @@
             if (!lastReference) return;
             document.getElementById('loading').classList.add('active');
 
-            // Sur Android avec Bluetooth disponible
+            // Impression via KONEPrint (Bluetooth, USB, Serial)
             if (KONEPrint.isSupported()) {
                 KONEPrint.printReceipt(lastReference).then(result => {
                     document.getElementById('loading').classList.remove('active');
@@ -1102,9 +1102,35 @@
             const btn = this;
             const text = document.getElementById('btPrintText');
             btn.disabled = true;
-            text.textContent = 'Connexion Bluetooth...';
+
+            // Si deja connecte, imprime directement
+            if (KONEPrint.isConnected()) {
+                try {
+                    const resp = await fetch('/impression-recu/' + lastReference + '/?format=json');
+                    const data = await resp.json();
+                    await KONEPrint.print(data);
+                    text.textContent = '✓ Imprimé!';
+                    setTimeout(() => {
+                        document.getElementById('successModal').classList.remove('active');
+                        window.location.href = redirectUrl;
+                    }, 1500);
+                    return;
+                } catch (e) {
+                    KONEPrint.disconnect();
+                }
+            }
+
+            // Choisir le type de connexion
+            let connType = 'ble';
+            if (KONEPrint.canUSB()) connType = 'usb';
+            if (KONEPrint.canSerial()) connType = 'serial';
+
+            text.textContent = connType === 'ble' ? 'Recherche imprimante Bluetooth...'
+                          : connType === 'usb' ? 'Recherche imprimante USB...'
+                          : 'Connexion port serie...';
 
             try {
+                await KONEPrint.connect(connType);
                 const result = await KONEPrint.printReceipt(lastReference);
                 if (result.success) {
                     text.textContent = '✓ Imprimé!';
@@ -1114,11 +1140,12 @@
                     }, 1500);
                 }
             } catch (e) {
-                text.textContent = 'Erreur Bluetooth';
+                console.error('KONEPrint error:', e);
+                text.textContent = 'Erreur: ' + (e.message || 'échec de connexion').slice(0, 25);
                 setTimeout(() => {
                     text.textContent = 'Imprimer Bluetooth';
                     btn.disabled = false;
-                }, 2000);
+                }, 3000);
             }
         });
 
@@ -1176,9 +1203,13 @@
         document.getElementById('printBtn').addEventListener('click', printReceipt);
         document.getElementById('closeSuccessBtn').addEventListener('click', closeSuccessModal);
 
-        // Afficher le bouton Bluetooth si supporté (Android Chrome)
-        if (KONEPrint.isSupported()) {
+        // Afficher le bouton Bluetooth si supporté
+        if (KONEPrint.canBluetooth() || KONEPrint.canUSB() || KONEPrint.canSerial()) {
             document.getElementById('btPrintBtn').style.display = '';
+            const btnText = document.getElementById('btPrintText');
+            if (KONEPrint.canBluetooth()) btnText.textContent = 'Imprimer Bluetooth';
+            else if (KONEPrint.canUSB()) btnText.textContent = 'Imprimer USB';
+            else btnText.textContent = 'Imprimer (Serie)';
         }
 
         numeroInput.focus();

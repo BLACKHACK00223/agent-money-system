@@ -1,0 +1,2 @@
+[nix]
+packages = ["cairo", "pango", "gdk-pixbuf", "pkg-config"]
