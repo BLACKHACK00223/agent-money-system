@@ -1,5 +1,5 @@
 [nix]
 packages = ["cairo", "cairo.dev", "pango", "pango.dev", "gdk-pixbuf", "pkg-config"]
 
-[apt]
-packages = ["libcairo2-dev", "libpango1.0-dev", "libgdk-pixbuf2.0-dev"]
+[phases.setup]
+cmds = ["apt-get update && apt-get install -y --no-install-recommends libcairo2-dev libpango1.0-dev libgdk-pixbuf2.0-dev pkg-config"]
