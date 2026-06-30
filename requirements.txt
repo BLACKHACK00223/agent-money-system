@@ -1,3 +1,7 @@
+bash
+libcairo2-dev
+pkg-config
+gcc
 arabic-reshaper==3.0.0
 asgiref==3.11.1
 asn1crypto==1.5.1
