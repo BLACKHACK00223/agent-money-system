@@ -1,2 +1,5 @@
 [nix]
-packages = ["cairo", "pango", "gdk-pixbuf", "pkg-config"]
+packages = ["cairo", "cairo.dev", "pango", "pango.dev", "gdk-pixbuf", "pkg-config"]
+
+[apt]
+packages = ["libcairo2-dev", "libpango1.0-dev", "libgdk-pixbuf2.0-dev"]
