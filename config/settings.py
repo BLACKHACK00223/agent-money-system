@@ -57,9 +57,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database (PostgreSQL via Railway DATABASE_URL, fallback SQLite en local)
+SQLITE_PATH = os.environ.get('SQLITE_PATH', str(BASE_DIR / 'db.sqlite3'))
+if SQLITE_PATH.startswith('sqlite:///'):
+    SQLITE_PATH = SQLITE_PATH.replace('sqlite:///', '', 1)
+if SQLITE_PATH and SQLITE_PATH != ':memory:':
+    Path(SQLITE_PATH).parent.mkdir(parents=True, exist_ok=True)
 DATABASES = {
     'default': dj_database_url.config(
-        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
+        default='sqlite:///' + SQLITE_PATH,
         conn_max_age=600,
         conn_health_checks=True,
     )
