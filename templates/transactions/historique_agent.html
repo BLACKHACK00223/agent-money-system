@@ -789,7 +789,15 @@
             qz.security.setSignaturePromise(function(toSign) {
                 return function(resolve) {
                     fetch("/sign-message?request=" + encodeURIComponent(toSign), {cache: 'no-store'})
-                        .then(function(r) { r.ok ? resolve(r.text()) : resolve(""); });
+                        .then(function(r) {
+                            if (!r.ok) throw new Error();
+                            return r.text();
+                        })
+                        .then(function(sig) {
+                            if (!sig || sig.length < 64) throw new Error();
+                            resolve(sig.trim());
+                        })
+                        .catch(function() { resolve(""); });
                 };
             });
             qz.websocket.connect()

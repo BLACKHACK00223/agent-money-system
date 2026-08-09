@@ -7116,10 +7116,12 @@ def api_annuler_transaction(request):
     return JsonResponse({'success': True, 'message': f'Transaction {reference} annulée avec succès.'})
 
 
-@login_required
 def sign_message(request):
     """
     Signe un message pour QZ Tray (signature HTTPS sans popup)
+    Endpoint public : la securite repose sur le certificat QZ,
+    pas sur la session navigateur (une session expiree ne doit
+    pas casser le signature, sinon QZ redemande a chaque fois).
     Utilise cryptography si disponible, sinon openssl CLI
     """
     msg = request.GET.get('request', '')
