@@ -4333,15 +4333,11 @@ def rapports_admin(request):
     # Trier par date decroissante
     operations.sort(key=lambda x: x['date'], reverse=True)
     
-    # Totaux generaux des caisses
-    caisses_admin = Caisse.objects.filter(user__in=[a.user for a in admins])
-    caisses_agents = Caisse.objects.filter(user__in=[a.user for a in agents])
-    caisses_assistants = Caisse.objects.filter(user__in=[a.user for a in assistants])
-    
-    total_cash = int(sum(c.solde_cash or 0 for c in caisses_admin) + sum(c.solde_cash or 0 for c in caisses_agents) + sum(c.solde_cash or 0 for c in caisses_assistants))
-    total_uv = int(sum(c.solde_uv or 0 for c in caisses_admin) + sum(c.solde_uv or 0 for c in caisses_agents) + sum(c.solde_uv or 0 for c in caisses_assistants))
-    total_wave = int(sum(c.solde_wave or 0 for c in caisses_admin) + sum(c.solde_wave or 0 for c in caisses_agents) + sum(c.solde_wave or 0 for c in caisses_assistants))
-    total_general = int(total_cash + total_uv + total_wave)
+    # Totaux generaux des comptes de l'admin connecte
+    total_cash = int(caisse.solde_cash or 0)
+    total_uv = int(caisse.solde_uv or 0)
+    total_wave = int(caisse.solde_wave or 0)
+    total_general = int(total_cash + total_uv + total_wave + (compte_epargne.solde or 0))
     
     context = {
         'title': 'Rapports et Gestion',
