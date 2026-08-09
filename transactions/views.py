@@ -1664,21 +1664,17 @@ def operation_agent(request):
         # Récupérer l'agent
         agent = Agent.objects.get(id=agent_id)
         
-        # Récupérer la caisse partagée (Admin)
-        caisse_partagee = Caisse.objects.filter(user__is_superuser=True).first()
-        if not caisse_partagee:
-            messages.error(request, "Caisse administrateur introuvable")
-            return redirect('gestion_agents')
-        
-        # Déterminer qui est l'opérateur
+        # Déterminer qui est l'opérateur et la caisse partagée
         try:
             admin_obj = Admin.objects.get(user=request.user)
             operateur_type = 'admin'
             operateur_nom = admin_obj.nom
+            caisse_partagee = admin_obj.user.caisse
         except Admin.DoesNotExist:
             assistant = Assistant.objects.get(user=request.user)
             operateur_type = 'assistant'
             operateur_nom = assistant.nom
+            caisse_partagee = assistant.admin.user.caisse
         
         # Déterminer le champ et les soldes
         if type_fonds == 'cash':
