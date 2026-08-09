@@ -1074,15 +1074,24 @@
                         return qz.print(config, printData);
                     });
                 })
+                .catch(err => {
+                    console.error(err);
+                    if (typeof KONEPrint !== 'undefined' && KONEPrint.isSupported()) {
+                        return KONEPrint.printReceipt(lastReference).then(() => {
+                            throw new Error('KONE_OK');
+                        }).catch(e2 => {
+                            if (e2 && e2.message === 'KONE_OK') return Promise.resolve();
+                            document.getElementById('loading').classList.remove('active');
+                            alert('Impression impossible : ' + (err.message || 'Erreur') + '. Lancez QZ Tray sur le PC ou connectez une imprimante.');
+                        });
+                    }
+                    document.getElementById('loading').classList.remove('active');
+                    alert('Impression directe impossible : ' + (err.message || 'Erreur QZ') + '. Lancez QZ Tray sur le PC puis réessayez.');
+                })
                 .then(() => {
                     document.getElementById('loading').classList.remove('active');
                     document.getElementById('successModal').classList.remove('active');
                     window.location.href = redirectUrl;
-                })
-                .catch(err => {
-                    console.error(err);
-                    document.getElementById('loading').classList.remove('active');
-                    alert('Impression directe impossible : ' + (err.message || 'Erreur QZ') + '. Lancez QZ Tray sur le PC puis réessayez.');
                 });
         }
 
@@ -1090,19 +1099,7 @@
             if (!lastReference) return;
             document.getElementById('loading').classList.add('active');
 
-            // Impression Bluetooth/USB/Serie (KONEPrint)
-            if (typeof KONEPrint !== 'undefined' && KONEPrint.isSupported()) {
-                KONEPrint.printReceipt(lastReference).then(result => {
-                    document.getElementById('loading').classList.remove('active');
-                    document.getElementById('successModal').classList.remove('active');
-                    window.location.href = redirectUrl;
-                }).catch(() => {
-                    doQZRawPrint();
-                });
-                return;
-            }
-
-            // QZ Tray (desktop) — texte brut direct, sans aperçu
+            // Priorité 1 : QZ Tray (impression USB directe, sans fenêtre)
             doQZRawPrint();
         }
 
