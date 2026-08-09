@@ -1005,7 +1005,7 @@ const chargerFactures = () => {
                         <td>${escapeHtml(f.type_facture)}</td>
                         <td>${escapeHtml(f.date_echeance)}</td>
                         <td style="text-align:right; font-weight:600;">${f.montant_total.toLocaleString()} F</td>
-                        <td><div class="actions-group"><button class="btn-pdf" onclick="window.open('/generer-facture-pdf/${f.id}/', '_blank')">PDF</button><button class="btn-thermal" onclick="window.open('/generer-facture-80mm/${f.id}/', '_blank')">Ticket</button><button class="btn-delete" onclick="supprimerFacture(${f.id})">Supprimer</button></div></td>
+                        <td><div class="actions-group"><button class="btn-pdf" onclick="location.href='/generer-facture-pdf/${f.id}/'">PDF</button><button class="btn-thermal" onclick="location.href='/generer-facture-80mm/${f.id}/'">Ticket</button><button class="btn-delete" onclick="supprimerFacture(${f.id})">Supprimer</button></div></td>
                     </tr>
                 `).join('');
             } else tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucune facture trouvée</td></tr>';
@@ -1297,7 +1297,7 @@ document.getElementById('generer-rapport')?.addEventListener('click', () => {
         format: 'excel'
     });
     if (agentSelect.value) params.append(isAssistant ? 'assistant' : 'agent', agentSelect.value);
-    window.open("{% url 'generer_rapport_admin' %}?" + params.toString(), '_blank');
+    window.location.href = "{% url 'generer_rapport_admin' %}?" + params.toString();
 });
 
 // ==================== REMBOURSEMENT ====================
@@ -1401,8 +1401,8 @@ const loadMobileFactures = () => {
                         <div class="card-row"><span class="card-label">Montant</span><span class="card-value-large text-success">${f.montant_total.toLocaleString()} F</span></div>
                         <div class="card-row"><span class="card-label">Échéance</span><span class="card-value">${escapeHtml(f.date_echeance)}</span></div>
                         <div class="card-actions">
-                            <button style="background:#ef4444; color:white;" onclick="window.open('/generer-facture-pdf/${f.id}/', '_blank')">PDF</button>
-                            <button style="background:#f59e0b; color:white;" onclick="window.open('/generer-facture-80mm/${f.id}/', '_blank')">Ticket</button>
+                            <button style="background:#ef4444; color:white;" onclick="location.href='/generer-facture-pdf/${f.id}/'">PDF</button>
+                            <button style="background:#f59e0b; color:white;" onclick="location.href='/generer-facture-80mm/${f.id}/'">Ticket</button>
                             <button style="background:#dc2626; color:white;" onclick="supprimerFacture(${f.id})">Supprimer</button>
                         </div>
                     </div>
