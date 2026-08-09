@@ -887,14 +887,6 @@ function imprimer(reference, btn) {
 }
 
 function doQZPrint(reference, btn, originalText) {
-    if (!currentPrinter) {
-        showNotification('Veuillez d\'abord sélectionner une imprimante', 'warning');
-        openPrinterModal();
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        return;
-    }
-
     var url = '/impression-recu/' + reference + '/?format=json';
 
     fetch(url)
@@ -904,19 +896,24 @@ function doQZPrint(reference, btn, originalText) {
         })
         .then(function(data) {
             var ticket = formatReceipt(data, printerWidth);
-            
-            if (qzReady && currentPrinter) {
-                var config = qz.configs.create(currentPrinter);
-                var fullCommand = "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00";
-                var printData = [{ type: 'raw', format: 'plain', data: fullCommand }];
-                return qz.print(config, printData);
+
+            if (qzReady) {
+                return qz.printers.find().then(function(printers) {
+                    if (!printers || printers.length === 0) throw new Error('Aucune imprimante');
+                    var printer = printers.find(function(p) { return p === currentPrinter; }) || printers[0];
+                    if (!currentPrinter) currentPrinter = printer;
+                    var config = qz.configs.create(printer);
+                    var fullCommand = "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00";
+                    var printData = [{ type: 'raw', format: 'plain', data: fullCommand }];
+                    return qz.print(config, printData);
+                });
             } else {
                 openPrintPopup(ticket);
                 return Promise.resolve();
             }
         })
         .then(function() {
-            showNotification('Impression OK sur ' + currentPrinter, 'success');
+            if (qzReady) showNotification('Impression OK sur ' + currentPrinter, 'success');
         })
         .catch(function(err) {
             console.error(err);
