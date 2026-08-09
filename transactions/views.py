@@ -1671,13 +1671,13 @@ def operation_agent(request):
             return redirect('gestion_agents')
         
         # Déterminer qui est l'opérateur
-        if request.user.is_superuser:
-            operateur_type = 'admin'
+        try:
             admin_obj = Admin.objects.get(user=request.user)
+            operateur_type = 'admin'
             operateur_nom = admin_obj.nom
-        else:
-            operateur_type = 'assistant'
+        except Admin.DoesNotExist:
             assistant = Assistant.objects.get(user=request.user)
+            operateur_type = 'assistant'
             operateur_nom = assistant.nom
         
         # Déterminer le champ et les soldes
