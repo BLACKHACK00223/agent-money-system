@@ -908,8 +908,18 @@ function doQZPrint(reference, btn, originalText) {
                     return qz.print(config, printData);
                 });
             } else {
-                openPrintPopup(ticket);
-                return Promise.resolve();
+                return qz.websocket.connect().then(function() {
+                    qzReady = true;
+                    return qz.printers.find();
+                }).then(function(printers) {
+                    if (!printers || printers.length === 0) throw new Error('Aucune imprimante');
+                    var printer = printers.find(function(p) { return p === currentPrinter; }) || printers[0];
+                    if (!currentPrinter) currentPrinter = printer;
+                    var config = qz.configs.create(printer);
+                    var fullCommand = "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00";
+                    var printData = [{ type: 'raw', format: 'plain', data: fullCommand }];
+                    return qz.print(config, printData);
+                });
             }
         })
         .then(function() {
@@ -917,7 +927,7 @@ function doQZPrint(reference, btn, originalText) {
         })
         .catch(function(err) {
             console.error(err);
-            showNotification('Erreur impression', 'error');
+            showNotification('Erreur impression : QZ Tray non connecté, lancez-le sur le PC', 'error');
         })
         .finally(function() {
             btn.innerHTML = originalText;

@@ -1002,73 +1002,69 @@
             window.location.href = redirectUrl;
         }
 
-        function printReceipt() {
-            if (!lastReference) return;
-            document.getElementById('loading').classList.add('active');
+        function ensureQZ() {
+            if (qzReady) return Promise.resolve(true);
+            if (typeof qz === "undefined") return Promise.resolve(false);
+            return qz.websocket.connect()
+                .then(() => { qzReady = true; return true; })
+                .catch(() => { qzReady = false; return false; });
+        }
 
-            // Impression via KONEPrint (Bluetooth, USB, Serial)
-            if (KONEPrint.isSupported()) {
-                KONEPrint.printReceipt(lastReference).then(result => {
-                    document.getElementById('loading').classList.remove('active');
-                    document.getElementById('successModal').classList.remove('active');
-                    window.location.href = redirectUrl;
-                }).catch(() => {
-                    // Fallback normal
-                    doPrintFallback();
-                });
-                return;
-            }
+        function buildTicket(data) {
+            let montant = parseInt(data.montant) || 0;
+            let montantFormatted = formatNumber(montant);
+            let pw = parseInt(localStorage.getItem('printer_width')) || 58;
+            let cols = pw === 80 ? 48 : 32;
+            let line = '='.repeat(cols);
+            let sep = '-'.repeat(cols);
 
-            // QZ Tray (desktop)
+            let ticket = "";
+            ticket += line + "\n";
+            ticket += "\x1D\x21\x30" + "       KONE SERVICES       \n";
+            ticket += "\x1D\x21\x10" + "    Services Transfert     \n";
+            ticket += "\x1D\x21\x00" + "     Tel: 76 89 77 31      \n";
+            ticket += line + "\n";
+            ticket += "\x1B\x45\x01" + "AGENT : " + (data.operateur || '-') + "\x1B\x45\x00\n";
+            ticket += sep + "\n";
+            ticket += "TYPE : " + (data.type || '-').toUpperCase() + "\n";
+            ticket += "OPERATEUR : " + (data.operateur_money || '-') + "\n";
+            ticket += sep + "\n";
+            ticket += "CLIENT : " + (data.client || '-') + "\n";
+            ticket += sep + "\n";
+            ticket += "\x1D\x21\x10\x1B\x45\x01" + "MONTANT : " + montantFormatted + " FCFA\n" + "\x1D\x21\x00\x1B\x45\x00";
+            ticket += sep + "\n";
+            ticket += "REF : " + (data.reference || '-') + "\n";
+            ticket += "DATE : " + (data.date || '-') + " " + (data.heure || '') + "\n";
+            ticket += sep + "\n";
+            ticket += "         MERCI POUR VOTRE CONFIANCE            \n";
+            ticket += line + "\n";
+            return ticket;
+        }
+
+        function doQZRawPrint() {
             fetch(`/impression-recu/${lastReference}/?format=json`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error('Reçu indisponible');
+                    return response.json();
+                })
                 .then(data => {
-                    if (qzReady && data) {
-                        return qz.printers.find().then(printers => {
-                            if (!printers || printers.length === 0) throw new Error('Aucune imprimante');
-                            let savedPrinter = localStorage.getItem('selected_printer');
-                            let printer = printers.find(p => p === savedPrinter) || printers[0];
-                            let config = qz.configs.create(printer);
-
-                            let montant = parseInt(data.montant) || 0;
-                            let montantFormatted = formatNumber(montant);
-                            let pw = parseInt(localStorage.getItem('printer_width')) || 58;
-                            let cols = pw === 80 ? 48 : 32;
-                            let line = '='.repeat(cols);
-                            let sep = '-'.repeat(cols);
-
-                            let ticket = "";
-                            ticket += line + "\n";
-                            ticket += "\x1D\x21\x30" + "       KONE SERVICES       \n";
-                            ticket += "\x1D\x21\x10" + "    Services Transfert     \n";
-                            ticket += "\x1D\x21\x00" + "     Tel: 76 89 77 31      \n";
-                            ticket += line + "\n";
-                            ticket += "\x1B\x45\x01" + "AGENT : " + (data.operateur || '-') + "\x1B\x45\x00\n";
-                            ticket += sep + "\n";
-                            ticket += "TYPE : " + (data.type || '-').toUpperCase() + "\n";
-                            ticket += "OPERATEUR : " + (data.operateur_money || '-') + "\n";
-                            ticket += sep + "\n";
-                            ticket += "CLIENT : " + (data.client || '-') + "\n";
-                            ticket += sep + "\n";
-                            ticket += "\x1D\x21\x10\x1B\x45\x01" + "MONTANT : " + montantFormatted + " FCFA\n" + "\x1D\x21\x00\x1B\x45\x00";
-                            ticket += sep + "\n";
-                            ticket += "REF : " + (data.reference || '-') + "\n";
-                            ticket += "DATE : " + (data.date || '-') + " " + (data.heure || '') + "\n";
-                            ticket += sep + "\n";
-                            ticket += "         MERCI POUR VOTRE CONFIANCE            \n";
-                            ticket += line + "\n";
-
-                            let printData = [{
-                                type: 'raw',
-                                format: 'plain',
-                                data: "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00"
-                            }];
-                            return qz.print(config, printData);
-                        });
-                    } else {
-                        doPrintFallback();
-                        return Promise.resolve();
-                    }
+                    if (!data) throw new Error('Reçu indisponible');
+                    return ensureQZ().then(ok => {
+                        if (!ok) throw new Error('QZ Tray non connecté');
+                        return qz.printers.find();
+                    }).then(printers => {
+                        if (!printers || printers.length === 0) throw new Error('Aucune imprimante');
+                        let savedPrinter = localStorage.getItem('selected_printer');
+                        let printer = printers.find(p => p === savedPrinter) || printers[0];
+                        let config = qz.configs.create(printer);
+                        let ticket = buildTicket(data);
+                        let printData = [{
+                            type: 'raw',
+                            format: 'plain',
+                            data: "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00"
+                        }];
+                        return qz.print(config, printData);
+                    });
                 })
                 .then(() => {
                     document.getElementById('loading').classList.remove('active');
@@ -1077,24 +1073,29 @@
                 })
                 .catch(err => {
                     console.error(err);
-                    doPrintFallback();
+                    document.getElementById('loading').classList.remove('active');
+                    alert('Impression directe impossible : ' + (err.message || 'Erreur QZ') + '. Lancez QZ Tray sur le PC puis réessayez.');
                 });
         }
 
-        function doPrintFallback() {
-            document.getElementById('loading').classList.remove('active');
+        function printReceipt() {
             if (!lastReference) return;
-            let printWindow = window.open(`/impression-recu/${lastReference}/`, '_blank');
-            if (printWindow) {
-                printWindow.onload = function() {
-                    printWindow.print();
-                    setTimeout(() => printWindow.close(), 1000);
-                };
+            document.getElementById('loading').classList.add('active');
+
+            // Impression Bluetooth/USB/Serie (KONEPrint)
+            if (typeof KONEPrint !== 'undefined' && KONEPrint.isSupported()) {
+                KONEPrint.printReceipt(lastReference).then(result => {
+                    document.getElementById('loading').classList.remove('active');
+                    document.getElementById('successModal').classList.remove('active');
+                    window.location.href = redirectUrl;
+                }).catch(() => {
+                    doQZRawPrint();
+                });
+                return;
             }
-            setTimeout(() => {
-                document.getElementById('successModal').classList.remove('active');
-                window.location.href = redirectUrl;
-            }, 2000);
+
+            // QZ Tray (desktop) — texte brut direct, sans aperçu
+            doQZRawPrint();
         }
 
         // Impression Bluetooth via bouton dédié
