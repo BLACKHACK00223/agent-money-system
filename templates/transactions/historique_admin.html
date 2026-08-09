@@ -817,7 +817,10 @@ function selectRealPrinter(printerName) {
 }
 
 function refreshPrinters() {
-    loadRealPrinters();
+    if (!qzReady) {
+        initQZ();
+    }
+    setTimeout(loadRealPrinters, 600);
 }
 
 function openPrinterModal() { 
