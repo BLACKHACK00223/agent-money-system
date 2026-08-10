@@ -102,8 +102,9 @@ const KONEPrint = (function() {
         lines.push(center(dash));
         if (data.montant) {
             lines.push('\x1B\x61\x01');
-            lines.push('\x1B\x21\x30');
+            lines.push('\x1B\x21\x10\x1B\x45\x01');
             lines.push(center(data.montant + ' FCFA'));
+            lines.push('\x1B\x45\x00');
             lines.push('\x1B\x21\x00');
             lines.push(center(dash));
         }
