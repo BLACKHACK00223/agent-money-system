@@ -80,7 +80,7 @@ const KONEPrint = (function() {
         lines.push(center('KONE SERVICES'));
         lines.push('\x1B\x21\x00');
         lines.push(center('Services Transfert'));
-        lines.push(center('Tel: 73 32 64 00'));
+        lines.push(center('Tel: 76 89 77 31'));
         lines.push(center(sep));
 
         // Type
