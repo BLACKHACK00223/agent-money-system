@@ -1,0 +1,54 @@
+# QZ Tray — Approbation permanente du site KONE (méthode override.crt)
+
+Ce dossier contient tout ce qu'il faut pour que QZ Tray **ne demande plus jamais « Allow »**
+lors des impressions depuis `kone-service.saheltech.tech`.
+
+## La méthode (officielle QZ Tray, version 2.1+)
+
+QZ Tray lit un fichier **`override.crt`** dans son dossier d'installation.
+S'il existe, le certificat qu'il contient devient la **racine de confiance** :
+le site qui se signe avec la clé privée correspondante est **automatiquement approuvé**,
+sans aucune popup.
+
+> Source officielle : https://qz.io/docs/signing → « To override the Trusted Root certificate:
+> Provide a file called `override.crt` (e.g. `C:\Program Files\QZ Tray\override.crt`) »
+
+## Installation (1 clic, sur le PC où QZ Tray est installé)
+
+1. Copiez le dossier `provision-qz` sur le PC d'impression (clé USB ou transfert).
+2. Clic droit sur **`installer.bat`** → **Exécuter en tant qu'administrateur**.
+3. Le script : copie `digital-certificate.txt` → `C:\Program Files\QZ Tray\override.crt`
+   (ou `Program Files (x86)`) et redémarre QZ Tray.
+
+## Si la popup « Allow / Remember this decision » apparaît quand même (1 seule fois)
+
+Cliquez **Allow** et **cochez « Remember this decision »** — QZ la mémorise ensuite
+définitivement dans `%APPDATA%\qz\allowed.dat`.
+
+## Vérifications
+
+- Ouvrez l'Explorateur → `C:\Program Files\QZ Tray\` → le fichier `override.crt` doit exister.
+- Vérifiez le contenu : il doit commencer par `-----BEGIN CERTIFICATE-----`.
+- Après le redémarrage, QZ Tray ne doit **plus** afficher de popup d'autorisation.
+
+## Installation manuelle (si le script échoue)
+
+1. Trouvez le dossier d'installation de QZ Tray :
+   clic droit sur l'icône QZ Tray (barre des tâches) → **Diagnostics** → **App Folder**.
+2. Copiez manuellement `digital-certificate.txt` dans ce dossier en le renommant **`override.crt`**.
+3. Quittez QZ Tray (icône → Quit) puis relancez-le.
+
+## Si le certificat devait changer un jour
+
+Refaites la même opération : le fichier `override.crt` écrasé puis QZ Tray redémarré.
+La clé privée correspondante est `private-key.pem` (générée en même temps que le certificat,
+stockée côté serveur pour la signature).
+
+## RÈGLE IMPORTANTE
+
+Ne **régénérez jamais** le certificat `digital-certificate.txt` sans mettre à jour
+en même temps :
+- la clé privée `certs/private-key.pem` (signature côté serveur),
+- votre variable `QZ_PRIVATE_KEY` sur Railway,
+- le fichier `override.crt` sur chaque PC d'agent.
+Toute incohérence entre ces éléments fera réapparaître le popup ou bloquera l'impression.

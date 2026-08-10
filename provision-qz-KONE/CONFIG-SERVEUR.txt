@@ -1,0 +1,44 @@
+# CONFIGURATION SERVEUR (Coolify) — À faire UNE fois
+
+Le kit du dossier s'occupe du PC d'impression (override.crt).
+Pour que la signature fonctionne, le serveur doit AUSSI être configuré.
+
+## 1. Le site doit servir le BON certificat
+
+Le fichier `digital-certificate.txt` de ce dossier doit être identique à celui servi par :
+    https://kone-service.saheltech.tech/static/certs/digital-certificate.txt
+
+S'il diffère :
+1. Remplacez `static/certs/digital-certificate.txt` dans le code source
+   par le certificat de CE dossier.
+2. Poussez sur GitHub (git add/commit/push).
+3. Sur Coolify (https://coolify.saheltech.tech/login) → votre application
+   `kone-service` → bouton **Deploy / Redeploy**.
+4. Vérifiez : `https://kone-service.saheltech.tech/static/certs/digital-certificate.txt`
+   doit commencer par `-----BEGIN CERTIFICATE-----`.
+
+## 2. La clé privée de signature
+
+`private-key.pem` (dans CE dossier) est la clé privée correspondant au certificat.
+Le serveur l'utilise pour signer (`/sign-message`). Deux possibilités :
+
+- **A) Variable d'environnement (recommandé) :**
+  Sur Coolify → Variables → ajouter :
+      QZ_PRIVATE_KEY = <contenu complet de private-key.pem>
+  Le code (views.py → sign_message) la lit automatiquement.
+
+- **B) Fichier sur le serveur :**
+  Le fichier `certs/private-key.pem` doit exister dans le dépôt déployé
+  (il est actuellement suivi par git).
+
+## 3. Vérification finale
+
+Ouvrez dans le navigateur :
+    https://kone-service.saheltech.tech/sign-message?request=test
+→ doit renvoyer un long texte base64 (signature), PAS une réponse vide.
+
+## RÈGLE ABSOLUE
+
+Ne régénérez JAMAIS `digital-certificate.txt` / `private-key.pem` sans mettre à jour
+en même temps : override.crt sur chaque PC, la variable QZ_PRIVATE_KEY, et le fichier
+static/certs du site. Tout écart = popup "Allow" ou impression bloquée.

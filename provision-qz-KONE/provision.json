@@ -1,0 +1,7 @@
+[
+  {
+    "description": "Pre-approuve le certificat QZ de kone-service.saheltech.tech (plus de popup Allow)",
+    "type": "cert",
+    "data": "digital-certificate.txt"
+  }
+]
