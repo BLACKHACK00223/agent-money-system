@@ -938,7 +938,7 @@
                 </div>
                 <div class="actions-row">
                     <button class="card-btn card-btn-profile" onclick="window.location.href='{% url 'detail_assistant' assistant.id %}'">👤 Profil</button>
-                    <button class="card-btn card-btn-edit" onclick="openEditAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}', '{{ assistant.telephone }}', '{{ assistant.email|default:''|escapejs }}', {{ assistant.est_actif|lower }})">✏️ Modifier</button>
+                    <button class="card-btn card-btn-edit" onclick="openEditAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}', '{{ assistant.telephone }}', '{{ assistant.user.username|escapejs }}', '{{ assistant.email|default:''|escapejs }}', {{ assistant.est_actif|lower }})">✏️ Modifier</button>
                     <button class="card-btn card-btn-password" onclick="openPasswordAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}')">🔑 Mot de passe</button>
                 </div>
             </div>
@@ -971,7 +971,7 @@
                         <td>
                             <div class="table-actions">
                                 <button class="table-btn" style="background:var(--primary-light);color:var(--primary);" onclick="window.location.href='{% url 'detail_assistant' assistant.id %}'">Profil</button>
-                                <button class="table-btn" style="background:var(--warning-light);color:var(--warning);" onclick="openEditAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}', '{{ assistant.telephone }}', '{{ assistant.email|default:''|escapejs }}', {{ assistant.est_actif|lower }})">Modifier</button>
+                                <button class="table-btn" style="background:var(--warning-light);color:var(--warning);" onclick="openEditAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}', '{{ assistant.telephone }}', '{{ assistant.user.username|escapejs }}', '{{ assistant.email|default:''|escapejs }}', {{ assistant.est_actif|lower }})">Modifier</button>
                                 <button class="table-btn" style="background:#e0e7ff;color:#4f46e5;" onclick="openPasswordAssistantModal({{ assistant.id }}, '{{ assistant.nom|escapejs }}')">Mot de passe</button>
                             </div>
                         </td>
@@ -1304,12 +1304,12 @@ function openAddAssistantModal() {
     document.getElementById('assistantModal').style.display = 'flex';
 }
 
-function openEditAssistantModal(id, nom, tel, email, actif) {
+function openEditAssistantModal(id, nom, tel, username, email, actif) {
     document.getElementById('assistantModalTitle').innerText = "Modifier l'assistant";
     document.getElementById('assistant_id').value = id;
     document.getElementById('assistant_nom').value = nom;
     document.getElementById('assistant_telephone').value = tel;
-    document.getElementById('assistant_username').value = '';
+    document.getElementById('assistant_username').value = username;
     document.getElementById('assistant_email').value = email;
     document.getElementById('assistant_actif').value = actif ? 'true' : 'false';
     document.getElementById('assistant-password-group').style.display = 'none';

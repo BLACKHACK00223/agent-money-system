@@ -3296,6 +3296,7 @@ def ajouter_assistant(request):
         return redirect('login')
     
     if request.method == 'POST':
+        assistant_id = request.POST.get('assistant_id')
         nom = request.POST.get('nom')
         telephone = request.POST.get('telephone')
         email = request.POST.get('email', '')
@@ -3303,7 +3304,41 @@ def ajouter_assistant(request):
         password = request.POST.get('password')
         est_actif = request.POST.get('est_actif') == 'true'
         
-        if not nom or not telephone or not username or not password:
+        if not nom or not telephone:
+            messages.error(request, 'Le nom et le téléphone sont obligatoires.')
+            return redirect('gestion_agents')  # ← Redirige vers gestion_agents
+        
+        if assistant_id:
+            # ===== Modification d'un assistant existant =====
+            try:
+                assistant = Assistant.objects.get(id=assistant_id, admin=admin)
+            except Assistant.DoesNotExist:
+                messages.error(request, 'Assistant non trouvé.')
+                return redirect('gestion_agents')
+            
+            assistant.nom = nom
+            assistant.telephone = telephone
+            assistant.email = email
+            assistant.est_actif = est_actif
+            assistant.save()
+            
+            # Identifiant et mot de passe mis à jour si fournis
+            user = assistant.user
+            if username and username != user.username:
+                if User.objects.filter(username=username).exclude(id=user.id).exists():
+                    messages.error(request, f"Le nom d'utilisateur '{username}' existe déjà.")
+                    return redirect('gestion_agents')
+                user.username = username
+            if password:
+                user.set_password(password)
+            user.email = email
+            user.save()
+            
+            messages.success(request, f'✅ Assistant "{nom}" modifié avec succès. Identifiant: {user.username}')
+            return redirect('gestion_agents')
+        
+        # ===== Création d'un nouvel assistant =====
+        if not username or not password:
             messages.error(request, 'Le nom, le téléphone, l\'identifiant et le mot de passe sont obligatoires.')
             return redirect('gestion_agents')  # ← Redirige vers gestion_agents
         
