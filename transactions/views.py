@@ -6389,7 +6389,7 @@ def generer_facture_pdf(request, facture_id):
     elements.append(header_table1)
     elements.append(Spacer(1, 5))
     
-    header_row2 = [[Paragraph("✉ contact@koneservices.com", style_small), Paragraph(f"TYPE : {facture.type_facture}", style_small_right)]]
+    header_row2 = [[Paragraph("✉ koneorange20@gmail.com", style_small), Paragraph(f"TYPE : {facture.type_facture}", style_small_right)]]
     header_table2 = Table(header_row2, colWidths=[8.5*cm, 8.5*cm])
     header_table2.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     elements.append(header_table2)
@@ -6401,7 +6401,7 @@ def generer_facture_pdf(request, facture_id):
     elements.append(header_table3)
     elements.append(Spacer(1, 3))
     
-    header_row4 = [[Paragraph("📞 +223 76 12 34 56", style_small), Paragraph(f"EMISSION : {facture.date_emission.strftime('%d/%m/%Y')}", style_small_right)]]
+    header_row4 = [[Paragraph("📞 +223 76 89 77 31", style_small), Paragraph(f"EMISSION : {facture.date_emission.strftime('%d/%m/%Y')}", style_small_right)]]
     header_table4 = Table(header_row4, colWidths=[8.5*cm, 8.5*cm])
     header_table4.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
     elements.append(header_table4)
@@ -6644,8 +6644,8 @@ def generer_facture_80mm(request, facture_id):
     # ==================== ENTÊTE ====================
     elements.append(Paragraph("🏦 KONE SERVICES ", style_logo))
     elements.append(Paragraph("• Solutions Financières •", style_soustitre))
-    elements.append(Paragraph("Tel: +223 76 12 34 56", style_soustitre))
-    elements.append(Paragraph("Email: contact@entreprise.com", style_soustitre))
+    elements.append(Paragraph("Tel: +223 76 89 77 31", style_soustitre))
+    elements.append(Paragraph("Email: koneorange20@gmail.com", style_soustitre))
     elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#0f766e'), spaceAfter=4, spaceBefore=4))
     
     # ==================== TYPE DE DOCUMENT ====================
