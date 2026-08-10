@@ -1426,6 +1426,34 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('agents-table-view').classList.remove('active');
     document.getElementById('assistants-cards-view').style.display = 'grid';
     document.getElementById('assistants-table-view').classList.remove('active');
+
+    // Envoi AJAX des formulaires agent/assistant (rapide, avec retour visuel)
+    ['agentForm', 'assistantForm'].forEach(function(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = form.querySelector('.btn-submit');
+            const original = btn.innerHTML;
+            btn.disabled = true;
+            btn.textContent = '⏳ Enregistrement...';
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function(resp) {
+                if (resp.ok) {
+                    window.location.reload();
+                } else {
+                    throw new Error('Erreur serveur (' + resp.status + ')');
+                }
+            }).catch(function(err) {
+                btn.disabled = false;
+                btn.innerHTML = original;
+                alert('Erreur : ' + err.message + '. Réessayez.');
+            });
+        });
+    });
 });
 </script>
 {% endblock %}
