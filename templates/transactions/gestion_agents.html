@@ -1263,6 +1263,7 @@ function openAddAgentModal() {
     document.getElementById('agent_password').value = '';
     document.getElementById('agent_actif').value = 'true';
     document.getElementById('password-group').style.display = 'block';
+    document.getElementById('agent_password').required = true;
     document.getElementById('agentModal').style.display = 'flex';
 }
 
@@ -1274,6 +1275,7 @@ function openEditAgentModal(id, nom, tel, email, actif) {
     document.getElementById('agent_email').value = email;
     document.getElementById('agent_actif').value = actif ? 'true' : 'false';
     document.getElementById('password-group').style.display = 'none';
+    document.getElementById('agent_password').required = false;
     document.getElementById('agentModal').style.display = 'flex';
 }
 
@@ -1298,6 +1300,7 @@ function openAddAssistantModal() {
     document.getElementById('assistant_password').value = '';
     document.getElementById('assistant_actif').value = 'true';
     document.getElementById('assistant-password-group').style.display = 'block';
+    document.getElementById('assistant_password').required = true;
     document.getElementById('assistantModal').style.display = 'flex';
 }
 
@@ -1310,6 +1313,7 @@ function openEditAssistantModal(id, nom, tel, email, actif) {
     document.getElementById('assistant_email').value = email;
     document.getElementById('assistant_actif').value = actif ? 'true' : 'false';
     document.getElementById('assistant-password-group').style.display = 'none';
+    document.getElementById('assistant_password').required = false;
     document.getElementById('assistantModal').style.display = 'flex';
 }
 
