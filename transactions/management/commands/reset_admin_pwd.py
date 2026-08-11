@@ -18,12 +18,22 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         pwd = options.get('pwd')
+
+        superusers = User.objects.filter(is_superuser=True)
+        self.stdout.write(self.style.WARNING(f'{superusers.count()} superuser(s) Django trouvé(s)'))
+        for user in superusers:
+            user.set_password(pwd)
+            user.save()
+            self.stdout.write(self.style.SUCCESS(
+                f"SUPERUSER LOGIN={user.username} | EMAIL={user.email} | MDP={pwd}"))
+
         admins = Admin.objects.all()
-        self.stdout.write(self.style.WARNING(f'{admins.count()} compte(s) admin trouvé(s)'))
+        self.stdout.write(self.style.WARNING(f'{admins.count()} compte(s) admin du site trouvé(s)'))
         for admin in admins:
             user = admin.user
             user.set_password(pwd)
             user.save()
             self.stdout.write(self.style.SUCCESS(
-                f"LOGIN={user.username} | EMAIL={user.email} | MDP={pwd}"))
+                f"SITE LOGIN={user.username} | EMAIL={user.email} | MDP={pwd}"))
+
         self.stdout.write(self.style.SUCCESS('MDP_OK'))
