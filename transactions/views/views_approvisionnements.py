@@ -214,6 +214,8 @@ from django.contrib.auth.decorators import login_required
 
 from decimal import Decimal
 
+@login_required
+@require_http_methods(["POST"])
 def demander_approvisionnement_api(request):
     """
     API pour les demandes d'approvisionnement (AJAX seulement)
@@ -299,6 +301,7 @@ def demander_approvisionnement_api(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+@login_required
 def demander_approvisionnement(request):
     """
     L'AGENT fait une demande d'approvisionnement
@@ -444,6 +447,7 @@ def demander_approvisionnement(request):
     }
     return render(request, 'transactions/demande_approvisionnement.html', context)
 
+@login_required
 def valider_demande(request, demande_id):
     """
     L'ADMIN valide ou refuse une demande d'approvisionnement
@@ -494,6 +498,7 @@ def valider_demande(request, demande_id):
     }
     return render(request, 'transactions/valider_demande.html', context)
 
+@login_required
 def historique_demandes_agent(request):
     """
     Historique des demandes d'approvisionnement ET des opérations de caisse
@@ -649,6 +654,7 @@ def historique_demandes_agent(request):
     }
     return render(request, 'transactions/historique_demandes.html', context)
 
+@login_required
 def traiter_demande_assistant(request, demande_id):
     """
     L'ASSISTANT traite (valide ou refuse) une demande d'approvisionnement

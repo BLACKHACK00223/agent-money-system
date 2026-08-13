@@ -214,6 +214,7 @@ from django.contrib.auth.decorators import login_required
 
 from decimal import Decimal
 
+@login_required
 def api_analyse_stats(request):
     """
     API pour les statistiques d'analyse

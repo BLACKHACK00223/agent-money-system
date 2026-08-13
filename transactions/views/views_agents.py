@@ -216,6 +216,7 @@ from decimal import Decimal
 
 from .views_exports import export_transactions
 
+@login_required
 def gestion_agents(request):
     """
     Page de gestion des agents ET assistants (vue unifiée)
@@ -249,6 +250,7 @@ def gestion_agents(request):
     }
     return render(request, 'transactions/gestion_agents.html', context)
 
+@login_required
 def ajouter_agent(request):
     """
     Ajouter ou modifier un agent
@@ -326,6 +328,7 @@ def ajouter_agent(request):
     
     return redirect('gestion_agents')
 
+@login_required
 def modifier_mot_de_passe_agent(request, user_id):
     if request.method == 'POST':
         nouveau_password = request.POST.get('nouveau_password')
@@ -359,6 +362,7 @@ def modifier_mot_de_passe_agent(request, user_id):
     
     return redirect('gestion_agents')
 
+@login_required
 def modifier_caisse(request):
     """Modifier la caisse d'un agent"""
     if request.method == 'POST':
@@ -404,6 +408,7 @@ def modifier_caisse(request):
     
     return redirect('gestion_agents')
 
+@login_required
 def api_agent_caisse(request, agent_id):
     """
     API pour récupérer les soldes de la caisse d'un agent
@@ -428,6 +433,7 @@ def api_agent_caisse(request, agent_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+@login_required
 def supprimer_agent(request):
     """
     Supprimer un agent (désactivation ou suppression définitive)
@@ -462,6 +468,7 @@ def supprimer_agent(request):
     
     return redirect('gestion_agents')
 
+@login_required
 def activer_agent(request, agent_id):
     """
     Réactiver un agent désactivé
@@ -482,6 +489,7 @@ def activer_agent(request, agent_id):
     
     return redirect('gestion_agents')
 
+@login_required
 def detail_agent(request, agent_id):
     """
     Page dédiée à un agent avec tous ses détails
@@ -700,6 +708,7 @@ def detail_agent(request, agent_id):
     }
     return render(request, 'transactions/detail_agent.html', context)
 
+@login_required
 def api_user_password(request, user_id):
     """API pour récupérer le mot de passe d'un utilisateur"""
     try:

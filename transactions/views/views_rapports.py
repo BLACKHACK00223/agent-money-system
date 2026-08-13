@@ -214,6 +214,7 @@ from django.contrib.auth.decorators import login_required
 
 from decimal import Decimal
 
+@login_required
 def rapports_admin(request):
     """Page principale des rapports et gestion"""
     try:
@@ -622,6 +623,7 @@ def rapports_admin(request):
     }
     return render(request, 'transactions/rapports_admin.html', context)
 
+@login_required
 def api_historique_operations(request):
     """API pour recuperer l'historique des operations"""
     from django.core.paginator import Paginator
@@ -701,6 +703,7 @@ def api_historique_operations(request):
         'total_decaissements': f"{total_decaissements:,.0f}"
     })
 
+@login_required
 def api_totaux_operations(request):
     """API pour recuperer les totaux d'encaissements et decaissements"""
     from django.db.models import Sum
@@ -753,6 +756,7 @@ def api_totaux_operations(request):
         'total_decaissements': total_decaissements
     })
 
+@login_required
 def generer_rapport_admin(request):
     """
     RAPPORT ADMINISTRATEUR - Version Finale

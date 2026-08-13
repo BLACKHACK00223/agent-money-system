@@ -214,6 +214,7 @@ from django.contrib.auth.decorators import login_required
 
 from decimal import Decimal
 
+@login_required
 def creer_facture(request):
     """Creer une nouvelle facture"""
     if request.method == 'POST':
@@ -257,6 +258,7 @@ def creer_facture(request):
     
     return redirect('rapports_admin')
 
+@login_required
 def api_factures(request):
     """API pour recuperer les factures"""
     factures = Facture.objects.filter(cree_par=request.user).order_by('-date_emission')
@@ -279,6 +281,7 @@ def api_factures(request):
     }
     return JsonResponse(data)
 
+@login_required
 def rechercher_client_api(request):
     """API pour rechercher un client par téléphone"""
     numero = request.GET.get('numero', '')
@@ -325,10 +328,12 @@ def rechercher_client_api(request):
     
     return JsonResponse({'success': False, 'clients': []})
 
+@login_required
 def detail_facture(request, facture_id):
     facture = get_object_or_404(Facture, id=facture_id)
     return render(request, 'transactions/detail_facture.html', {'facture': facture})
 
+@login_required
 def modifier_facture(request, facture_id):
     """Modifier une facture"""
     facture = get_object_or_404(Facture, id=facture_id)
@@ -343,6 +348,7 @@ def modifier_facture(request, facture_id):
     
     return redirect('rapports_admin')
 
+@login_required
 def enregistrer_paiement_facture(request, facture_id):
     """Enregistrer un paiement sur une facture"""
     facture = get_object_or_404(Facture, id=facture_id)
@@ -377,6 +383,7 @@ def enregistrer_paiement_facture(request, facture_id):
     
     return redirect('rapports_admin')
 
+@login_required
 def generer_facture_pdf(request, facture_id):
     """Générer une facture PDF professionnelle"""
     
@@ -549,6 +556,7 @@ def generer_facture_pdf(request, facture_id):
     doc.build(elements)
     return response
 
+@login_required
 def generer_facture_80mm(request, facture_id):
     """Générer un ticket 80mm professionnel avec QR code, détails complets et design pro"""
     from reportlab.lib.units import cm
@@ -817,6 +825,7 @@ def generer_facture_80mm(request, facture_id):
     doc.build(elements)
     return response
 
+@login_required
 def supprimer_facture(request, facture_id):
     print(f"=== Tentative de suppression de la facture {facture_id} par {request.user} ===")
     

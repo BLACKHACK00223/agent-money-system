@@ -214,6 +214,7 @@ from django.contrib.auth.decorators import login_required
 
 from decimal import Decimal
 
+@login_required
 def transaction_user(request, operateur, type_transaction):
     """
     Transaction pour l'utilisateur connecté (ADMIN, AGENT ou ASSISTANT)
@@ -391,6 +392,7 @@ def transaction_user(request, operateur, type_transaction):
     }
     return render(request, 'transactions/transaction_form.html', context)
 
+@login_required
 def impression_recu(request, transaction_id):
     """
     Vue pour l'impression des reçus
@@ -438,6 +440,7 @@ def impression_recu(request, transaction_id):
     }
     return render(request, 'transactions/recu.html', context)
 
+@login_required
 def historique_admin(request):
     """
     Historique des transactions pour l'ADMIN (toutes)
@@ -569,6 +572,8 @@ def historique_admin(request):
     }
     return render(request, 'transactions/historique_admin.html', context)
 
+@login_required
+@login_required
 def historique_agent(request):
     """
     Historique des transactions pour l'AGENT ou ASSISTANT (ses propres transactions)
@@ -661,6 +666,7 @@ def historique_agent(request):
     }
     return render(request, 'transactions/historique_agent.html', context)
 
+@login_required
 def operation_agent(request):
     """
     Opération sur agent : Admin ou Assistant peut ajouter ou retirer des fonds
@@ -791,11 +797,13 @@ def operation_agent(request):
     
     return redirect('gestion_agents')
 
+@login_required
 def historique_operations(request):
     """Page d'historique des opérations (Admin/Assistant → Agents)"""
     agents = Agent.objects.all()
     return render(request, 'transactions/historique_operations.html', {'agents': agents})
 
+@login_required
 def api_historique_agent_page(request):
     """API pour récupérer l'historique des opérations avec pagination et filtres"""
     
@@ -890,6 +898,7 @@ def api_historique_agent_page(request):
         }
     })
 
+@login_required
 def api_historique_agent(request, agent_id=None):
     """API pour récupérer l'historique des opérations sur les agents"""
     historique = HistoriqueAgent.objects.all().order_by('-date_operation')[:200]
@@ -929,6 +938,8 @@ def api_historique_agent(request, agent_id=None):
     
     return JsonResponse(data)
 
+@login_required
+@require_POST
 def ajax_calculer_frais(request):
     """
     API pour calculer les frais en temps réel (AJAX)
@@ -953,6 +964,7 @@ def ajax_calculer_frais(request):
         'total_a_payer': str(montant + frais) if type_transaction == 'depot' else str(montant)
     })
 
+@login_required
 def api_annuler_transaction(request):
     import json
     try:

@@ -214,6 +214,7 @@ from django.contrib.auth.decorators import login_required
 
 from decimal import Decimal
 
+@login_required
 def api_comptes_epargne(request):
     """API REST pour les comptes epargne"""
     from django.core.serializers import json
@@ -240,6 +241,7 @@ def api_comptes_epargne(request):
     
     return JsonResponse({'success': False, 'error': 'Method not allowed'})
 
+@login_required
 def operation_compte(request, compte_id):
     """Effectuer une operation sur un compte epargne"""
     from django.shortcuts import get_object_or_404, redirect
@@ -279,6 +281,7 @@ def operation_compte(request, compte_id):
     
     return redirect('rapports_admin')
 
+@login_required
 def get_caisse_operations(request):
     """API pour recuperer les operations de caisse"""
     from django.http import JsonResponse

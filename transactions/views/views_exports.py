@@ -415,6 +415,7 @@ def export_transactions(transactions, agent, caisse, total_entree, total_sortie,
     
     return None
 
+@login_required
 def exporter_historique_agent(request, format_type):
     """
     Exporte les transactions de l'agent avec les filtres appliqués
@@ -724,6 +725,7 @@ def exporter_historique_agent(request, format_type):
     
     return None
 
+@login_required
 def exporter_rapport_complet_agent(request, format_type):
     """
     Exporte un rapport complet: soldes, transactions, demandes

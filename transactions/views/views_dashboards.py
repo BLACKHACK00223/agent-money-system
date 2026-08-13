@@ -214,6 +214,7 @@ from django.contrib.auth.decorators import login_required
 
 from decimal import Decimal
 
+@login_required
 def dashboard_redirect(request):
     """
     Redirige vers le bon tableau de bord selon le rôle
@@ -243,6 +244,7 @@ def dashboard_redirect(request):
     messages.error(request, 'Vous n\'avez pas de profil configuré.')
     return redirect('login')
 
+@login_required
 def dashboard_admin(request):
     """
     Tableau de bord pour l'ADMIN
@@ -400,6 +402,7 @@ def dashboard_admin(request):
         messages.error(request, 'Vous n\'êtes pas configuré comme administrateur.')
         return redirect('login')
 
+@login_required
 def dashboard_agent(request):
     """
     Tableau de bord pour l'AGENT
@@ -475,6 +478,7 @@ def dashboard_agent(request):
         messages.error(request, 'Vous n\'êtes pas configuré comme agent.')
         return redirect('login')
 
+@login_required
 def dashboard_assistant(request):
     """
     Tableau de bord pour l'ASSISTANT

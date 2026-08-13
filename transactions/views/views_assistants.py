@@ -216,6 +216,7 @@ from decimal import Decimal
 
 from .views_exports import export_transactions
 
+@login_required
 def api_assistant_infos(request, assistant_id):
     """API pour récupérer les informations d'un assistant"""
     from transactions.models import Assistant
@@ -238,6 +239,7 @@ def api_assistant_infos(request, assistant_id):
             'error': str(e)
         })
 
+@login_required
 def gestion_assistants(request):
     """Page de gestion des assistants"""
     try:
@@ -258,6 +260,7 @@ def gestion_assistants(request):
     }
     return render(request, 'transactions/gestion_assistants.html', context)
 
+@login_required
 def ajouter_assistant(request):
     """Ajouter un assistant"""
     try:
@@ -338,6 +341,7 @@ def ajouter_assistant(request):
     
     return redirect('gestion_agents')
 
+@login_required
 def toggle_assistant_status(request, assistant_id):
     """Activer/Désactiver un assistant"""
     try:
@@ -354,6 +358,7 @@ def toggle_assistant_status(request, assistant_id):
     messages.success(request, f'✅ Assistant "{assistant.nom}" {status}.')
     return redirect('gestion_assistants')
 
+@login_required
 def modifier_assistant(request, assistant_id):
     """Modifier un assistant"""
     try:
@@ -376,6 +381,7 @@ def modifier_assistant(request, assistant_id):
     
     return redirect('gestion_assistants')
 
+@login_required
 def activer_assistant(request, assistant_id):
     """Activer/Désactiver un assistant"""
     try:
@@ -392,6 +398,7 @@ def activer_assistant(request, assistant_id):
     messages.success(request, f'✅ Assistant "{assistant.nom}" {status}.')
     return redirect('gestion_assistants')
 
+@login_required
 def supprimer_assistant(request, assistant_id):
     """Supprimer un assistant"""
     try:
@@ -410,6 +417,7 @@ def supprimer_assistant(request, assistant_id):
     messages.success(request, f'✅ Assistant "{nom}" supprimé définitivement.')
     return redirect('gestion_assistants')
 
+@login_required
 def detail_assistant(request, assistant_id):
     """Page dédiée à un assistant avec ses demandes reçues"""
     try:
@@ -634,6 +642,7 @@ def detail_assistant(request, assistant_id):
     }
     return render(request, 'transactions/detail_assistant.html', context)
 
+@login_required
 def modifier_mot_de_passe_assistant(request, assistant_id):
     """Modifier le mot de passe d'un assistant"""
     try:

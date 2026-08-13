@@ -214,6 +214,7 @@ from django.contrib.auth.decorators import login_required
 
 from decimal import Decimal
 
+@login_required
 def ajouter_dette(request):
     """Ajouter une nouvelle dette - SAISIE LIBRE DU NOM"""
     if request.method == 'POST':
@@ -290,6 +291,7 @@ def ajouter_dette(request):
     
     return redirect('rapports_admin')
 
+@login_required
 def modifier_dette(request, dette_id):
     """Modifier une dette"""
     dette = get_object_or_404(Dette, id=dette_id)
@@ -325,6 +327,7 @@ def modifier_dette(request, dette_id):
     
     return redirect('rapports_admin')
 
+@login_required
 def supprimer_dette(request, dette_id):
     """Supprimer une dette"""
     dette = get_object_or_404(Dette, id=dette_id)
@@ -335,6 +338,7 @@ def supprimer_dette(request, dette_id):
     
     return redirect('rapports_admin')
 
+@login_required
 def enregistrer_remboursement_dette(request, dette_id):
     """Enregistrer un remboursement et AJOUTER à la caisse"""
     dette = get_object_or_404(Dette, id=dette_id)
@@ -493,6 +497,7 @@ def generer_recu_pdf(remboursement):
     buffer.seek(0)
     return buffer
 
+@login_required
 def download_recu(request, remboursement_id):
     """Télécharger le reçu PDF"""
     remboursement = get_object_or_404(RemboursementDette, id=remboursement_id)
@@ -512,6 +517,7 @@ def download_recu(request, remboursement_id):
         content_type='application/pdf'
     )
 
+@login_required
 def api_dettes(request):
     """API REST pour les dettes"""
     if request.method == 'GET':
@@ -553,6 +559,7 @@ def api_dettes(request):
     
     return JsonResponse({'success': False, 'error': 'Method not allowed'})
 
+@login_required
 def api_dette_detail(request, dette_id):
     """API REST pour le détail d'une dette"""
     if request.method == 'GET':
@@ -587,6 +594,7 @@ def api_dette_detail(request, dette_id):
     
     return JsonResponse({'success': False, 'error': 'Method not allowed'})
 
+@login_required
 def api_chercher_debiteurs(request):
     """API pour rechercher des débiteurs par nom (autocomplétion)"""
     if request.method == 'GET':
