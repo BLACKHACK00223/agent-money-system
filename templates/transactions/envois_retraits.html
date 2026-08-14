@@ -52,6 +52,18 @@
         .mb-promote { background: var(--secondary); }
         .mb-print { background: var(--gray-700); }
         .mb-wa { background: var(--success); }
+        .er-steps { display: flex; align-items: center; gap: 8px; margin-bottom: 22px; }
+        .er-step { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--gray-400); min-width: 62px; }
+        .er-step span { width: 30px; height: 30px; border-radius: 50%; background: var(--gray-100); color: var(--gray-500); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; transition: all 0.2s; }
+        .er-step.active span { background: var(--primary); color: #fff; }
+        .er-step.active { color: var(--primary); }
+        .er-step.done span { background: var(--success-light); color: var(--success); }
+        .er-step.done { color: var(--success); }
+        .er-step-line { flex: 1; height: 2px; background: var(--gray-200); }
+        .er-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; align-items: center; }
+        .er-nav .er-send { margin-top: 0; width: auto; flex: 1; padding: 12px; }
+        .er-prev { border: 2px solid var(--gray-200); background: #fff; color: var(--gray-600); border-radius: 12px; padding: 12px 16px; font-weight: 600; font-family: inherit; cursor: pointer; }
+        .er-add { border: none; background: var(--primary); color: #fff; border-radius: 12px; padding: 11px 16px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; box-shadow: 0 3px 8px rgba(15,118,110,0.25); }
         @media (max-width: 640px) {
             .er-form { grid-template-columns: 1fr; }
             .er-choice { grid-template-columns: 1fr; }
@@ -107,61 +119,8 @@
 
     <!-- ========== NOUVELLE OPERATION ========== -->
     <div class="table-container">
-        <div class="table-header"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18" style="vertical-align:middle;margin-right:8px;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>Nouvelle opération</h3></div>
-        <div style="padding: 20px;">
-            <div class="er-choice">
-                <button type="button" class="er-big" id="btnChoiceEnvoi" onclick="erChoose('envoi')">📤 ENVOI<small>Admin → Agent</small></button>
-                <button type="button" class="er-big" id="btnChoiceRetrait" onclick="erChoose('retrait')">📥 RETRAIT<small>Admin reprend</small></button>
-            </div>
-
-            <div id="stepForm" style="display: none;">
-                <div class="er-form" style="margin-top: 18px;">
-                    <div class="er-field">
-                        <label>Type</label>
-                        <select id="typeAppro">
-                            <option value="cash">💰 Argent</option>
-                            <option value="uv">📱 UV Touchpoint</option>
-                            <option value="wave">💳 UV Wave</option>
-                        </select>
-                    </div>
-                    <div class="er-field">
-                        <label>Agent destinataire</label>
-                        <select id="agentSel">
-                            <option value="">— Choisir un agent —</option>
-                            {% for agent in agents %}
-                            <option value="{{ agent.id }}" data-telephone="{{ agent.telephone }}">{{ agent.nom }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="er-field">
-                        <label>Montant (FCFA)</label>
-                        <input type="number" id="montant" min="1000" step="1" placeholder="Minimum 1 000">
-                    </div>
-                    <div class="er-field">
-                        <label>Notes (optionnel)</label>
-                        <input type="text" id="notes" placeholder="Remarque éventuelle">
-                    </div>
-                </div>
-
-                <div class="er-recap" id="recap" style="display: none;">
-                    <h3>Récapitulatif</h3>
-                    <div class="er-row"><span>Opération</span><b id="r-op">—</b></div>
-                    <div class="er-row"><span>Agent</span><b id="r-agent">—</b></div>
-                    <div class="er-row"><span>Type</span><b id="r-type">—</b></div>
-                    <div class="er-row"><span>Montant</span><b id="r-montant">—</b></div>
-                    <div id="r-agent-lines"></div>
-                </div>
-
-                <div class="er-checks">
-                    <label class="er-check"><input type="radio" name="statut" value="entente" checked><span>🤝 Entente</span></label>
-                    <label class="er-check"><input type="radio" name="statut" value="valide"><span>✅ Valide</span></label>
-                </div>
-
-                <div class="er-msg" id="msgBox"></div>
-
-                <button type="button" class="er-send" id="btnEnvoyer" disabled>📨 Envoyer</button>
-            </div>
-        </div>
+        <div class="table-header"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18" style="vertical-align:middle;margin-right:8px;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>Nouvelle opération</h3><button type="button" class="er-add" onclick="erOpenModal()">➕ Créer une opération</button></div>
+        <div class="empty-state" style="padding: 24px; text-align: left;">Cliquez sur <b>➕ Créer une opération</b> pour ouvrir l'assistant :<br>1️⃣ Choix Envoi / Retrait → 2️⃣ Agent &amp; Montant → 3️⃣ Entente / Valide + Envoyer</div>
     </div>
 
     <!-- ========== ENTENTES ========== -->
@@ -219,6 +178,91 @@
             {% endfor %}
         </div>
     </div>
+
+    <!-- ========== MODAL NOUVELLE OPERATION (ASSISTANT) ========== -->
+    <div id="erModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header"><h3>➕ Nouvelle opération</h3></div>
+            <div class="modal-body">
+                <div class="er-steps">
+                    <div class="er-step active" id="stp1"><span>1</span>Type</div>
+                    <div class="er-step-line"></div>
+                    <div class="er-step" id="stp2"><span>2</span>Agent &amp; Montant</div>
+                    <div class="er-step-line"></div>
+                    <div class="er-step" id="stp3"><span>3</span>Statut &amp; Envoi</div>
+                </div>
+
+                <!-- ETAPE 1 : type d'operation -->
+                <div id="erStep1">
+                    <div class="er-choice">
+                        <button type="button" class="er-big" id="btnChoiceEnvoi" onclick="erChoose('envoi')">📤 ENVOI<small>Admin → Agent</small></button>
+                        <button type="button" class="er-big" id="btnChoiceRetrait" onclick="erChoose('retrait')">📥 RETRAIT<small>Admin reprend</small></button>
+                    </div>
+                </div>
+
+                <!-- ETAPE 2 : details -->
+                <div id="erStep2" style="display: none;">
+                    <div class="er-form">
+                        <div class="er-field">
+                            <label>Type</label>
+                            <select id="typeAppro">
+                                <option value="cash">💰 Argent</option>
+                                <option value="uv">📱 UV Touchpoint</option>
+                                <option value="wave">💳 UV Wave</option>
+                            </select>
+                        </div>
+                        <div class="er-field">
+                            <label>Agent destinataire</label>
+                            <select id="agentSel">
+                                <option value="">— Choisir un agent —</option>
+                                {% for agent in agents %}
+                                <option value="{{ agent.id }}" data-telephone="{{ agent.telephone }}">{{ agent.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="er-field">
+                            <label>Montant (FCFA)</label>
+                            <input type="number" id="montant" min="1000" step="1" placeholder="Minimum 1 000">
+                        </div>
+                        <div class="er-field">
+                            <label>Notes (optionnel)</label>
+                            <input type="text" id="notes" placeholder="Remarque éventuelle">
+                        </div>
+                    </div>
+                    <div class="er-recap" id="recap" style="display: none;">
+                        <h3>Récapitulatif</h3>
+                        <div class="er-row"><span>Opération</span><b id="r-op">—</b></div>
+                        <div class="er-row"><span>Agent</span><b id="r-agent">—</b></div>
+                        <div class="er-row"><span>Type</span><b id="r-type">—</b></div>
+                        <div class="er-row"><span>Montant</span><b id="r-montant">—</b></div>
+                        <div id="r-agent-lines"></div>
+                    </div>
+                </div>
+
+                <!-- ETAPE 3 : statut + envoi -->
+                <div id="erStep3" style="display: none;">
+                    <div class="er-recap" id="recap3">
+                        <h3>Confirmation</h3>
+                        <div class="er-row"><span>Opération</span><b id="r3-op">—</b></div>
+                        <div class="er-row"><span>Agent</span><b id="r3-agent">—</b></div>
+                        <div class="er-row"><span>Type</span><b id="r3-type">—</b></div>
+                        <div class="er-row"><span>Montant</span><b id="r3-montant">—</b></div>
+                        <div id="r3-lines"></div>
+                    </div>
+                    <div class="er-checks">
+                        <label class="er-check"><input type="radio" name="statut" value="entente" checked><span>🤝 Entente</span></label>
+                        <label class="er-check"><input type="radio" name="statut" value="valide"><span>✅ Valide</span></label>
+                    </div>
+                    <div class="er-msg" id="msgBox"></div>
+                </div>
+
+                <div class="er-nav">
+                    <button type="button" id="erPrev" class="er-prev" onclick="erPrev()" style="display: none;">← Précédent</button>
+                    <button type="button" id="erNext" class="er-send" onclick="erNext()">Suivant →</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -226,13 +270,48 @@
 <script src="/static/js/qz-tray.js"></script>
 <script>
         var erCurrentOp = null;
+        var erStep = 1;
+
+        function erOpenModal() {
+            erCurrentOp = null;
+            erStep = 1;
+            document.getElementById('erStep1').style.display = 'block';
+            document.getElementById('erStep2').style.display = 'none';
+            document.getElementById('erStep3').style.display = 'none';
+            document.getElementById('btnChoiceEnvoi').classList.remove('active-envoi');
+            document.getElementById('btnChoiceRetrait').classList.remove('active-retrait');
+            document.getElementById('erPrev').style.display = 'none';
+            document.getElementById('erNext').innerHTML = 'Suivant →';
+            erResetForm();
+            erUpdateSteps();
+            openModal('erModal');
+        }
+
+        function erUpdateSteps() {
+            for (var i = 1; i <= 3; i++) {
+                var s = document.getElementById('stp' + i);
+                s.classList.remove('active', 'done');
+                if (i === erStep) s.classList.add('active');
+                else if (i < erStep) s.classList.add('done');
+            }
+        }
+
+        function erGo(n) {
+            erStep = n;
+            document.getElementById('erStep1').style.display = n === 1 ? 'block' : 'none';
+            document.getElementById('erStep2').style.display = n === 2 ? 'block' : 'none';
+            document.getElementById('erStep3').style.display = n === 3 ? 'block' : 'none';
+            document.getElementById('erPrev').style.display = n > 1 ? 'block' : 'none';
+            document.getElementById('erNext').innerHTML = n === 3 ? '📨 Envoyer' : 'Suivant →';
+            erUpdateSteps();
+        }
 
         function erChoose(op) {
             erCurrentOp = op;
-            document.getElementById('stepForm').style.display = 'block';
             document.getElementById('btnChoiceEnvoi').classList.toggle('active-envoi', op === 'envoi');
             document.getElementById('btnChoiceRetrait').classList.toggle('active-retrait', op === 'retrait');
             erResetForm();
+            erGo(2);
         }
 
         function erResetForm() {
@@ -242,7 +321,6 @@
             document.getElementById('recap').style.display = 'none';
             document.getElementById('msgBox').className = 'er-msg';
             document.getElementById('msgBox').innerHTML = '';
-            document.getElementById('btnEnvoyer').disabled = true;
             var t = document.getElementById('typeAppro');
             t.value = 'cash';
             for (var i = 0; i < t.options.length; i++) {
@@ -268,25 +346,69 @@
             var montant = document.getElementById('montant');
             var agent = agentSel.options[agentSel.selectedIndex];
             var recap = document.getElementById('recap');
-            var hasAll = agentSel.value && montant.value && parseFloat(montant.value) >= 1000;
             document.getElementById('r-op').textContent = erCurrentOp === 'envoi' ? '📤 Envoi' : '📥 Retrait';
             document.getElementById('r-agent').textContent = agent && agentSel.value ? agent.textContent : '—';
             document.getElementById('r-type').textContent = typeSel.options[typeSel.selectedIndex].textContent;
             document.getElementById('r-montant').textContent = montant.value ? parseFloat(montant.value).toLocaleString('fr-FR') + ' FCFA' : '—';
-            var lines = '';
-            if (agentSel.value && montant.value) {
-                if (erCurrentOp === 'envoi') {
-                    lines = '<div class="er-row"><span>Source (Caisse admin)</span><b class="er-down">-' + parseFloat(montant.value).toLocaleString('fr-FR') + ' FCFA</b></div>';
-                    lines += '<div class="er-row"><span>Destination (Agent)</span><b class="er-up">+' + parseFloat(montant.value).toLocaleString('fr-FR') + ' FCFA</b></div>';
-                } else {
-                    lines = '<div class="er-row"><span>Source (Agent)</span><b class="er-down">-' + parseFloat(montant.value).toLocaleString('fr-FR') + ' FCFA</b></div>';
-                    lines += '<div class="er-row"><span>Destination (Caisse admin)</span><b class="er-up">+' + parseFloat(montant.value).toLocaleString('fr-FR') + ' FCFA</b></div>';
-                }
-            }
+            var lines = erMovementsHtml();
             document.getElementById('r-agent-lines').innerHTML = lines;
             recap.style.display = montant.value ? 'block' : 'none';
-            document.getElementById('btnEnvoyer').disabled = !hasAll;
         }
+
+        function erMovementsHtml() {
+            var montant = document.getElementById('montant').value;
+            var lines = '';
+            if (montant) {
+                var m = parseFloat(montant).toLocaleString('fr-FR') + ' FCFA';
+                if (erCurrentOp === 'envoi') {
+                    lines = '<div class="er-row"><span>Source (Caisse admin)</span><b class="er-down">-' + m + '</b></div>';
+                    lines += '<div class="er-row"><span>Destination (Agent)</span><b class="er-up">+' + m + '</b></div>';
+                } else {
+                    lines = '<div class="er-row"><span>Source (Agent)</span><b class="er-down">-' + m + '</b></div>';
+                    lines += '<div class="er-row"><span>Destination (Caisse admin)</span><b class="er-up">+' + m + '</b></div>';
+                }
+            }
+            return lines;
+        }
+
+        function erFillRecap3() {
+            document.getElementById('r3-op').textContent = erCurrentOp === 'envoi' ? '📤 Envoi' : '📥 Retrait';
+            var agentSel = document.getElementById('agentSel');
+            document.getElementById('r3-agent').textContent = agentSel.options[agentSel.selectedIndex].textContent;
+            var typeSel = document.getElementById('typeAppro');
+            document.getElementById('r3-type').textContent = typeSel.options[typeSel.selectedIndex].textContent;
+            var montant = document.getElementById('montant');
+            document.getElementById('r3-montant').textContent = parseFloat(montant.value).toLocaleString('fr-FR') + ' FCFA';
+            document.getElementById('r3-lines').innerHTML = erMovementsHtml();
+        }
+
+        function erShowMsg(text, isError) {
+            var msg = document.getElementById('msgBox');
+            msg.className = 'er-msg show ' + (isError ? 'error' : 'success');
+            msg.innerHTML = (isError ? '⚠ ' : '✓ ') + text;
+        }
+
+        function erNext() {
+            if (erStep === 1) { erGo(2); return; }
+            if (erStep === 2) {
+                var agentSel = document.getElementById('agentSel');
+                var montant = document.getElementById('montant');
+                if (!agentSel.value || !montant.value) {
+                    erShowMsg('Veuillez choisir un agent et saisir un montant.', true);
+                    return;
+                }
+                if (parseFloat(montant.value) < 1000) {
+                    erShowMsg('Le montant minimum est de 1 000 FCFA.', true);
+                    return;
+                }
+                erFillRecap3();
+                erGo(3);
+                return;
+            }
+            if (erStep === 3) { erSubmitOperation(); }
+        }
+
+        function erPrev() { if (erStep > 1) erGo(erStep - 1); }
 
         function erSubmitOperation() {
             if (!erCurrentOp) return;
@@ -295,18 +417,6 @@
             var montant = document.getElementById('montant');
             var notes = document.getElementById('notes');
             var statut = document.querySelector('input[name="statut"]:checked');
-            var msg = document.getElementById('msgBox');
-
-            if (!agentSel.value || !montant.value) {
-                msg.className = 'er-msg error show';
-                msg.innerHTML = '⚠ Veuillez choisir un agent et saisir un montant.';
-                return;
-            }
-            if (parseFloat(montant.value) < 1000) {
-                msg.className = 'er-msg error show';
-                msg.innerHTML = '⚠ Le montant minimum est de 1 000 FCFA.';
-                return;
-            }
 
             var data = new URLSearchParams();
             data.append('csrfmiddlewaretoken', getCSRFToken());
@@ -329,26 +439,24 @@
             .then(function (data) {
                 if (loading) loading.style.display = 'none';
                 if (data.status === 'ok') {
-                    msg.className = 'er-msg success show';
-                    msg.innerHTML = '✓ ' + data.message + ' <button type="button" class="er-mini mb-print" onclick="printReceipt(' + data.operation_id + ', this)">🖨️ Imprimer</button>';
-                    document.getElementById('btnEnvoyer').disabled = true;
-                    setTimeout(function () { location.reload(); }, 1500);
+                    erShowMsg(data.message + ' <button type="button" class="er-mini mb-print" onclick="printReceipt(' + data.operation_id + ', this)">🖨️ Imprimer</button>', false);
+                    setTimeout(function () { location.reload(); }, 2000);
                 } else {
-                    msg.className = 'er-msg error show';
-                    msg.innerHTML = '⚠ ' + data.message;
+                    erShowMsg(data.message, true);
                 }
             })
             .catch(function () {
                 if (loading) loading.style.display = 'none';
-                msg.className = 'er-msg error show';
-                msg.innerHTML = '⚠ Erreur réseau. Réessayez.';
+                erShowMsg('Erreur réseau. Réessayez.', true);
             });
         }
 
-        document.getElementById('btnEnvoyer').addEventListener('click', erSubmitOperation);
         document.getElementById('agentSel').addEventListener('change', erSelAgent);
         document.getElementById('typeAppro').addEventListener('change', erTypeChange);
         document.getElementById('montant').addEventListener('input', erMontantChange);
+        document.addEventListener('click', function (e) {
+            if (e.target === document.getElementById('erModal')) closeModal('erModal');
+        });
 
         /* ================= RECU QZ + WHATSAPP ================= */
         function erPrintFrame() {
