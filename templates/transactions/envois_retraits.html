@@ -1,0 +1,494 @@
+<!-- templates/transactions/envois_retraits.html -->
+{% load humanize %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>{{ title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root {
+            --primary: #0f766e; --primary-dark: #0d9488; --primary-darker: #0f766e;
+            --primary-light: #ccfbf1; --primary-bg: #f0fdfa;
+            --secondary: #6366f1; --secondary-dark: #4f46e5; --secondary-light: #e0e7ff;
+            --success: #059669; --success-light: #d1fae5;
+            --warning: #d97706; --warning-light: #fef3c7;
+            --danger: #dc2626; --danger-light: #fee2e2;
+            --info: #3b82f6; --info-light: #dbeafe;
+            --gray-50: #f9fafb; --gray-100: #f3f4f6; --gray-200: #e5e7eb; --gray-300: #d1d5db;
+            --gray-400: #9ca3af; --gray-500: #6b7280; --gray-600: #4b5563; --gray-700: #374151;
+            --gray-800: #1f2937; --gray-900: #111827;
+            --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08);
+            --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-full: 9999px;
+            --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 100%); color: var(--gray-900); line-height: 1.5; min-height: 100vh; }
+        .container { max-width: 960px; margin: 0 auto; padding: 16px; padding-bottom: 60px; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 4px; }
+        .topbar h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .topbar a { color: var(--gray-600); text-decoration: none; font-size: 14px; font-weight: 500; }
+        .topbar a:hover { color: var(--primary); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .stat-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm); }
+        .stat-card .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-500); }
+        .stat-card .value { font-size: 22px; font-weight: 700; color: var(--gray-900); margin-top: 4px; }
+        .stat-card .sub { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+        .stat-card.warn { border-top: 3px solid var(--warning); }
+        .stat-card.ok { border-top: 3px solid var(--success); }
+
+        .card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); margin-bottom: 18px; overflow: hidden; }
+        .card-header { padding: 16px 18px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; }
+        .card-header h2 { font-size: 15px; font-weight: 700; }
+        .card-header h2 .badge-count { background: var(--warning-light); color: var(--warning); border-radius: var(--radius-full); padding: 2px 10px; font-size: 12px; margin-left: 8px; }
+        .card-header h2 .badge-count.ok { background: var(--success-light); color: var(--success); }
+        .card-body { padding: 18px; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .form-grid .full { grid-column: 1 / -1; }
+        .field label { display: block; font-size: 12px; font-weight: 600; color: var(--gray-600); margin-bottom: 6px; }
+        .field select, .field input {
+            width: 100%; padding: 11px 12px; border: 1px solid var(--gray-300); border-radius: var(--radius-sm);
+            font-size: 14px; font-family: inherit; background: white; color: var(--gray-900); transition: border-color var(--transition-base);
+        }
+        .field select:focus, .field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,118,110,0.12); }
+
+        .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .seg label { position: relative; cursor: pointer; }
+        .seg input { position: absolute; opacity: 0; }
+        .seg span { display: block; text-align: center; padding: 11px; border: 1.5px solid var(--gray-300); border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; color: var(--gray-600); transition: all var(--transition-base); }
+        .seg input:checked + span { border-color: var(--primary); background: var(--primary-bg); color: var(--primary); }
+        .seg.retrait span { border-color: var(--secondary-light); }
+        .seg.retrait input:checked + span { border-color: var(--secondary); background: var(--secondary-light); color: var(--secondary-dark); }
+
+        .recap { margin-top: 16px; background: var(--gray-50); border: 1px dashed var(--gray-300); border-radius: var(--radius-md); padding: 14px; font-size: 13px; }
+        .recap h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-500); margin-bottom: 10px; }
+        .recap-row { display: flex; justify-content: space-between; padding: 4px 0; color: var(--gray-700); }
+        .recap-row b { color: var(--gray-900); }
+        .recap-row .up { color: var(--success); font-weight: 600; }
+        .recap-row .down { color: var(--danger); font-weight: 600; }
+
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+        .btn { border: none; border-radius: var(--radius-md); padding: 13px 14px; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; transition: transform var(--transition-base), box-shadow var(--transition-base); }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-entente { background: var(--warning); color: white; box-shadow: 0 4px 10px rgba(217,119,6,0.25); }
+        .btn-valide { background: var(--success); color: white; box-shadow: 0 4px 10px rgba(5,150,105,0.25); }
+
+        .msg { display: none; margin-top: 14px; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; }
+        .msg.show { display: block; }
+        .msg.success { background: var(--success-light); color: var(--success); }
+        .msg.error { background: var(--danger-light); color: var(--danger); }
+
+        .op-item { border-bottom: 1px solid var(--gray-100); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .op-item:last-child { border-bottom: none; }
+        .op-main { flex: 1; min-width: 180px; }
+        .op-title { font-size: 14px; font-weight: 700; }
+        .op-title .tag { display: inline-block; font-size: 11px; font-weight: 700; border-radius: var(--radius-full); padding: 2px 10px; margin-left: 6px; vertical-align: 1px; }
+        .tag.envoi { background: var(--success-light); color: var(--success); }
+        .tag.retrait { background: var(--danger-light); color: var(--danger); }
+        .tag.entente { background: var(--warning-light); color: var(--warning); }
+        .tag.valide { background: var(--info-light); color: var(--info); }
+        .op-meta { font-size: 12px; color: var(--gray-500); margin-top: 3px; }
+        .op-amount { font-size: 16px; font-weight: 700; color: var(--gray-900); text-align: right; }
+        .op-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .mini-btn { border: none; border-radius: var(--radius-sm); padding: 9px 12px; font-size: 12px; font-weight: 700; font-family: inherit; cursor: pointer; color: white; transition: filter var(--transition-base); text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+        .mini-btn:hover { filter: brightness(1.08); }
+        .mb-promote { background: var(--secondary); }
+        .mb-print { background: var(--gray-700); }
+        .mb-wa { background: var(--success); }
+        .empty-state { padding: 26px; text-align: center; color: var(--gray-500); font-size: 13px; }
+        .loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; color: white; font-weight: 700; }
+        .loading.show { display: flex; }
+        .spin { width: 36px; height: 36px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: rot 0.8s linear infinite; margin-right: 12px; }
+        @keyframes rot { to { transform: rotate(360deg); } }
+        @media (max-width: 640px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .btn-row { grid-template-columns: 1fr; }
+            .op-amount { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="topbar">
+            <a href="{% url 'dashboard_admin' %}">← Tableau de bord</a>
+            <h1>📦 Envois &amp; Retraits</h1>
+            <a href="{% url 'logout' %}" style="color: var(--danger);">Déconnexion</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card warn">
+                <div class="label">Ententes en attente</div>
+                <div class="value">{{ stats.ententes_count }}</div>
+                <div class="sub">{{ stats.ententes_montant|floatformat:0|intcomma }} FCFA</div>
+            </div>
+            <div class="stat-card ok">
+                <div class="label">Validés</div>
+                <div class="value">{{ stats.valides_count }}</div>
+                <div class="sub">{{ stats.valides_montant|floatformat:0|intcomma }} FCFA</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Envois total</div>
+                <div class="value">{{ stats.envois_count }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Retraits total</div>
+                <div class="value">{{ stats.retraits_count }}</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h2>➕ Nouvelle opération</h2></div>
+            <div class="card-body">
+                <div class="field">
+                    <label>Type d'opération</label>
+                    <div class="seg" id="segOperation">
+                        <label><input type="radio" name="type_operation" value="envoi" checked><span>📤 Envoi (Admin → Agent)</span></label>
+                        <label><input type="radio" name="type_operation" value="retrait"><span>📥 Retrait (Admin reprend)</span></label>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-top: 14px;">
+                    <div class="field">
+                        <label>Type</label>
+                        <select id="typeAppro">
+                            <option value="cash">💰 Argent</option>
+                            <option value="uv">📱 UV Touchpoint</option>
+                            <option value="wave">💳 UV Wave</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Agent destinataire</label>
+                        <select id="agentSel">
+                            <option value="">— Choisir un agent —</option>
+                            {% for agent in agents %}
+                            <option value="{{ agent.id }}" data-telephone="{{ agent.telephone }}">{{ agent.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Montant (FCFA)</label>
+                        <input type="number" id="montant" min="1000" step="1" placeholder="Minimum 1 000">
+                    </div>
+                    <div class="field">
+                        <label>Notes (optionnel)</label>
+                        <input type="text" id="notes" placeholder="Remarque éventuelle">
+                    </div>
+                </div>
+
+                <div class="recap" id="recap" style="display: none;">
+                    <h3>Récapitulatif</h3>
+                    <div class="recap-row"><span>Opération</span><b id="r-op">—</b></div>
+                    <div class="recap-row"><span>Agent</span><b id="r-agent">—</b></div>
+                    <div class="recap-row"><span>Type</span><b id="r-type">—</b></div>
+                    <div class="recap-row"><span>Montant</span><b id="r-montant">—</b></div>
+                    <div class="recap-row"><span>Votre caisse : Argent</span><b id="r-admin-cash">—</b></div>
+                    <div class="recap-row"><span>Votre caisse : UV Touchpoint</span><b id="r-admin-uv">—</b></div>
+                    <div class="recap-row"><span>Votre caisse : UV Wave</span><b id="r-admin-wave">—</b></div>
+                    <div id="r-agent-lines"></div>
+                </div>
+
+                <div class="msg" id="msgBox"></div>
+
+                <div class="btn-row">
+                    <button class="btn btn-entente" id="btnEntente">🤝 Valider en Entente</button>
+                    <button class="btn btn-valide" id="btnValide">✅ Valider</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h2>⏳ Ententes <span class="badge-count">{{ stats.ententes_count }}</span></h2></div>
+            {% if ententes %}
+                {% for op in ententes %}
+                <div class="op-item" data-telephone="{{ op.agent_destinataire.telephone }}">
+                    <div class="op-main">
+                        <div class="op-title">{{ op.get_type_operation_display }} — {{ op.get_type_approvisionnement_display }}
+                            <span class="tag {{ op.type_operation }}">{{ op.get_type_operation_display }}</span>
+                            <span class="tag entente">Entente</span>
+                        </div>
+                        <div class="op-meta">{{ op.agent_destinataire.nom }} · {{ op.date|date:"d/m/Y à H:i" }} · Réf. ER-{{ op.id|stringformat:"06d" }}</div>
+                    </div>
+                    <div class="op-amount">
+                        {{ op.montant|floatformat:0|intcomma }} FCFA
+                        <div class="op-actions">
+                            <form method="post" action="{% url 'promouvoir_entente' op.id %}" style="margin: 0;">
+                                {% csrf_token %}
+                                <button class="mini-btn mb-promote" type="submit">✔ Promouvoir en Valide</button>
+                            </form>
+                            <button class="mini-btn mb-print" onclick="printReceipt({{ op.id }}, this)">🖨️ Imprimer</button>
+                            <button class="mini-btn mb-wa" onclick="openWhatsApp({{ op.id }}, this)">💬 WhatsApp</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">📭 Aucune entente en attente</div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h2>✅ Validés <span class="badge-count ok">{{ stats.valides_count }}</span></h2></div>
+            {% if valides %}
+                {% for op in valides %}
+                <div class="op-item" data-telephone="{{ op.agent_destinataire.telephone }}">
+                    <div class="op-main">
+                        <div class="op-title">{{ op.get_type_operation_display }} — {{ op.get_type_approvisionnement_display }}
+                            <span class="tag {{ op.type_operation }}">{{ op.get_type_operation_display }}</span>
+                            <span class="tag valide">Valide</span>
+                        </div>
+                        <div class="op-meta">{{ op.agent_destinataire.nom }} · {{ op.date|date:"d/m/Y à H:i" }} · Réf. ER-{{ op.id|stringformat:"06d" }}{% if op.date_validation %} · Validé le {{ op.date_validation|date:"d/m/Y à H:i" }}{% endif %}</div>
+                    </div>
+                    <div class="op-amount">
+                        {{ op.montant|floatformat:0|intcomma }} FCFA
+                        <div class="op-actions">
+                            <button class="mini-btn mb-print" onclick="printReceipt({{ op.id }}, this)">🖨️ Imprimer</button>
+                            <button class="mini-btn mb-wa" onclick="openWhatsApp({{ op.id }}, this)">💬 WhatsApp</button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">📭 Aucune opération validée</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="loading" id="loading"><div class="spin"></div><span id="loadingText">Traitement en cours...</span></div>
+
+    {% csrf_token %}
+    <script src="/static/js/qz-tray.js"></script>
+    <script>
+        const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const ADMIN_CASH = {{ caisse.solde_cash|default:"0" }};
+        const ADMIN_UV = {{ caisse.solde_uv|default:"0" }};
+        const ADMIN_WAVE = {{ caisse.solde_wave|default:"0" }};
+
+        function fmt(n) { return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " "); }
+
+        const segInputs = document.querySelectorAll('#segOperation input');
+        const typeSel = document.getElementById('typeAppro');
+        const agentSel = document.getElementById('agentSel');
+        const montantInput = document.getElementById('montant');
+        const recap = document.getElementById('recap');
+        const msgBox = document.getElementById('msgBox');
+        let agentSoldes = null;
+
+        function showMsg(ok, text) {
+            msgBox.className = 'msg show ' + (ok ? 'success' : 'error');
+            msgBox.textContent = text;
+        }
+
+        segInputs.forEach(function(radio) {
+            radio.addEventListener('change', updateForm);
+        });
+        typeSel.addEventListener('change', renderRecap);
+        agentSel.addEventListener('change', loadAgentSoldes);
+        montantInput.addEventListener('input', renderRecap);
+
+        function loadAgentSoldes() {
+            const id = agentSel.value;
+            if (!id) { agentSoldes = null; recap.style.display = 'none'; return; }
+            fetch("/api/agent-soldes/" + id + "/")
+                .then(r => r.json())
+                .then(d => { agentSoldes = d; recap.style.display = 'block'; renderRecap(); })
+                .catch(() => { agentSoldes = null; recap.style.display = 'none'; });
+        }
+
+        function updateForm() {
+            const op = (document.querySelector('#segOperation input:checked') || {}).value || 'envoi';
+            Array.from(typeSel.options).forEach(opt => {
+                opt.disabled = (op === 'retrait' && opt.value === 'cash');
+                if (opt.disabled && opt.selected) typeSel.value = 'uv';
+            });
+            renderRecap();
+        }
+
+        function renderRecap() {
+            const op = (document.querySelector('#segOperation input:checked') || {}).value || 'envoi';
+            const t = typeSel.value;
+            const m = parseFloat(montantInput.value) || 0;
+            const agentNom = agentSel.options[agentSel.selectedIndex] ? agentSel.options[agentSel.selectedIndex].text : '';
+            const typeLabels = { cash: '💰 Argent', uv: '📱 UV Touchpoint', wave: '💳 UV Wave' };
+
+            document.getElementById('r-op').textContent = op === 'envoi' ? '📤 Envoi (Admin → Agent)' : '📥 Retrait (Admin reprend)';
+            document.getElementById('r-agent').textContent = agentNom || '—';
+            document.getElementById('r-type').textContent = typeLabels[t] || '—';
+            document.getElementById('r-montant').textContent = m ? fmt(m) + ' FCFA' : '—';
+            document.getElementById('r-admin-cash').textContent = fmt(ADMIN_CASH) + ' FCFA';
+            document.getElementById('r-admin-uv').textContent = fmt(ADMIN_UV) + ' FCFA';
+            document.getElementById('r-admin-wave').textContent = fmt(ADMIN_WAVE) + ' FCFA';
+
+            let lines = '';
+            let ok = true;
+            const btnE = document.getElementById('btnEntente');
+            const btnV = document.getElementById('btnValide');
+            if (agentSoldes && m > 0) {
+                if (op === 'envoi') {
+                    const apres = {
+                        cash: ADMIN_CASH - m, uv: ADMIN_UV - m, wave: ADMIN_WAVE - m
+                    };
+                    lines += '<div class="recap-row"><span>Agent — ' + typeLabels[t] + ' (après)</span><b class="up">' + fmt(agentSoldes[t] + m) + ' FCFA</b></div>';
+                    if (apres[t] < 0) ok = false;
+                } else {
+                    const cashAgentApres = agentSoldes.cash + m;
+                    const apres = { uv: ADMIN_UV + m, wave: ADMIN_WAVE + m };
+                    lines += '<div class="recap-row"><span>Agent — Argent (après)</span><b class="up">' + fmt(cashAgentApres) + ' FCFA</b></div>';
+                    lines += '<div class="recap-row"><span>Agent — ' + typeLabels[t] + ' (après)</span><b class="down">' + fmt(agentSoldes[t] - m) + ' FCFA</b></div>';
+                    if (apres[t] < 0 || ADMIN_CASH - m < 0) ok = false;
+                }
+            }
+            btnE.disabled = !(agentSoldes && m >= 1000 && ok);
+            btnV.disabled = !(agentSoldes && m >= 1000 && ok);
+            document.getElementById('r-agent-lines').innerHTML = lines;
+        }
+
+        function submitOperation(statut) {
+            const op = (document.querySelector('#segOperation input:checked') || {}).value || 'envoi';
+            const body = new URLSearchParams({
+                type_operation: op,
+                type_approvisionnement: typeSel.value,
+                agent_id: agentSel.value,
+                montant: montantInput.value,
+                notes: document.getElementById('notes').value,
+                statut: statut
+            });
+            const loading = document.getElementById('loading');
+            loading.classList.add('show');
+            fetch("/api/envoi-retrait/", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF },
+                body: body
+            })
+                .then(r => r.json())
+                .then(d => {
+                    loading.classList.remove('show');
+                    if (!d.success) throw new Error(d.error || 'Erreur inconnue');
+                    showMsg(true, '✅ ' + d.message + ' — Réf. ' + d.reference);
+                    setTimeout(function() { window.location.href = '/envois-retraits/'; }, 1600);
+                })
+                .catch(err => {
+                    loading.classList.remove('show');
+                    showMsg(false, '❌ ' + (err.message || 'Erreur inconnue'));
+                });
+        }
+
+        document.getElementById('btnEntente').addEventListener('click', function() { submitOperation('entente'); });
+        document.getElementById('btnValide').addEventListener('click', function() { submitOperation('valide'); });
+
+        updateForm();
+
+        // ==================== IMPRESSION QZ TRAY ====================
+        let qzReady = false;
+        function initQZ() {
+            if (typeof qz === "undefined") { setTimeout(initQZ, 2000); return; }
+            qz.security.setCertificatePromise(function(resolve) {
+                fetch("/static/certs/digital-certificate.txt", {cache: 'no-store'})
+                    .then(function(r) { r.ok ? resolve(r.text()) : resolve(""); });
+            });
+            qz.security.setSignatureAlgorithm("SHA512");
+            qz.security.setSignaturePromise(function(toSign) {
+                return function(resolve) {
+                    fetch("/sign-message?request=" + encodeURIComponent(toSign), {cache: 'no-store'})
+                        .then(function(r) { if (!r.ok) throw new Error(); return r.text(); })
+                        .then(function(sig) { if (!sig || sig.length < 64) throw new Error(); resolve(sig.trim()); })
+                        .catch(function() { resolve(""); });
+                };
+            });
+            qz.websocket.connect()
+                .then(() => { qzReady = true; console.log("QZ Tray connecté"); })
+                .catch(() => { qzReady = false; console.log("QZ Tray non disponible"); });
+        }
+        setTimeout(initQZ, 1000);
+
+        function ensureQZ() {
+            if (qzReady) return Promise.resolve(true);
+            if (typeof qz === "undefined") return Promise.resolve(false);
+            return qz.websocket.connect().then(() => { qzReady = true; return true; }).catch(() => { qzReady = false; return false; });
+        }
+
+        function printReceipt(operationId, btn) {
+            const loading = document.getElementById('loading');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "⏳";
+            btn.disabled = true;
+            document.getElementById('loadingText').textContent = "Impression en cours...";
+            loading.classList.add('show');
+
+            fetch("/recu-envoi-retrait/" + operationId + "/?format=json")
+                .then(response => { if (!response.ok) throw new Error('Reçu indisponible'); return response.json(); })
+                .then(data => {
+                    if (!data) throw new Error('Reçu indisponible');
+                    return ensureQZ().then(ok => { if (!ok) throw new Error('QZ Tray non connecté'); return qz.printers.find(); })
+                        .then(printers => {
+                            if (!printers || printers.length === 0) throw new Error('Aucune imprimante');
+                            let savedPrinter = localStorage.getItem('selected_printer');
+                            let printer = printers.find(p => p === savedPrinter) || printers[0];
+                            let config = qz.configs.create(printer);
+                            let pw = parseInt(localStorage.getItem('printer_width')) || 58;
+                            let cols = pw === 80 ? 48 : 32;
+                            let line = '='.repeat(cols);
+                            let sep = '-'.repeat(cols);
+                            let ticket = "";
+                            ticket += line + "\n";
+                            ticket += "\x1B\x61\x01" + "\x1D\x21\x10" + "KONE SERVICES\n";
+                            ticket += "\x1D\x21\x00" + "Envois & Retraits\n";
+                            ticket += "\x1B\x61\x00" + line + "\n";
+                            ticket += sep + "\n";
+                            ticket += "\x1B\x45\x01" + "OPERATION : " + (data.operation || '-').toUpperCase() + "\x1B\x45\x00\n";
+                            ticket += "TYPE : " + (data.type || '-') + "\n";
+                            ticket += "AGENT : " + (data.agent || '-') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "\x1D\x21\x10\x1B\x45\x01" + "MONTANT : " + (data.montant || '0') + " FCFA\n" + "\x1D\x21\x00\x1B\x45\x00";
+                            ticket += sep + "\n";
+                            ticket += "REF : " + (data.reference || '-') + "\n";
+                            ticket += "DATE : " + (data.date || '-') + " " + (data.heure || '') + "\n";
+                            ticket += "STATUT : " + (data.statut || '-') + "\n";
+                            ticket += sep + "\n";
+                            ticket += "         MERCI POUR VOTRE CONFIANCE           \n";
+                            ticket += line + "\n";
+                            let printData = [{ type: 'raw', format: 'plain', data: "\x1B\x40" + ticket + "\n\n\n\n\n\x1D\x56\x00" }];
+                            return qz.print(config, printData);
+                        });
+                })
+                .then(() => {
+                    loading.classList.remove('show');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                })
+                .catch(err => {
+                    console.error(err);
+                    loading.classList.remove('show');
+                    alert('Impression directe impossible : ' + (err.message || 'Erreur QZ') + '. Lancez QZ Tray sur le PC puis réessayez.');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                });
+        }
+
+        // ==================== WHATSAPP ====================
+        function openWhatsApp(operationId, btn) {
+            const item = btn.closest('.op-item');
+            const tel = item ? item.getAttribute('data-telephone') : '';
+            fetch("/recu-envoi-retrait/" + operationId + "/?format=json")
+                .then(r => r.json())
+                .then(data => {
+                    if (!data) throw new Error('Reçu indisponible');
+                    const text = (data.operation === 'Envoi'
+                        ? 'Bonjour ' + data.agent + ', vous avez reçu un ENVOI de ' + data.montant + ' FCFA (' + data.type + ') de la part de l\'Administrateur.'
+                        : 'Bonjour ' + data.agent + ', un RETRAIT de ' + data.montant + ' FCFA (' + data.type + ') a été effectué par l\'Administrateur.')
+                        + ' Référence : ' + data.reference + '. Merci, KONE SERVICES.';
+                    const digits = (tel || '').replace(/[^\d]/g, '');
+                    if (!digits) { alert("Numéro WhatsApp de l'agent manquant."); return; }
+                    window.open('https://wa.me/' + digits + '?text=' + encodeURIComponent(text), '_blank');
+                })
+                .catch(err => alert('Reçu indisponible : ' + (err.message || 'Erreur')));
+        }
+    </script>
+</body>
+</html>

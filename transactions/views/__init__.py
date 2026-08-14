@@ -1,9 +1,9 @@
-# Package views: re-export de toutes les fonctions (compat avec from . import views)
+﻿# Package views: re-export de toutes les fonctions (compat avec from . import views)
 
 from .views_auth import (logout_view, sign_message)
 from .views_dashboards import (dashboard_redirect, dashboard_admin, dashboard_agent, dashboard_assistant)
 from .views_transactions import (transaction_user, impression_recu, historique_admin, historique_agent, operation_agent, historique_operations, api_historique_agent, api_historique_agent_page, ajax_calculer_frais, api_annuler_transaction)
-from .views_approvisionnements import (demander_approvisionnement_api, demander_approvisionnement, valider_demande, historique_demandes_agent, traiter_demande_assistant, get_demandes_filter_for_user, api_demandes_attente_count, api_demandes_attente_list)
+from .views_approvisionnements import (creer_envoi_retrait, envois_retraits, promouvoir_entente, api_agent_soldes, api_ententes_count, api_ententes_list, recu_envoi_retrait)
 from .views_agents import (gestion_agents, ajouter_agent, modifier_mot_de_passe_agent, modifier_caisse, api_agent_caisse, supprimer_agent, activer_agent, detail_agent, api_user_password)
 from .views_assistants import (gestion_assistants, ajouter_assistant, toggle_assistant_status, modifier_assistant, activer_assistant, supprimer_assistant, detail_assistant, modifier_mot_de_passe_assistant, api_assistant_infos)
 from .views_exports import (export_transactions, exporter_historique_agent, exporter_rapport_complet_agent)
@@ -12,3 +12,4 @@ from .views_factures import (creer_facture, api_factures, rechercher_client_api,
 from .views_dettes import (ajouter_dette, modifier_dette, supprimer_dette, enregistrer_remboursement_dette, generer_recu_pdf, download_recu, api_dettes, api_dette_detail, api_chercher_debiteurs)
 from .views_epargne import (api_comptes_epargne, operation_compte, get_caisse_operations)
 from .views_stats import (api_analyse_stats)
+

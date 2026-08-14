@@ -1317,6 +1317,13 @@
                 </svg>
                 <span>TRANSACTIONS</span>
             </a>
+            <a href="{% url 'envois_retraits' %}" class="menu-item" data-page="envois">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                    <path d="M8 12h8M8 8h8M8 16h4"/>
+                </svg>
+                <span>ENVOIS &amp; RETRAITS</span>
+            </a>
             <a href="{% url 'gestion_agents' %}" class="menu-item" data-page="gestion">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -1415,6 +1422,10 @@
                     <span class="icon-box icon-transactions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></span>
                     <span class="menu-text">Transactions</span>
                 </a>
+                <a href="{% url 'envois_retraits' %}" class="profile-menu-item">
+                    <span class="icon-box icon-envois"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><path d="M8 12h8M8 8h8M8 16h4"/></svg></span>
+                    <span class="menu-text">Envois &amp; Retraits</span>
+                </a>
                 <a href="{% url 'gestion_agents' %}" class="profile-menu-item">
                     <span class="icon-box icon-staff"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
                     <span class="menu-text">Personnel</span>
@@ -1469,7 +1480,7 @@
             </div>
             <div class="stat-card">
                 <div class="icon danger"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div>
-                <div class="info"><div class="value">{{ demandes_attente|length }}</div><div class="label">Demandes en attente</div></div>
+                <div class="info"><div class="value"><a href="{% url 'envois_retraits' %}" style="color: inherit; text-decoration: none;">{{ demandes_attente|length }}</a></div><div class="label"><a href="{% url 'envois_retraits' %}" style="color: inherit; text-decoration: none;">Ententes à valider</a></div></div>
             </div>
             <div class="stat-card">
                 <div class="icon warning"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/></svg></div>
@@ -1521,7 +1532,7 @@
     <!-- ========== MODAL ALERTE ========== -->
     <div id="alertModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18" style="vertical-align:middle;margin-right:8px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Demandes en attente</h3></div>
+            <div class="modal-header"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18" style="vertical-align:middle;margin-right:8px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Ententes en attente</h3></div>
             <div class="modal-body" id="alertModalBody">
                 <p style="text-align: center;">Chargement...</p>
             </div>
@@ -1693,7 +1704,7 @@
         }
 
         function updateAllBadges(){
-            fetch('/api/demandes-attente/count/').then(function(r){return r.json();}).then(function(d){
+            fetch('/api/ententes/count/').then(function(r){return r.json();}).then(function(d){
                 var c=d.count||0;
                 var mb=document.getElementById('mobileAlertBadge');
                 if(mb){mb.textContent=c;mb.style.display=c>0?'block':'none';}
@@ -1704,22 +1715,22 @@
         function loadAlertModal(){
             var body=document.getElementById('alertModalBody');
             body.innerHTML='<p style="text-align:center;">Chargement...</p>';
-            fetch('/api/demandes-attente/list/').then(function(r){return r.json();}).then(function(d){
-                if(d.demands&&d.demands.length===0){body.innerHTML='<p style="text-align:center;">Aucune demande en attente</p><button class="btn-close-modal" onclick="closeModal(\'alertModal\')">Fermer</button>';return;}
-                var items=d.demandes||[];
-                if(items.length===0){body.innerHTML='<p style="text-align:center;">Aucune demande en attente</p><button class="btn-close-modal" onclick="closeModal(\'alertModal\')">Fermer</button>';return;}
+            fetch('/api/ententes/list/').then(function(r){return r.json();}).then(function(d){
+                var items=d.ententes||[];
+                if(items.length===0){body.innerHTML='<p style="text-align:center;">Aucune entente en attente</p><a class="btn-close-modal" href="{% url "envois_retraits" %}" style="display:inline-block;margin-top:10px;">Aller aux Envois &amp; Retraits</a><button class="btn-close-modal" onclick="closeModal(\'alertModal\')">Fermer</button>';return;}
                 var h='';
                 for(var i=0;i<items.length;i++){
                     var it=items[i];
                     h+='<div class="pending-request" style="margin-bottom:12px;">';
-                    h+='<div><strong>'+it.agent_nom+'</strong><span style="display:block;font-size:12px;">'+it.type_echange+'</span>';
-                    if(it.motif){h+='<span style="display:block;font-size:11px;color:var(--gray-500);">'+it.motif+'</span>';}
+                    h+='<div><strong>'+it.agent_nom+'</strong><span style="display:block;font-size:12px;">'+it.type_operation+' · '+it.type+'</span>';
+                    h+='<span style="display:block;font-size:11px;color:var(--gray-500);">'+it.date+'</span>';
                     h+='<strong style="font-size:16px;">'+it.montant+' FCFA</strong></div>';
                     h+='<div style="display:flex;gap:8px;margin-top:8px;">';
-                    h+='<form method="post" action="/valider-demande/'+it.id+'/" style="display:inline;"><input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRFToken()+'"><input type="hidden" name="action" value="valider"><button type="submit" class="btn-validate">✓ Valider</button></form>';
-                    h+='<form method="post" action="/valider-demande/'+it.id+'/" style="display:inline;"><input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRFToken()+'"><input type="hidden" name="action" value="refuser"><button type="submit" class="btn-reject">✗ Refuser</button></form>';
+                    h+='<form method="post" action="/envoi-retrait/'+it.id+'/promouvoir/" style="display:inline;"><input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRFToken()+'"><button type="submit" class="btn-validate">✓ Promouvoir</button></form>';
+                    h+='<a href="/recu-envoi-retrait/'+it.id+'/" target="_blank" class="btn-reject" style="text-decoration:none;display:inline-flex;align-items:center;">🖨 Reçu</a>';
                     h+='</div></div>';
                 }
+                h+='<a href="{% url "envois_retraits" %}" class="btn-close-modal" style="display:inline-block;margin-right:8px;">Voir tout</a>';
                 h+='<button class="btn-close-modal" onclick="closeModal(\'alertModal\')">Fermer</button>';
                 body.innerHTML=h;
             }).catch(function(){body.innerHTML='<p style="text-align:center;">Erreur de chargement</p><button class="btn-close-modal" onclick="closeModal(\'alertModal\')">Fermer</button>';});

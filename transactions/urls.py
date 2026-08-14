@@ -15,17 +15,16 @@ urlpatterns = [
     path('transaction/<str:operateur>/<str:type_transaction>/', views.transaction_user, name='transaction_user'),
     path('impression-recu/<str:transaction_id>/', views.impression_recu, name='impression_recu'),
     
-    # ==================== DEMANDES D'APPROVISIONNEMENT ====================
-    path('demander-approvisionnement/', views.demander_approvisionnement, name='demander_approvisionnement'),
-    path('api/demander-approvisionnement/', views.demander_approvisionnement_api, name='demander_approvisionnement_api'),
-    path('valider-demande/<int:demande_id>/', views.valider_demande, name='valider_demande'),
+    # ==================== ENVOIS & RETRAITS ====================
+    path('envois-retraits/', views.envois_retraits, name='envois_retraits'),
+    path('api/envoi-retrait/', views.creer_envoi_retrait, name='creer_envoi_retrait'),
+    path('api/agent-soldes/<int:agent_id>/', views.api_agent_soldes, name='api_agent_soldes'),
+    path('envoi-retrait/<int:operation_id>/promouvoir/', views.promouvoir_entente, name='promouvoir_entente'),
+    path('recu-envoi-retrait/<int:operation_id>/', views.recu_envoi_retrait, name='recu_envoi_retrait'),
 
-    
     # ==================== HISTORIQUES ====================
     path('historique/', views.historique_admin, name='historique_admin'),
     path('mes-transactions/', views.historique_agent, name='historique_agent'),
-    path('mes-demandes/', views.historique_demandes_agent, name='historique_demandes_agent'),
-    path('traiter-demande-assistant/<int:demande_id>/', views.traiter_demande_assistant, name='traiter_demande_assistant'),
     
     # ==================== GESTION DES AGENTS ====================
     path('gestion-agents/', views.gestion_agents, name='gestion_agents'),
@@ -98,8 +97,8 @@ urlpatterns = [
     path('api/historique-agent/', views.api_historique_agent, name='api_historique_agent'),
     path('api/factures/<int:facture_id>/supprimer/', views.supprimer_facture, name='supprimer_facture'),
 
-    path('api/demandes-attente/count/', views.api_demandes_attente_count, name='api_demandes_count'),
-    path('api/demandes-attente/list/', views.api_demandes_attente_list, name='api_demandes_list'),
+    path('api/ententes/count/', views.api_ententes_count, name='api_ententes_count'),
+    path('api/ententes/list/', views.api_ententes_list, name='api_ententes_list'),
     
     # ==================== ANNULATION ====================
     path('api/annuler-transaction/', views.api_annuler_transaction, name='api_annuler_transaction'),

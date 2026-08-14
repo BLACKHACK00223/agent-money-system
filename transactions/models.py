@@ -586,12 +586,21 @@ class DemandeApprovisionnement(models.Model):
 
 class ApprovisionnementDirect(models.Model):
     """
-    Approvisionnement direct ADMIN ou ASSISTANT → AGENT
+    Opération ENVOI / RETRAIT entre l'administrateur et un agent.
+    L'admin effectue tout : envoi (admin -X, agent +X) ou retrait
+    (agent UV/Wave -X + Cash +X, admin UV/Wave +X + Cash -X).
+    Deux statuts : 'entente' (soldes appliqués immédiatement) et
+    'valide' (promotion de l'entente, aucun second mouvement de soldes).
     """
+    TYPE_OPERATION_CHOICES = (
+        ('envoi', 'Envoi'),
+        ('retrait', 'Retrait'),
+    )
+    
     TYPE_CHOICES = (
-        ('cash', '💰 Cash'),
-        ('uv', '📱 UV Touspiont'),
-        ('wave', '💳 Wave'),
+        ('cash', 'Argent'),
+        ('uv', 'UV Touchpoint'),
+        ('wave', 'UV Wave'),
     )
     
     SOURCE_CHOICES = (
@@ -599,6 +608,12 @@ class ApprovisionnementDirect(models.Model):
         ('assistant', 'Assistant'),
     )
     
+    STATUT_CHOICES = (
+        ('entente', 'Entente'),
+        ('valide', 'Valide'),
+    )
+    
+    type_operation = models.CharField(max_length=10, choices=TYPE_OPERATION_CHOICES, default='envoi')
     source_type = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='admin')
     admin_source = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, related_name='approvisionnements_emis')
     assistant_source = models.ForeignKey(Assistant, on_delete=models.SET_NULL, null=True, blank=True, related_name='approvisionnements_emis')
@@ -606,11 +621,16 @@ class ApprovisionnementDirect(models.Model):
     agent_destinataire = models.ForeignKey(Agent, on_delete=models.CASCADE, related_name='approvisionnements_recus')
     type_approvisionnement = models.CharField(max_length=10, choices=TYPE_CHOICES)
     montant = models.DecimalField(max_digits=12, decimal_places=2)
+    statut = models.CharField(max_length=10, choices=STATUT_CHOICES, default='entente')
+    date_validation = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
     date = models.DateTimeField(auto_now_add=True)
     
-    def save(self, *args, **kwargs):
-        # Caisse de la source
+    def effectuer_mouvements(self):
+        """
+        Applique les mouvements de soldes (ENVOI ou RETRAIT).
+        Appelé une seule fois, à la création de l'opération.
+        """
         if self.source_type == 'admin':
             caisse_source = self.admin_source.user.caisse
         else:
@@ -618,19 +638,55 @@ class ApprovisionnementDirect(models.Model):
         
         caisse_agent = self.agent_destinataire.user.caisse
         
-        if self.type_approvisionnement == 'cash':
-            caisse_source.solde_cash -= self.montant
-            caisse_agent.solde_cash += self.montant
-        elif self.type_approvisionnement == 'uv':
-            caisse_source.solde_uv -= self.montant
-            caisse_agent.solde_uv += self.montant
-        elif self.type_approvisionnement == 'wave':
-            caisse_source.solde_wave -= self.montant
-            caisse_agent.solde_wave += self.montant
+        if not caisse_source or not caisse_agent:
+            raise ValueError('Caisse de la source ou de l\'agent introuvable.')
+        
+        if self.type_operation == 'envoi':
+            # Admin -X, Agent +X (unilatéral)
+            if self.type_approvisionnement == 'cash':
+                caisse_source.solde_cash -= self.montant
+                caisse_agent.solde_cash += self.montant
+            elif self.type_approvisionnement == 'uv':
+                caisse_source.solde_uv -= self.montant
+                caisse_agent.solde_uv += self.montant
+            elif self.type_approvisionnement == 'wave':
+                caisse_source.solde_wave -= self.montant
+                caisse_agent.solde_wave += self.montant
+            else:
+                raise ValueError('Type d\'envoi invalide.')
+                
+        elif self.type_operation == 'retrait':
+            # Agent UV/Wave -X + Cash +X ; Admin UV/Wave +X + Cash -X
+            if self.type_approvisionnement == 'uv':
+                caisse_agent.solde_uv -= self.montant
+                caisse_agent.solde_cash += self.montant
+                caisse_source.solde_uv += self.montant
+                caisse_source.solde_cash -= self.montant
+            elif self.type_approvisionnement == 'wave':
+                caisse_agent.solde_wave -= self.montant
+                caisse_agent.solde_cash += self.montant
+                caisse_source.solde_wave += self.montant
+                caisse_source.solde_cash -= self.montant
+            else:
+                raise ValueError('Retrait possible uniquement en UV Touchpoint ou UV Wave.')
+        else:
+            raise ValueError('Type d\'opération invalide.')
         
         caisse_source.save()
         caisse_agent.save()
+    
+    def save(self, *args, **kwargs):
+        if self.pk is None:
+            self.effectuer_mouvements()
         super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.get_type_operation_display()} {self.get_type_approvisionnement_display()} - {self.agent_destinataire.nom} - {self.montant:,.0f} FCFA"
+    
+    class Meta:
+        verbose_name = "Envoi / Retrait"
+        verbose_name_plural = "Envois et retraits"
+        ordering = ['-date']
     
     @property
     def source_nom(self):

@@ -743,13 +743,6 @@
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <button class="btn-ripple" style="background: none; border: none; position: relative; cursor: pointer; padding: 6px;" onclick="openAlertModal()" id="mobileAlertBtn">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                    </svg>
-                    <span id="mobileAlertBadge" style="position: absolute; top: 0; right: 0; background: #dc2626; color: white; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 10px; min-width: 16px; text-align: center; display: none;">0</span>
-                </button>
                 <button class="menu-btn" onclick="window.location.href='{% url "historique_agent" %}'">
                     <span></span>
                     <span></span>
@@ -768,10 +761,6 @@
             </div>
         </div>
         <div class="profile-menu-items">
-            <button class="profile-menu-item" onclick="closeProfileMenuAndRedirect('{% url "historique_demandes_agent" %}')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
-                <span>Mes demandes</span>
-            </button>
             <button class="profile-menu-item" onclick="exportRapportPDF()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 <span>Exporter PDF</span>
@@ -860,54 +849,6 @@
             </div>
         </div>
 
-        <div class="section-title">
-            <span>📋</span> Demandes des agents
-        </div>
-
-        <!-- Demandes reçues des agents avec boutons -->
-        <div class="demandes-container">
-            <div class="demandes-header">
-                <h3>Demandes d'approvisionnement reçues</h3>
-                <a href="{% url 'historique_demandes_agent' %}">Voir tout →</a>
-            </div>
-            {% if demandes_recues %}
-                {% for demande in demandes_recues|slice:":5" %}
-                <div class="demande-item">
-                    <div class="demande-info">
-                        <div class="agent-nom">👤 {{ demande.agent.nom }}</div>
-                        <div class="demande-type">{{ demande.get_type_echange_display }}</div>
-                        <div class="demande-date">{{ demande.date_demande|date:"d/m/Y à H:i" }}</div>
-                        {% if demande.motif %}
-                            <div class="demande-date">📝 {{ demande.motif|truncatechars:30 }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="demande-montant">
-                        {{ demande.montant|floatformat:0|intcomma }} F
-                    </div>
-                    <div class="demande-status">
-                        {% if demande.statut == 'en_attente' %}
-                            <span class="badge-pending">⏳ En attente</span>
-                        {% elif demande.statut == 'valide' %}
-                            <span class="badge-approved">✅ Validé</span>
-                        {% else %}
-                            <span class="badge-rejected">❌ Refusé</span>
-                        {% endif %}
-                    </div>
-                    {% if demande.statut == 'en_attente' %}
-                    <div class="demande-actions">
-                        <button class="btn-validate" onclick="traiterDemande({{ demande.id }}, 'valider')">✅ Valider</button>
-                        <button class="btn-reject" onclick="traiterDemande({{ demande.id }}, 'refuser')">❌ Refuser</button>
-                    </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="empty-state" style="padding: 30px;">
-                    📭 Aucune demande reçue
-                </div>
-            {% endif %}
-        </div>
-
         <div class="recent-section">
             <div class="recent-header">
                 <h3>Historique récent</h3>
@@ -956,16 +897,6 @@
                     <a href="#" id="btnCredit" class="btn-credit">● Crédit</a>
                 </div>
                 <button class="btn-secondary" onclick="closeModal()">Fermer</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========== MODAL ALERTE ========== -->
-    <div id="alertModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center;">
-        <div class="modal-content">
-            <div class="modal-header"><h3>🔔 Demandes en attente</h3></div>
-            <div class="modal-body" id="alertModalBody">
-                <p style="text-align: center;">Chargement...</p>
             </div>
         </div>
     </div>
@@ -1025,38 +956,6 @@
             document.getElementById('transactionModal').style.display = 'none';
         }
 
-        // Traitement des demandes par l'assistant
-        function traiterDemande(demandeId, action) {
-            const csrftoken = getCookie('csrftoken');
-            
-            if (confirm(`Êtes-vous sûr de vouloir ${action === 'valider' ? 'valider' : 'refuser'} cette demande ?`)) {
-                fetch(`/traiter-demande-assistant/${demandeId}/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': csrftoken,
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: new URLSearchParams({
-                        'action': action
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert(data.message);
-                        window.location.reload();
-                    } else {
-                        alert('Erreur: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur:', error);
-                    alert('Erreur de connexion');
-                });
-            }
-        }
-
         function getCookie(name) {
             let value = null;
             if (document.cookie && document.cookie !== '') {
@@ -1081,74 +980,6 @@
                 document.getElementById('loading').style.display = 'block';
             });
         });
-
-        // ========== SYSTÈME DE CLOCHE (NOTIFICATIONS) ==========
-        function openModalAlert(id) {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'flex';
-        }
-        function closeModalAlert(id) {
-            const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
-        }
-        window.closeModal = closeModalAlert;
-
-        function getCSRFToken() {
-            const m = document.cookie.match(/csrftoken=([^;]+)/);
-            return m ? m[1] : '';
-        }
-
-        function updateAllBadges(){
-            fetch('/api/demandes-attente/count/').then(function(r){return r.json();}).then(function(d){
-                var c=d.count||0;
-                var mb=document.getElementById('mobileAlertBadge');
-                if(mb){mb.textContent=c;mb.style.display=c>0?'block':'none';}
-            }).catch(function(){});
-        }
-
-        function loadAlertModal(){
-            var body=document.getElementById('alertModalBody');
-            if(!body)return;
-            body.innerHTML='<p style="text-align:center;">Chargement...</p>';
-            fetch('/api/demandes-attente/list/').then(function(r){return r.json();}).then(function(d){
-                var items=d.demandes||[];
-                if(items.length===0){
-                    body.innerHTML='<p style="text-align:center;">Aucune demande en attente</p><button class="btn-secondary" onclick="document.getElementById(\'alertModal\').style.display=\'none\'">Fermer</button>';
-                    return;
-                }
-                var h='';
-                for(var i=0;i<items.length;i++){
-                    var it=items[i];
-                    h+='<div style="margin-bottom:12px; background:var(--gray-50); border-radius:14px; padding:12px; border:1px solid var(--gray-200);">';
-                    h+='<div><strong>'+it.agent_nom+'</strong><span style="display:block;font-size:12px;">'+it.type_echange+'</span>';
-                    if(it.motif){h+='<span style="display:block;font-size:11px;color:var(--gray-500);">📝 '+it.motif+'</span>';}
-                    h+='<strong style="font-size:16px;">'+it.montant+' FCFA</strong></div>';
-                    h+='<div style="display:flex;gap:8px;margin-top:8px;">';
-                    h+='<form method="post" action="/traiter-demande-assistant/'+it.id+'/" style="display:inline;">';
-                    h+='<input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRFToken()+'">';
-                    h+='<input type="hidden" name="action" value="valider">';
-                    h+='<button type="submit" class="btn-validate">✓ Valider</button></form>';
-                    h+='<form method="post" action="/traiter-demande-assistant/'+it.id+'/" style="display:inline;">';
-                    h+='<input type="hidden" name="csrfmiddlewaretoken" value="'+getCSRFToken()+'">';
-                    h+='<input type="hidden" name="action" value="refuser">';
-                    h+='<button type="submit" class="btn-reject">✗ Refuser</button></form>';
-                    h+='</div></div>';
-                }
-                h+='<button class="btn-secondary" onclick="document.getElementById(\'alertModal\').style.display=\'none\'">Fermer</button>';
-                body.innerHTML=h;
-            }).catch(function(){
-                body.innerHTML='<p style="text-align:center;">Erreur de chargement</p><button class="btn-secondary" onclick="document.getElementById(\'alertModal\').style.display=\'none\'">Fermer</button>';
-            });
-        }
-
-        function openAlertModal(){
-            const el=document.getElementById('alertModal');
-            if(el){el.style.display='flex';}
-            loadAlertModal();
-        }
-
-        updateAllBadges();
-        setInterval(updateAllBadges, 30000);
 
         // Export Rapport PDF
         function exportRapportPDF() {

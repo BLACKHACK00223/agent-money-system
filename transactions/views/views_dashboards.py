@@ -298,20 +298,17 @@ def dashboard_admin(request):
             'nombre': ((stats_today['nombre'] - stats_yesterday['nombre']) / stats_yesterday['nombre'] * 100) if stats_yesterday['nombre'] > 0 else 0,
         }
         
-        # ========== DEMANDES ==========
-        demandes_attente = DemandeApprovisionnement.objects.filter(
-            statut='en_attente'
-        ).order_by('-date_demande')
-        
-        demandes_today = DemandeApprovisionnement.objects.filter(date_demande__date=today)
-        demandes_yesterday = DemandeApprovisionnement.objects.filter(date_demande__date=yesterday)
-        
-        demandes_stats = {
-            'aujourdhui': demandes_today.count(),
-            'hier': demandes_yesterday.count(),
-            'total_attente': demandes_attente.count(),
-            'total_validees': DemandeApprovisionnement.objects.filter(statut='valide').count(),
-            'total_refusees': DemandeApprovisionnement.objects.filter(statut='refuse').count(),
+        # ========== ENVOIS & RETRAITS (ENTENTES) ==========
+        ententes_attente = ApprovisionnementDirect.objects.filter(
+            statut='entente'
+        ).order_by('-date')
+
+        ententes_today = ApprovisionnementDirect.objects.filter(date__date=today)
+        ententes_stats = {
+            'aujourdhui': ententes_today.count(),
+            'total_attente': ententes_attente.count(),
+            'total_validees': ApprovisionnementDirect.objects.filter(statut='valide').count(),
+            'montant_attente': ententes_attente.aggregate(Sum('montant'))['montant__sum'] or 0,
         }
         
         # ========== NOUVEAUX AGENTS ==========
@@ -384,8 +381,8 @@ def dashboard_admin(request):
             'stats_today': stats_today,
             'stats_yesterday': stats_yesterday,
             'evolution': evolution,
-            'demandes_attente': demandes_attente,
-            'demandes_stats': demandes_stats,
+            'demandes_attente': ententes_attente,
+            'demandes_stats': ententes_stats,
             'nouveaux_agents_today': nouveaux_agents_today,
             'nouveaux_agents_yesterday': nouveaux_agents_yesterday,
             'stats_par_operateur': stats_par_operateur,
@@ -449,17 +446,6 @@ def dashboard_agent(request):
             user=request.user
         ).order_by('-date')[:20]
         
-        # Demandes en cours
-        demandes_en_cours = DemandeApprovisionnement.objects.filter(
-            agent=agent,
-            statut='en_attente'
-        )
-        
-        # Historique des demandes
-        historique_demandes = DemandeApprovisionnement.objects.filter(
-            agent=agent
-        ).order_by('-date_demande')[:10]
-        
         context = {
             'title': 'Tableau de bord - Agent',
             'agent': agent,
@@ -469,8 +455,6 @@ def dashboard_agent(request):
             'stats_par_operateur': stats_par_operateur,
             'transactions_jour': transactions_jour[:20],
             'dernieres_transactions': dernieres_transactions,
-            'demandes_en_cours': demandes_en_cours,
-            'historique_demandes': historique_demandes,
         }
         return render(request, 'transactions/dashboard_agent.html', context)
         
@@ -517,20 +501,6 @@ def dashboard_assistant(request):
         user=request.user
     ).order_by('-date')[:20]
     
-    # ========== DEMANDES REÇUES DES AGENTS ==========
-    # L'assistant reçoit les demandes des agents qui l'ont choisi comme destinataire
-    demandes_recues = DemandeApprovisionnement.objects.filter(
-        destinataire_type='assistant',
-        assistant_destinataire=assistant
-    ).order_by('-date_demande')
-    
-    # Statistiques des demandes
-    demandes_stats = {
-        'en_attente': demandes_recues.filter(statut='en_attente').count(),
-        'validees': demandes_recues.filter(statut='valide').count(),
-        'refusees': demandes_recues.filter(statut='refuse').count(),
-    }
-    
     context = {
         'title': 'Tableau de bord - Assistant',
         'assistant': assistant,
@@ -538,7 +508,5 @@ def dashboard_assistant(request):
         'stats_jour': stats_jour,
         'transactions_jour': transactions_jour[:20],
         'dernieres_transactions': dernieres_transactions,
-        'demandes_recues': demandes_recues[:10],
-        'demandes_stats': demandes_stats,
     }
     return render(request, 'transactions/dashboard_assistant.html', context)
