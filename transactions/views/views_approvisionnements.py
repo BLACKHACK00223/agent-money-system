@@ -220,14 +220,23 @@ from django.db import transaction as db_transaction
 @require_http_methods(["POST"])
 def creer_envoi_retrait(request):
     """
-    API : l'ADMIN crée une opération ENVOI ou RETRAIT vers un agent.
+    API : l'ADMIN ou l'ASSISTANT crée une opération ENVOI ou RETRAIT vers un agent.
     statut 'entente' => soldes appliqués immédiatement, listée en Ententes
     statut 'valide'  => soldes appliqués, historique direct
     """
     try:
         admin = Admin.objects.get(user=request.user)
+        source_type = 'admin'
+        admin_source = admin
+        assistant_source = None
     except Admin.DoesNotExist:
-        return JsonResponse({'success': False, 'error': "Vous n'êtes pas autorisé."})
+        try:
+            assistant = Assistant.objects.get(user=request.user)
+        except Assistant.DoesNotExist:
+            return JsonResponse({'success': False, 'error': "Vous n'êtes pas autorisé."})
+        source_type = 'assistant'
+        admin_source = None
+        assistant_source = assistant
 
     type_operation = request.POST.get('type_operation')
     type_approvisionnement = request.POST.get('type_approvisionnement')
@@ -245,9 +254,15 @@ def creer_envoi_retrait(request):
     except (Agent.DoesNotExist, ValueError, TypeError):
         return JsonResponse({'success': False, 'error': 'Agent introuvable ou inactif.'})
 
-    caisse = admin.user.caisse
+    if source_type == 'admin':
+        caisse = admin.user.caisse
+    else:
+        caisse = assistant_source.get_caisse
     if not caisse:
         return JsonResponse({'success': False, 'error': 'Votre caisse n\'est pas configurée.'})
+
+    if source_type == 'assistant' and assistant_source.agent and assistant_source.agent_id == agent.id:
+        return JsonResponse({'success': False, 'error': "Impossible d'opérer sur votre propre agent."})
 
     try:
         montant = Decimal(montant_str)
@@ -263,31 +278,33 @@ def creer_envoi_retrait(request):
     if type_operation == 'retrait' and type_approvisionnement not in ('uv', 'wave'):
         return JsonResponse({'success': False, 'error': 'Retrait possible uniquement en UV Touchpoint ou UV Wave.'})
 
-    # ====== Contrôles de solde ======
-    if type_operation == 'envoi':
-        if type_approvisionnement == 'cash' and montant > caisse.solde_cash:
-            return JsonResponse({'success': False, 'error': f"Solde Argent insuffisant. Solde actuel : {caisse.solde_cash:,.0f} FCFA"})
-        if type_approvisionnement == 'uv' and montant > caisse.solde_uv:
-            return JsonResponse({'success': False, 'error': f"Solde UV Touchpoint insuffisant. Solde actuel : {caisse.solde_uv:,.0f} FCFA"})
-        if type_approvisionnement == 'wave' and montant > caisse.solde_wave:
-            return JsonResponse({'success': False, 'error': f"Solde UV Wave insuffisant. Solde actuel : {caisse.solde_wave:,.0f} FCFA"})
-    else:
-        caisse_agent = agent.user.caisse
-        if not caisse_agent:
-            return JsonResponse({'success': False, 'error': "La caisse de l'agent n'est pas configurée."})
-        if montant > caisse.solde_cash:
-            return JsonResponse({'success': False, 'error': f"Solde Argent insuffisant. Solde actuel : {caisse.solde_cash:,.0f} FCFA"})
-        if type_approvisionnement == 'uv' and montant > caisse_agent.solde_uv:
-            return JsonResponse({'success': False, 'error': f"Solde UV Touchpoint de l'agent insuffisant. Solde actuel : {caisse_agent.solde_uv:,.0f} FCFA"})
-        if type_approvisionnement == 'wave' and montant > caisse_agent.solde_wave:
-            return JsonResponse({'success': False, 'error': f"Solde UV Wave de l'agent insuffisant. Solde actuel : {caisse_agent.solde_wave:,.0f} FCFA"})
-
     try:
         with db_transaction.atomic():
+            # Verrouiller les caisses : élimine les courses sur les soldes
+            caisse = Caisse.objects.select_for_update().get(pk=caisse.pk)
+
+            # ====== Contrôles de solde ======
+            if type_operation == 'envoi':
+                if type_approvisionnement == 'cash' and montant > caisse.solde_cash:
+                    return JsonResponse({'success': False, 'error': f"Solde Argent insuffisant. Solde actuel : {caisse.solde_cash:,.0f} FCFA"})
+                if type_approvisionnement == 'uv' and montant > caisse.solde_uv:
+                    return JsonResponse({'success': False, 'error': f"Solde UV Touchpoint insuffisant. Solde actuel : {caisse.solde_uv:,.0f} FCFA"})
+                if type_approvisionnement == 'wave' and montant > caisse.solde_wave:
+                    return JsonResponse({'success': False, 'error': f"Solde UV Wave insuffisant. Solde actuel : {caisse.solde_wave:,.0f} FCFA"})
+            else:
+                caisse_agent = Caisse.objects.select_for_update().get(pk=agent.user.caisse.pk)
+                if montant > caisse.solde_cash:
+                    return JsonResponse({'success': False, 'error': f"Solde Argent insuffisant. Solde actuel : {caisse.solde_cash:,.0f} FCFA"})
+                if type_approvisionnement == 'uv' and montant > caisse_agent.solde_uv:
+                    return JsonResponse({'success': False, 'error': f"Solde UV Touchpoint de l'agent insuffisant. Solde actuel : {caisse_agent.solde_uv:,.0f} FCFA"})
+                if type_approvisionnement == 'wave' and montant > caisse_agent.solde_wave:
+                    return JsonResponse({'success': False, 'error': f"Solde UV Wave de l'agent insuffisant. Solde actuel : {caisse_agent.solde_wave:,.0f} FCFA"})
+
             operation = ApprovisionnementDirect.objects.create(
                 type_operation=type_operation,
-                source_type='admin',
-                admin_source=admin,
+                source_type=source_type,
+                admin_source=admin_source,
+                assistant_source=assistant_source,
                 agent_destinataire=agent,
                 type_approvisionnement=type_approvisionnement,
                 montant=montant,
@@ -295,7 +312,7 @@ def creer_envoi_retrait(request):
                 date_validation=timezone.now() if statut == 'valide' else None,
                 notes=request.POST.get('notes', ''),
             )
-    except ValueError as e:
+    except (ValueError, Caisse.DoesNotExist) as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
     message = 'Envoi confirmé' if type_operation == 'envoi' else 'Retrait confirmé'
@@ -312,55 +329,157 @@ def creer_envoi_retrait(request):
 @login_required
 def envois_retraits(request):
     """
-    Page Envois & Retraits (ADMIN uniquement) :
-    formulaire de création + liste des Ententes + liste des Validés
+    Page Envois & Retraits (ADMIN ou ASSISTANT) :
+    formulaire de création + registre unique avec filtres.
+    L'assistant d'un agent utilise la caisse de son agent.
     """
     try:
         admin = Admin.objects.get(user=request.user)
+        is_admin = True
+        assistant = None
+        caisse = admin.user.caisse
     except Admin.DoesNotExist:
-        messages.error(request, "Vous n'êtes pas autorisé.")
-        return redirect('dashboard_redirect')
+        try:
+            assistant = Assistant.objects.get(user=request.user)
+        except Assistant.DoesNotExist:
+            messages.error(request, "Vous n'êtes pas autorisé.")
+            return redirect('dashboard_redirect')
+        is_admin = False
+        admin = None
+        caisse = assistant.get_caisse
 
     agents = Agent.objects.filter(est_actif=True).select_related('user__caisse').order_by('nom')
-    caisse = admin.user.caisse
+    filter_agents = Agent.objects.order_by('nom')
+    if not is_admin and assistant.agent:
+        agents = agents.exclude(id=assistant.agent_id)
+        filter_agents = filter_agents.exclude(id=assistant.agent_id)
 
-    ententes = ApprovisionnementDirect.objects.filter(statut='entente').select_related('agent_destinataire', 'admin_source').order_by('-date')
-    valides = ApprovisionnementDirect.objects.filter(statut='valide').select_related('agent_destinataire', 'admin_source').order_by('-date')[:50]
+    operations = ApprovisionnementDirect.objects.select_related(
+        'agent_destinataire', 'admin_source', 'assistant_source'
+    ).order_by('-date')
+    if not is_admin:
+        if assistant.agent_id:
+            operations = operations.filter(
+                Q(agent_destinataire_id=assistant.agent_id) | Q(assistant_source_id=assistant.id)
+            )
+        elif assistant.admin_id:
+            operations = operations.filter(
+                Q(admin_source_id=assistant.admin_id) | Q(assistant_source_id=assistant.id)
+            )
 
     stats = {
-        'ententes_count': ententes.count(),
-        'ententes_montant': ententes.aggregate(Sum('montant'))['montant__sum'] or 0,
-        'valides_count': valides.count(),
-        'valides_montant': valides.aggregate(Sum('montant'))['montant__sum'] or 0,
-        'envois_count': ApprovisionnementDirect.objects.filter(type_operation='envoi').count(),
-        'retraits_count': ApprovisionnementDirect.objects.filter(type_operation='retrait').count(),
+        'ententes_count': operations.filter(statut='entente').count(),
+        'ententes_montant': operations.filter(statut='entente').aggregate(Sum('montant'))['montant__sum'] or 0,
+        'valides_count': operations.filter(statut='valide').count(),
+        'valides_montant': operations.filter(statut='valide').aggregate(Sum('montant'))['montant__sum'] or 0,
+        'envois_count': operations.filter(type_operation='envoi').count(),
+        'envois_montant': operations.filter(type_operation='envoi').aggregate(Sum('montant'))['montant__sum'] or 0,
+        'retraits_count': operations.filter(type_operation='retrait').count(),
+        'retraits_montant': operations.filter(type_operation='retrait').aggregate(Sum('montant'))['montant__sum'] or 0,
     }
+
+    search = request.GET.get('q', '').strip()
+    statut = request.GET.get('statut', '')
+    type_operation = request.GET.get('operation', '')
+    type_approvisionnement = request.GET.get('type', '')
+    agent_id = request.GET.get('agent', '')
+    date_debut = request.GET.get('date_debut', '')
+    date_fin = request.GET.get('date_fin', '')
+
+    if search:
+        search_filter = (
+            Q(agent_destinataire__nom__icontains=search) |
+            Q(agent_destinataire__telephone__icontains=search)
+        )
+        reference = search.upper().replace('ER-', '').lstrip('0')
+        if reference.isdigit():
+            search_filter |= Q(id=int(reference))
+        operations = operations.filter(search_filter)
+    if statut in ('entente', 'valide'):
+        operations = operations.filter(statut=statut)
+    else:
+        statut = ''
+    if type_operation in ('envoi', 'retrait'):
+        operations = operations.filter(type_operation=type_operation)
+    else:
+        type_operation = ''
+    if type_approvisionnement in ('cash', 'uv', 'wave'):
+        operations = operations.filter(type_approvisionnement=type_approvisionnement)
+    else:
+        type_approvisionnement = ''
+    if agent_id.isdigit():
+        agent_id = int(agent_id)
+        operations = operations.filter(agent_destinataire_id=agent_id)
+    else:
+        agent_id = ''
+    if date_debut:
+        try:
+            operations = operations.filter(date__date__gte=datetime.strptime(date_debut, '%Y-%m-%d').date())
+        except ValueError:
+            date_debut = ''
+    if date_fin:
+        try:
+            operations = operations.filter(date__date__lte=datetime.strptime(date_fin, '%Y-%m-%d').date())
+        except ValueError:
+            date_fin = ''
+
+    paginator = Paginator(operations, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    filter_query = request.GET.copy()
+    filter_query.pop('page', None)
 
     context = {
         'title': 'Envois & Retraits',
         'admin': admin,
+        'assistant': assistant,
+        'is_admin': is_admin,
         'caisse': caisse,
         'agents': agents,
-        'ententes': ententes,
-        'valides': valides,
+        'filter_agents': filter_agents,
+        'operations': page_obj,
+        'operations_count': paginator.count,
+        'page_obj': page_obj,
+        'filter_query': filter_query.urlencode(),
+        'filters': {
+            'q': search,
+            'statut': statut,
+            'operation': type_operation,
+            'type': type_approvisionnement,
+            'agent': agent_id,
+            'date_debut': date_debut,
+            'date_fin': date_fin,
+        },
         'stats': stats,
     }
-    return render(request, 'transactions/envois_retraits.html', context)
+    template_name = 'transactions/envois_retraits.html' if is_admin else 'transactions/envois_retraits_assistant.html'
+    return render(request, template_name, context)
 
 @login_required
 @require_POST
 def promouvoir_entente(request, operation_id):
     """
-    L'ADMIN promeut une Entente en Valide.
+    L'ADMIN ou l'ASSISTANT promeut une Entente en Valide.
     Changement de statut uniquement : les soldes ont déjà été appliqués à la création.
     """
+    is_assistant = False
     try:
         admin = Admin.objects.get(user=request.user)
     except Admin.DoesNotExist:
-        messages.error(request, "Vous n'êtes pas autorisé.")
-        return redirect('dashboard_redirect')
+        try:
+            assistant = Assistant.objects.get(user=request.user)
+            is_assistant = True
+        except Assistant.DoesNotExist:
+            messages.error(request, "Vous n'êtes pas autorisé.")
+            return redirect('dashboard_redirect')
 
     operation = get_object_or_404(ApprovisionnementDirect, id=operation_id, statut='entente')
+    if is_assistant and not (
+        operation.assistant_source_id == assistant.id or
+        (assistant.agent_id and operation.agent_destinataire_id == assistant.agent_id)
+    ):
+        messages.error(request, "Vous n'êtes pas autorisé sur cette opération.")
+        return redirect('dashboard_redirect')
+
     operation.statut = 'valide'
     operation.date_validation = timezone.now()
     operation.save()
@@ -430,14 +549,26 @@ def recu_envoi_retrait(request, operation_id):
     """
     Reçu d'une opération Envoi / Retrait.
     JSON pour l'impression QZ Tray, page HTML en fallback.
+    Admin et Assistant autorisés (l'assistant d'un agent voit les opérations le concernant).
     """
+    is_assistant = False
     try:
         admin = Admin.objects.get(user=request.user)
     except Admin.DoesNotExist:
-        messages.error(request, "Vous n'êtes pas autorisé.")
-        return redirect('dashboard_redirect')
+        try:
+            assistant = Assistant.objects.get(user=request.user)
+            is_assistant = True
+        except Assistant.DoesNotExist:
+            messages.error(request, "Vous n'êtes pas autorisé.")
+            return redirect('dashboard_redirect')
 
     operation = get_object_or_404(ApprovisionnementDirect, id=operation_id)
+    if is_assistant and not (
+        operation.assistant_source_id == assistant.id or
+        (assistant.agent_id and operation.agent_destinataire_id == assistant.agent_id)
+    ):
+        messages.error(request, "Vous n'êtes pas autorisé sur cette opération.")
+        return redirect('dashboard_redirect')
     data = {
         'reference': f"ER-{operation.id:06d}",
         'date': operation.date.strftime('%d/%m/%Y'),

@@ -1,0 +1,154 @@
+<!-- templates/transactions/dashboard_assistant.html -->
+{% load humanize %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>{{ title }} - Agent Money</title>
+    <link rel="stylesheet" href="{% static 'css/envois_retraits_assistant_0.css' %}">
+</head>
+<link rel="stylesheet" href="{% static 'css/er.css' %}">
+</head>
+<body>
+    <div class="header">
+        <div class="header-top">
+            <div class="profile" onclick="toggleProfileMenu()">
+                <div class="avatar">{{ assistant.nom|slice:":1"|upper }}{{ assistant.nom|slice:"1:2"|upper }}</div>
+                <div class="profile-info">
+                    <div class="profile-name">{{ assistant.nom }}</div>
+                    <div class="profile-role">Assistant</div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="menu-btn" onclick="window.location.href='{% url "historique_agent" %}'">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-menu" id="profileMenu">
+        <div class="profile-menu-header">
+            <div class="profile-menu-avatar">{{ assistant.nom|slice:":1"|upper }}{{ assistant.nom|slice:"1:2"|upper }}</div>
+            <div class="profile-menu-info">
+                <div class="name">{{ assistant.nom }}</div>
+                <div class="role">Assistant</div>
+            </div>
+        </div>
+        <div class="profile-menu-items">
+            <button class="profile-menu-item" onclick="exportRapportPDF()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span>Exporter PDF</span>
+            </button>
+            <button class="profile-menu-item" onclick="exportRapportExcel()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2l2 3 2-3h2"/></svg>
+                <span>Exporter Excel</span>
+            </button>
+        </div>
+        <div class="profile-menu-logout">
+            <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="profile-menu-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l4-4-4-4M12 3h8v8"/></svg>
+                    <span>Déconnexion</span>
+                </button>
+            </form>
+        </div>
+    </div>
+<div class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% include "transactions/_er_partials_body.html" %}
+</div>
+
+<div class="loading" id="loading">⏳ Traitement en cours...</div>
+
+<script>
+    function toggleProfileMenu() {
+        const menu = document.getElementById('profileMenu');
+        menu.classList.toggle('show');
+    }
+
+    document.addEventListener('click', function(event) {
+        const profile = document.querySelector('.profile');
+        const menu = document.getElementById('profileMenu');
+        if (profile && !profile.contains(event.target) && menu && !menu.contains(event.target)) {
+            menu.classList.remove('show');
+        }
+    });
+
+    window.openModal = function(id) {
+        document.getElementById(id).style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    };
+    window.closeModal = function(id) {
+        document.getElementById(id).style.display = 'none';
+        document.body.style.overflow = '';
+    };
+    window.onclick = function(e) {
+        if (e.target && e.target.id && document.getElementById(e.target.id) === e.target && e.target.classList.contains('modal')) {
+            closeModal(e.target.id);
+        }
+    };
+    window.getCSRFToken = function() {
+        let v = null;
+        if (document.cookie) {
+            const c = document.cookie.split(';');
+            for (let i = 0; i < c.length; i++) {
+                let x = c[i].trim();
+                if (x.substring(0, 10) === 'csrftoken=') { v = decodeURIComponent(x.substring(10)); break; }
+            }
+        }
+        return v;
+    };
+
+    function exportRapportPDF() {
+        const loading = document.getElementById('loading');
+        loading.style.display = 'block';
+        window.location.href = "{% url 'exporter_rapport_complet_agent_pdf' %}";
+        setTimeout(() => { loading.style.display = 'none'; }, 1000);
+    }
+
+    function exportRapportExcel() {
+        const loading = document.getElementById('loading');
+        loading.style.display = 'block';
+        window.location.href = "{% url 'exporter_rapport_complet_agent_excel' %}";
+        setTimeout(() => { loading.style.display = 'none'; }, 1000);
+    }
+
+    function erPrintFrame() {
+        try { window.frames['qzFrame'].focus(); window.frames['qzFrame'].print(); } catch (e) {}
+    }
+
+    function erGetSignature(operationId) {
+        return fetch('/recu-envoi-retrait/' + operationId + '/?format=json', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .catch(function () { return null; });
+    }
+
+    function showReceiptPage(operationId) {
+        var f = document.createElement('iframe');
+        f.id = 'qzFrame';
+        f.style.position = 'fixed';
+        f.style.right = '0';
+        f.style.bottom = '0';
+        f.style.width = '0';
+        f.style.height = '0';
+        f.src = '/recu-envoi-retrait/' + operationId + '/';
+        f.onload = function () { erPrintFrame(); };
+        document.body.appendChild(f);
+    }
+</script>
+<script src="/static/js/qz-tray.js"></script>
+{% include "transactions/_er_partials_js.html" %}
+</body>
+</html>

@@ -241,7 +241,7 @@ def transaction_user(request, operateur, type_transaction):
     # - ASSISTANT: la caisse de son ADMIN (impacte le solde admin)
     if is_assistant:
         assistant = request.user.assistant_profile
-        caisse = assistant.admin.user.caisse  # ← Caisse de l'ADMIN
+        caisse = assistant.get_caisse
     else:
         caisse = request.user.caisse  # ← Propre caisse
     
@@ -271,96 +271,101 @@ def transaction_user(request, operateur, type_transaction):
         form = form_class(request.POST)
         if form.is_valid():
             montant = form.cleaned_data['montant']
-            
-            # ========== VÉRIFICATIONS DES SOLDES ==========
-            solde_ok = True
-            message_erreur = ""
-            
-            # ORANGE, MALITEL, TELECEL (via UV Touspiont)
-            if operateur in ['orange', 'malitel', 'telecel']:
-                if type_transaction == 'depot':
-                    # DÉPÔT: client donne cash → agent donne ses UV (il faut assez d'UV)
-                    if caisse.solde_uv < montant:
-                        solde_ok = False
-                        message_erreur = f"❌ Solde UV Touspiont insuffisant. Solde actuel: {caisse.solde_uv:,.0f} FCFA"
-                    
-                elif type_transaction == 'retrait':
-                    # RETRAIT: client prend cash → agent donne son cash (il faut assez de cash)
-                    if caisse.solde_cash < montant:
-                        solde_ok = False
-                        message_erreur = f"❌ Solde Cash insuffisant. Solde actuel: {caisse.solde_cash:,.0f} FCFA"
-                    
-                elif type_transaction == 'credit':
-                    # CRÉDIT: client recharge → agent donne ses UV (il faut assez d'UV)
-                    if caisse.solde_uv < montant:
-                        solde_ok = False
-                        message_erreur = f"❌ Solde UV Touspiont insuffisant pour le crédit. Solde actuel: {caisse.solde_uv:,.0f} FCFA"
-            
-            # WAVE
-            elif operateur == 'wave':
-                if type_transaction == 'depot':
-                    # DÉPÔT WAVE: client donne cash → agent donne ses Wave (il faut assez de Wave)
-                    if caisse.solde_wave < montant:
-                        solde_ok = False
-                        message_erreur = f"❌ Solde Wave insuffisant. Solde actuel: {caisse.solde_wave:,.0f} FCFA"
-                    
-                elif type_transaction == 'retrait':
-                    # RETRAIT WAVE: client prend cash → agent donne son cash (il faut assez de cash)
-                    if caisse.solde_cash < montant:
-                        solde_ok = False
-                        message_erreur = f"❌ Solde Cash insuffisant. Solde actuel: {caisse.solde_cash:,.0f} FCFA"
-            
-            # Si solde insuffisant
-            if not solde_ok:
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': message_erreur})
-                messages.error(request, message_erreur)
-                return redirect('dashboard_redirect')
-            
-            # Déterminer le rôle et l'admin associé
-            if is_admin:
-                role = 'admin'
-                assistant_admin = None
-            elif is_agent:
-                role = 'agent'
-                assistant_admin = None
-            else:
-                role = 'assistant'
-                assistant_admin = request.user.assistant_profile.admin
-            
-            # Créer et sauvegarder la transaction
-            transaction = form.save(commit=False)
-            transaction.user = request.user
-            transaction.type_transaction = type_transaction
-            transaction.operateur = operateur
-            transaction.role = role
-            transaction.assistant_admin = assistant_admin
-            
-            try:
-                transaction.save()  # ← Ici la logique du modèle Transaction met à jour la caisse
+
+            from django.db import transaction as db_transaction
+            with db_transaction.atomic():
+                # Verrouiller la ligne caisse : élimine les courses sur les soldes
+                caisse = Caisse.objects.select_for_update().get(pk=caisse.pk)
+
+                # ========== VÉRIFICATIONS DES SOLDES ==========
+                solde_ok = True
+                message_erreur = ""
                 
-                # Réponse JSON pour AJAX
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({
-                        'success': True,
-                        'reference': transaction.reference,
-                        'message': f'Transaction {operateur.capitalize()} effectuée avec succès!'
-                    })
+                # ORANGE, MALITEL, TELECEL (via UV Touspiont)
+                if operateur in ['orange', 'malitel', 'telecel']:
+                    if type_transaction == 'depot':
+                        # DÉPÔT: client donne cash → agent donne ses UV (il faut assez d'UV)
+                        if caisse.solde_uv < montant:
+                            solde_ok = False
+                            message_erreur = f"❌ Solde UV Touspiont insuffisant. Solde actuel: {caisse.solde_uv:,.0f} FCFA"
+                        
+                    elif type_transaction == 'retrait':
+                        # RETRAIT: client prend cash → agent donne son cash (il faut assez de cash)
+                        if caisse.solde_cash < montant:
+                            solde_ok = False
+                            message_erreur = f"❌ Solde Cash insuffisant. Solde actuel: {caisse.solde_cash:,.0f} FCFA"
+                        
+                    elif type_transaction == 'credit':
+                        # CRÉDIT: client recharge → agent donne ses UV (il faut assez d'UV)
+                        if caisse.solde_uv < montant:
+                            solde_ok = False
+                            message_erreur = f"❌ Solde UV Touspiont insuffisant pour le crédit. Solde actuel: {caisse.solde_uv:,.0f} FCFA"
                 
-                messages.success(request, f'✅ Transaction {operateur.capitalize()} effectuée avec succès! Réf: {transaction.reference}')
+                # WAVE
+                elif operateur == 'wave':
+                    if type_transaction == 'depot':
+                        # DÉPÔT WAVE: client donne cash → agent donne ses Wave (il faut assez de Wave)
+                        if caisse.solde_wave < montant:
+                            solde_ok = False
+                            message_erreur = f"❌ Solde Wave insuffisant. Solde actuel: {caisse.solde_wave:,.0f} FCFA"
+                        
+                    elif type_transaction == 'retrait':
+                        # RETRAIT WAVE: client prend cash → agent donne son cash (il faut assez de cash)
+                        if caisse.solde_cash < montant:
+                            solde_ok = False
+                            message_erreur = f"❌ Solde Cash insuffisant. Solde actuel: {caisse.solde_cash:,.0f} FCFA"
                 
-                # Redirection selon le rôle
+                # Si solde insuffisant
+                if not solde_ok:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': message_erreur})
+                    messages.error(request, message_erreur)
+                    return redirect('dashboard_redirect')
+                
+                # Déterminer le rôle et l'admin associé
                 if is_admin:
-                    return redirect('dashboard_admin')
+                    role = 'admin'
+                    assistant_admin = None
                 elif is_agent:
-                    return redirect('dashboard_agent')
+                    role = 'agent'
+                    assistant_admin = None
                 else:
-                    return redirect('dashboard_assistant')
+                    role = 'assistant'
+                    assistant_admin = request.user.assistant_profile.admin
+                
+                # Créer et sauvegarder la transaction
+                transaction = form.save(commit=False)
+                transaction.user = request.user
+                transaction.type_transaction = type_transaction
+                transaction.operateur = operateur
+                transaction.role = role
+                transaction.assistant_admin = assistant_admin
+                
+                try:
+                    transaction.save()  # ← Ici la logique du modèle Transaction met à jour la caisse
                     
-            except Exception as e:
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': str(e)})
-                messages.error(request, f'Erreur: {str(e)}')
+                    # Réponse JSON pour AJAX
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({
+                            'success': True,
+                            'reference': transaction.reference,
+                            'message': f'Transaction {operateur.capitalize()} effectuée avec succès!'
+                        })
+                    
+                    messages.success(request, f'✅ Transaction {operateur.capitalize()} effectuée avec succès! Réf: {transaction.reference}')
+                    
+                    # Redirection selon le rôle
+                    if is_admin:
+                        return redirect('dashboard_admin')
+                    elif is_agent:
+                        return redirect('dashboard_agent')
+                    else:
+                        return redirect('dashboard_assistant')
+                        
+                except Exception as e:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': str(e)})
+                    messages.error(request, f'Erreur: {str(e)}')
         else:
             # Erreurs du formulaire
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -593,8 +598,34 @@ def historique_agent(request):
             messages.error(request, 'Vous n\'êtes pas autorisé.')
             return redirect('login')
     
-    # Récupérer toutes les transactions de l'utilisateur
-    transactions = Transaction.objects.filter(user=request.user).order_by('-date')
+    # ========== TRANSACTIONS DE L'UTILISATEUR ==========
+    # Pour l'AGENT : ses propres transactions + celles de SES ASSISTANTS
+    # (toutes touchent sa caisse). Pour l'ASSISTANT : uniquement les siennes.
+    fait_par = {}
+    if is_agent:
+        assistants = Assistant.objects.filter(agent=agent).select_related('user')
+        user_ids = [agent.user_id] + [a.user_id for a in assistants]
+        transactions = Transaction.objects.filter(user_id__in=user_ids).order_by('-date')
+        fait_par[agent.user_id] = f"Agent {agent.nom}"
+        for a in assistants:
+            fait_par[a.user_id] = f"Assistant {a.nom}"
+    else:
+        transactions = Transaction.objects.filter(user=request.user).order_by('-date')
+        fait_par[request.user.id] = "Moi"
+    
+    # ========== ENVOIS & RETRAITS (ApprovisionnementDirect) ==========
+    # L'agent voit tous les envois/retraits le concernant ;
+    # l'assistant voit ceux de son agent ou ceux qu'il a effectués.
+    if is_agent:
+        er_operations = ApprovisionnementDirect.objects.filter(agent_destinataire=agent)
+    elif assistant.agent_id:
+        er_operations = ApprovisionnementDirect.objects.filter(
+            Q(agent_destinataire_id=assistant.agent_id) | Q(assistant_source_id=assistant.id)
+        )
+    else:
+        er_operations = ApprovisionnementDirect.objects.filter(
+            Q(admin_source_id=assistant.admin_id) | Q(assistant_source_id=assistant.id)
+        )
     
     # Date d'aujourd'hui avec timezone
     today = timezone.now().date()
@@ -638,14 +669,66 @@ def historique_agent(request):
     if type_transaction:
         transactions = transactions.filter(type_transaction=type_transaction)
     
+    # ========== FILTRES APPLIQUÉS AUX ENVOIS & RETRAITS ==========
+    if not date_debut and not date_fin:
+        er_operations = er_operations.filter(date__date=today)
+    else:
+        if date_debut:
+            try:
+                date_debut_obj = datetime.strptime(date_debut, '%Y-%m-%d').date()
+                er_operations = er_operations.filter(date__date__gte=date_debut_obj)
+            except ValueError:
+                pass
+        if date_fin:
+            try:
+                date_fin_obj = datetime.strptime(date_fin, '%Y-%m-%d').date()
+                er_operations = er_operations.filter(date__date__lte=date_fin_obj)
+            except ValueError:
+                pass
+    
+    # Les Envois/Retraits n'ont pas d'opérateur mobile :
+    # si un opérateur est filtré, on les exclut.
+    if operateur or type_transaction == 'credit':
+        er_operations = er_operations.none()
+    elif type_transaction == 'depot':
+        er_operations = er_operations.filter(type_operation='envoi')
+    elif type_transaction == 'retrait':
+        er_operations = er_operations.filter(type_operation='retrait')
+    
     # ========== CALCUL DES TOTAUX (APRES FILTRES) ==========
     total_entree = transactions.filter(type_transaction='depot').aggregate(Sum('montant'))['montant__sum'] or 0
     total_sortie = transactions.filter(type_transaction='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
     total_commission = transactions.aggregate(Sum('commission'))['commission__sum'] or 0
     
+    # Les ENVOIS entrent dans la caisse de l'agent, les RETRAITS en sortent
+    total_envois = er_operations.filter(type_operation='envoi').aggregate(Sum('montant'))['montant__sum'] or 0
+    total_retraits = er_operations.filter(type_operation='retrait').aggregate(Sum('montant'))['montant__sum'] or 0
+    total_entree += total_envois
+    total_sortie += total_retraits
+    
+    # ========== FUSION TRANSACTIONS + ENVOIS/RETRAITS ==========
+    items = [{
+        'kind': 'transaction',
+        'obj': t,
+        'date': t.date,
+        'fait_par': fait_par.get(t.user_id, t.user.username),
+    } for t in transactions]
+    for op in er_operations:
+        if op.source_type == 'admin':
+            source_label = f"Admin {op.admin_source.nom}" if op.admin_source else "Admin"
+        else:
+            source_label = f"Assistant {op.assistant_source.nom}" if op.assistant_source else "Assistant"
+        items.append({
+            'kind': 'er',
+            'obj': op,
+            'date': op.date,
+            'fait_par': source_label,
+        })
+    items.sort(key=lambda x: x['date'], reverse=True)
+    
     # ========== PAGINATION ==========
     page = request.GET.get('page', 1)
-    paginator = Paginator(transactions, 10)
+    paginator = Paginator(items, 10)
     
     try:
         transactions_page = paginator.page(page)
@@ -708,7 +791,7 @@ def operation_agent(request):
             assistant = Assistant.objects.get(user=request.user)
             operateur_type = 'assistant'
             operateur_nom = assistant.nom
-            caisse_partagee = assistant.admin.user.caisse
+            caisse_partagee = assistant.get_caisse
         
         # Déterminer le champ et les soldes
         if type_fonds == 'cash':
@@ -1009,6 +1092,11 @@ def api_annuler_transaction(request):
 
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Méthode non autorisée.'})
+
+    # Sécurité : seuls l'auteur de la transaction ou un ADMIN peuvent annuler
+    is_admin_user = hasattr(request.user, 'admin_profile')
+    if not is_admin_user and transaction.user_id != request.user.id:
+        return JsonResponse({'success': False, 'error': "Vous n'êtes pas autorisé à annuler cette transaction."})
 
     if transaction.est_annule:
         return JsonResponse({'success': False, 'error': 'Cette transaction est déjà annulée.'})

@@ -277,10 +277,20 @@ def ajouter_assistant(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         est_actif = request.POST.get('est_actif') == 'true'
+        agent_id = request.POST.get('agent_id', '')
         
         if not nom or not telephone:
             messages.error(request, 'Le nom et le téléphone sont obligatoires.')
             return redirect('gestion_agents')  # ← Redirige vers gestion_agents
+        
+        if agent_id:
+            try:
+                agent_lie = Agent.objects.get(id=agent_id)
+            except (Agent.DoesNotExist, ValueError, TypeError):
+                messages.error(request, 'Agent introuvable.')
+                return redirect('gestion_agents')
+        else:
+            agent_lie = None
         
         if assistant_id:
             # ===== Modification d'un assistant existant =====
@@ -294,6 +304,7 @@ def ajouter_assistant(request):
             assistant.telephone = telephone
             assistant.email = email
             assistant.est_actif = est_actif
+            assistant.agent = agent_lie
             assistant.save()
             
             # Identifiant et mot de passe mis à jour si fournis
@@ -332,6 +343,7 @@ def ajouter_assistant(request):
             telephone=telephone,
             email=email,
             admin=admin,
+            agent=agent_lie,
             est_actif=est_actif,
             created_by=admin
         )
@@ -427,7 +439,7 @@ def detail_assistant(request, assistant_id):
         return redirect('login')
     
     assistant = get_object_or_404(Assistant, id=assistant_id, admin=admin)
-    caisse = assistant.admin.user.caisse  # L'assistant partage la caisse de l'admin
+    caisse = assistant.get_caisse  # Caisse partagée (admin ou agent)
     
     today = datetime.now().date()
     

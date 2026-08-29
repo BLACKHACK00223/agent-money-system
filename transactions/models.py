@@ -1,6 +1,6 @@
 # transactions/models.py
 from decimal import Decimal
-from django.db import models
+from django.db import models, transaction as db_transaction
 from django.contrib.auth.models import User
 from django.utils import timezone
 import uuid
@@ -33,7 +33,7 @@ class Agent(models.Model):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='agent_profile')
     nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20)
+    telephone = models.CharField(max_length=20, db_index=True)
     email = models.EmailField(blank=True)
     est_actif = models.BooleanField(default=True)
     created_by = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, related_name='agents_crees')
@@ -52,7 +52,7 @@ class Assistant(models.Model):
     """
     ASSISTANT - Compte assistant avec droits similaires à l'Admin
     Peut faire: dépôt, retrait, crédit
-    Un Admin peut avoir plusieurs Assistants
+    Un Admin ou un Agent peut avoir plusieurs Assistants
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='assistant_profile')
     nom = models.CharField(max_length=100)
@@ -61,18 +61,26 @@ class Assistant(models.Model):
     est_actif = models.BooleanField(default=True)
     
     # Lié à un Admin (un admin peut avoir plusieurs assistants)
-    admin = models.ForeignKey(Admin, on_delete=models.CASCADE, related_name='assistants')
+    admin = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, related_name='assistants')
+    
+    # Lié à un Agent (un agent peut avoir plusieurs assistants)
+    agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='assistants')
     
     created_by = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, related_name='assistants_crees')
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return f"{self.nom} - {self.telephone} (Assistant de {self.admin.nom})"
+        if self.agent:
+            return f"{self.nom} - {self.telephone} (Assistant de l'agent {self.agent.nom})"
+        return f"{self.nom} - {self.telephone} (Assistant de {self.admin.nom if self.admin else '?'})"
     
     @property
     def get_caisse(self):
-        """L'assistant partage la caisse de son Admin"""
-        return self.admin.user.caisse
+        """L'assistant de l'agent partage la caisse de son Agent,
+        sinon celle de son Admin"""
+        if self.agent:
+            return self.agent.user.caisse
+        return self.admin.user.caisse if self.admin else None
     
     class Meta:
         verbose_name = "Assistant"
@@ -217,7 +225,7 @@ class Transaction(models.Model):
     type_transaction = models.CharField(max_length=10, choices=TYPE_CHOICES)
     
     # Client
-    numero_client = models.CharField(max_length=20)
+    numero_client = models.CharField(max_length=20, db_index=True)
     nom_client = models.CharField(max_length=100, blank=True, null=True)
     
     # Montants
@@ -333,36 +341,45 @@ class Transaction(models.Model):
         return Decimal('0')
     
     def annuler(self, user, motif=""):
-        if self.est_annule:
-            return False
-        if self.role == 'assistant' and self.assistant_admin:
-            caisse = self.assistant_admin.user.caisse
+        with db_transaction.atomic():
+            verrou = Transaction.objects.select_for_update().get(pk=self.pk)
+            if verrou.est_annule:
+                return False
+            if verrou.role == 'assistant' and verrou.assistant_admin:
+                caisse = Caisse.objects.select_for_update().get(pk=verrou.assistant_admin.user.caisse.pk)
+            else:
+                caisse = Caisse.objects.select_for_update().get(pk=verrou.user.caisse.pk)
+            if verrou.operateur in ['orange', 'malitel', 'telecel']:
+                if verrou.type_transaction == 'depot':
+                    caisse.solde_cash -= verrou.montant
+                    caisse.solde_uv += verrou.montant
+                elif verrou.type_transaction == 'retrait':
+                    caisse.solde_cash += verrou.montant
+                    caisse.solde_uv -= verrou.montant
+                elif verrou.type_transaction == 'credit':
+                    caisse.solde_cash -= verrou.montant
+                    caisse.solde_uv += verrou.montant
+            elif verrou.operateur == 'wave':
+                if verrou.type_transaction == 'depot':
+                    caisse.solde_cash -= verrou.montant
+                    caisse.solde_wave += verrou.montant
+                elif verrou.type_transaction == 'retrait':
+                    caisse.solde_cash += verrou.montant
+                    caisse.solde_wave -= verrou.montant
+            caisse.save()
+            self.est_annule = True
+            self.date_annulation = timezone.now()
+            self.annule_par = user
+            self.motif_annulation = motif
+            self.save(update_fields=['est_annule', 'date_annulation', 'annule_par', 'motif_annulation'])
+            return True
+
+    def _caisse_lockee(self):
+        if self.role == 'assistant' and hasattr(self.user, 'assistant_profile'):
+            caisse = self.user.assistant_profile.get_caisse
         else:
             caisse = self.user.caisse
-        if self.operateur in ['orange', 'malitel', 'telecel']:
-            if self.type_transaction == 'depot':
-                caisse.solde_cash -= self.montant
-                caisse.solde_uv += self.montant
-            elif self.type_transaction == 'retrait':
-                caisse.solde_cash += self.montant
-                caisse.solde_uv -= self.montant
-            elif self.type_transaction == 'credit':
-                caisse.solde_cash -= self.montant
-                caisse.solde_uv += self.montant
-        elif self.operateur == 'wave':
-            if self.type_transaction == 'depot':
-                caisse.solde_cash -= self.montant
-                caisse.solde_wave += self.montant
-            elif self.type_transaction == 'retrait':
-                caisse.solde_cash += self.montant
-                caisse.solde_wave -= self.montant
-        caisse.save()
-        self.est_annule = True
-        self.date_annulation = timezone.now()
-        self.annule_par = user
-        self.motif_annulation = motif
-        self.save(update_fields=['est_annule', 'date_annulation', 'annule_par', 'motif_annulation'])
-        return True
+        return Caisse.objects.select_for_update().get(pk=caisse.pk)
 
     def save(self, *args, **kwargs):
         if not self.reference:
@@ -379,30 +396,30 @@ class Transaction(models.Model):
             }.get(self.type_transaction, 'T')
             self.reference = f"{prefix}{type_prefix}{uuid.uuid4().hex[:8].upper()}"
         if self.pk is None:
-            self.commission = self.calculer_commission()
-            self.frais_operateur = self.calculer_frais_operateur()
-            if self.role == 'assistant' and self.assistant_admin:
-                caisse = self.assistant_admin.user.caisse
-            else:
-                caisse = self.user.caisse
-            if self.operateur in ['orange', 'malitel', 'telecel']:
-                if self.type_transaction == 'depot':
-                    caisse.solde_cash += self.montant
-                    caisse.solde_uv -= self.montant
-                elif self.type_transaction == 'retrait':
-                    caisse.solde_cash -= self.montant
-                    caisse.solde_uv += self.montant
-                elif self.type_transaction == 'credit':
-                    caisse.solde_cash += self.montant
-                    caisse.solde_uv -= self.montant
-            elif self.operateur == 'wave':
-                if self.type_transaction == 'depot':
-                    caisse.solde_cash += self.montant
-                    caisse.solde_wave -= self.montant
-                elif self.type_transaction == 'retrait':
-                    caisse.solde_cash -= self.montant
-                    caisse.solde_wave += self.montant
-            caisse.save()
+            with db_transaction.atomic():
+                self.commission = self.calculer_commission()
+                self.frais_operateur = self.calculer_frais_operateur()
+                caisse = self._caisse_lockee()
+                if self.operateur in ['orange', 'malitel', 'telecel']:
+                    if self.type_transaction == 'depot':
+                        caisse.solde_cash += self.montant
+                        caisse.solde_uv -= self.montant
+                    elif self.type_transaction == 'retrait':
+                        caisse.solde_cash -= self.montant
+                        caisse.solde_uv += self.montant
+                    elif self.type_transaction == 'credit':
+                        caisse.solde_cash += self.montant
+                        caisse.solde_uv -= self.montant
+                elif self.operateur == 'wave':
+                    if self.type_transaction == 'depot':
+                        caisse.solde_cash += self.montant
+                        caisse.solde_wave -= self.montant
+                    elif self.type_transaction == 'retrait':
+                        caisse.solde_cash -= self.montant
+                        caisse.solde_wave += self.montant
+                caisse.save()
+                super().save(*args, **kwargs)
+            return
         super().save(*args, **kwargs)
     
     def __str__(self):
@@ -466,13 +483,13 @@ class DemandeApprovisionnement(models.Model):
     def valider_par_assistant(self, assistant_user):
         """
         Valider la demande par un ASSISTANT
-        L'assistant utilise la caisse de SON ADMIN (pas sa propre caisse)
+        L'assistant utilise la caisse de SON ADMIN (ou de son AGENT)
         """
         try:
             # Récupérer le profil assistant
             assistant = assistant_user.assistant_profile
-            # Récupérer la caisse de l'admin associé à l'assistant
-            caisse_admin = assistant.admin.user.caisse
+            # Récupérer la caisse liée à l'assistant (admin ou agent)
+            caisse_admin = assistant.get_caisse
             return self._valider(caisse_admin, assistant_user, 'assistant')
         except Exception as e:
             print(f"Erreur lors de la validation par assistant: {e}")
@@ -631,49 +648,46 @@ class ApprovisionnementDirect(models.Model):
         Applique les mouvements de soldes (ENVOI ou RETRAIT).
         Appelé une seule fois, à la création de l'opération.
         """
-        if self.source_type == 'admin':
-            caisse_source = self.admin_source.user.caisse
-        else:
-            caisse_source = self.assistant_source.user.caisse
-        
-        caisse_agent = self.agent_destinataire.user.caisse
-        
-        if not caisse_source or not caisse_agent:
-            raise ValueError('Caisse de la source ou de l\'agent introuvable.')
-        
-        if self.type_operation == 'envoi':
-            # Admin -X, Agent +X (unilatéral)
-            if self.type_approvisionnement == 'cash':
-                caisse_source.solde_cash -= self.montant
-                caisse_agent.solde_cash += self.montant
-            elif self.type_approvisionnement == 'uv':
-                caisse_source.solde_uv -= self.montant
-                caisse_agent.solde_uv += self.montant
-            elif self.type_approvisionnement == 'wave':
-                caisse_source.solde_wave -= self.montant
-                caisse_agent.solde_wave += self.montant
+        with db_transaction.atomic():
+            if self.source_type == 'admin':
+                caisse_source = Caisse.objects.select_for_update().get(pk=self.admin_source.user.caisse.pk)
             else:
-                raise ValueError('Type d\'envoi invalide.')
-                
-        elif self.type_operation == 'retrait':
-            # Agent UV/Wave -X + Cash +X ; Admin UV/Wave +X + Cash -X
-            if self.type_approvisionnement == 'uv':
-                caisse_agent.solde_uv -= self.montant
-                caisse_agent.solde_cash += self.montant
-                caisse_source.solde_uv += self.montant
-                caisse_source.solde_cash -= self.montant
-            elif self.type_approvisionnement == 'wave':
-                caisse_agent.solde_wave -= self.montant
-                caisse_agent.solde_cash += self.montant
-                caisse_source.solde_wave += self.montant
-                caisse_source.solde_cash -= self.montant
+                caisse_source = Caisse.objects.select_for_update().get(pk=self.assistant_source.get_caisse.pk)
+            caisse_agent = Caisse.objects.select_for_update().get(pk=self.agent_destinataire.user.caisse.pk)
+
+            if self.type_operation == 'envoi':
+                # Admin -X, Agent +X (unilatéral)
+                if self.type_approvisionnement == 'cash':
+                    caisse_source.solde_cash -= self.montant
+                    caisse_agent.solde_cash += self.montant
+                elif self.type_approvisionnement == 'uv':
+                    caisse_source.solde_uv -= self.montant
+                    caisse_agent.solde_uv += self.montant
+                elif self.type_approvisionnement == 'wave':
+                    caisse_source.solde_wave -= self.montant
+                    caisse_agent.solde_wave += self.montant
+                else:
+                    raise ValueError('Type d\'envoi invalide.')
+                    
+            elif self.type_operation == 'retrait':
+                # Agent UV/Wave -X + Cash +X ; Admin UV/Wave +X + Cash -X
+                if self.type_approvisionnement == 'uv':
+                    caisse_agent.solde_uv -= self.montant
+                    caisse_agent.solde_cash += self.montant
+                    caisse_source.solde_uv += self.montant
+                    caisse_source.solde_cash -= self.montant
+                elif self.type_approvisionnement == 'wave':
+                    caisse_agent.solde_wave -= self.montant
+                    caisse_agent.solde_cash += self.montant
+                    caisse_source.solde_wave += self.montant
+                    caisse_source.solde_cash -= self.montant
+                else:
+                    raise ValueError('Retrait possible uniquement en UV Touchpoint ou UV Wave.')
             else:
-                raise ValueError('Retrait possible uniquement en UV Touchpoint ou UV Wave.')
-        else:
-            raise ValueError('Type d\'opération invalide.')
-        
-        caisse_source.save()
-        caisse_agent.save()
+                raise ValueError('Type d\'opération invalide.')
+            
+            caisse_source.save()
+            caisse_agent.save()
     
     def save(self, *args, **kwargs):
         if self.pk is None:

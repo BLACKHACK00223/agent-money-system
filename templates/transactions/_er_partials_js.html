@@ -1,0 +1,355 @@
+{% load static %}
+<script src="{% static 'js/jsQR.js' %}"></script>
+<script>
+        var erScanStream = null;
+        var erScanRaf = null;
+
+        function erChooseType(type) {
+            erType = type;
+            document.getElementById('btnTypeCash').classList.toggle('active-type', type === 'cash');
+            document.getElementById('btnTypeUv').classList.toggle('active-type', type === 'uv');
+            document.getElementById('btnTypeWave').classList.toggle('active-type', type === 'wave');
+            erStopScan();
+            document.getElementById('erScanWrap').style.display = type === 'wave' ? 'block' : 'none';
+            erGo(2);
+        }
+
+        function erStartScan() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                erShowMsg('Caméra non disponible sur cet appareil.', true);
+                return;
+            }
+            erStopScan();
+            var panel = document.getElementById('erScanPanel');
+            if (panel) document.body.appendChild(panel);
+            document.getElementById('erScanPanel').style.display = 'block';
+            document.getElementById('erScanResult').style.display = 'none';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }).then(function (stream) {
+                erScanStream = stream;
+                var v = document.getElementById('erScanVideo');
+                v.srcObject = stream;
+                v.play().catch(function () {});
+                erScanTick();
+            }).catch(function () {
+                erShowMsg('Impossible d\'accéder à la caméra. Autorisez l\'accès dans le navigateur.', true);
+            });
+        }
+
+        function erScanTick() {
+            var v = document.getElementById('erScanVideo');
+            if (!erScanStream || !v || v.readyState < 2) { erScanRaf = requestAnimationFrame(erScanTick); return; }
+            var c = document.createElement('canvas');
+            c.width = v.videoWidth;
+            c.height = v.videoHeight;
+            var ctx = c.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(v, 0, 0);
+            var code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+            if (code && code.data) {
+                erApplyScan(code.data);
+                return;
+            }
+            erScanRaf = requestAnimationFrame(erScanTick);
+        }
+
+        function erEsc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        function erApplyScan(text) {
+            erStopScan();
+            var digits = (text.match(/\d{7,14}/g) || []).sort(function (a, b) { return b.length - a.length; })[0] || '';
+            var agentSel = document.getElementById('agentSel');
+            var matched = '';
+            if (agentSel) {
+                for (var i = 0; i < agentSel.options.length; i++) {
+                    var tel = (agentSel.options[i].getAttribute('data-telephone') || '').replace(/\s+/g, '');
+                    if (tel && digits && tel.slice(-8) === digits.slice(-8)) {
+                        agentSel.value = agentSel.options[i].value;
+                        matched = agentSel.options[i].text;
+                        break;
+                    }
+                }
+            }
+            var r = document.getElementById('erScanResult');
+            r.style.display = 'block';
+            if (matched) {
+                r.className = 'er-scan-result is-ok';
+                r.innerHTML = '✅ QR reconnu : <b>' + erEsc(matched) + '</b> — téléphone ' + erEsc(digits || '?') + '. Agent sélectionné automatiquement.';
+            } else {
+                r.className = 'er-scan-result is-warn';
+                r.innerHTML = '📄 QR lu : "' + erEsc(text.slice(0, 30)) + (text.length > 30 ? '…' : '') + '" — téléphone ' + erEsc(digits || 'non trouvé') + ' (aucun agent correspondant).';
+            }
+        }
+
+        function erStopScan() {
+            if (erScanStream) {
+                erScanStream.getTracks().forEach(function (t) { t.stop(); });
+                erScanStream = null;
+            }
+            if (erScanRaf) { cancelAnimationFrame(erScanRaf); erScanRaf = null; }
+            var v = document.getElementById('erScanVideo');
+            if (v) v.srcObject = null;
+            var p = document.getElementById('erScanPanel');
+            if (p) p.style.display = 'none';
+        }
+
+        var erCurrentOp = null;
+        var erType = null;
+        var erStep = 1;
+
+        function erOpenModal(op) {
+            erCurrentOp = op === 'retrait' ? 'retrait' : 'envoi';
+            erType = null;
+            erStep = 1;
+            document.getElementById('erStep1').style.display = 'block';
+            document.getElementById('erStep2').style.display = 'none';
+            document.getElementById('erStep3').style.display = 'none';
+            document.getElementById('erPrev').style.display = 'none';
+            document.getElementById('erNext').innerHTML = 'Suivant →';
+            erResetForm();
+            erUpdateSteps();
+            openModal('erModal');
+        }
+
+        function erUpdateSteps() {
+            for (var i = 1; i <= 3; i++) {
+                var s = document.getElementById('stp' + i);
+                s.classList.remove('active', 'done');
+                if (i === erStep) s.classList.add('active');
+                else if (i < erStep) s.classList.add('done');
+            }
+        }
+
+        function erGo(n) {
+            erStep = n;
+            document.getElementById('erStep1').style.display = n === 1 ? 'block' : 'none';
+            document.getElementById('erStep2').style.display = n === 2 ? 'block' : 'none';
+            document.getElementById('erStep3').style.display = n === 3 ? 'block' : 'none';
+            document.getElementById('erPrev').style.display = n > 1 ? 'block' : 'none';
+            document.getElementById('erNext').innerHTML = n === 3 ? '📨 Envoyer' : 'Suivant →';
+            erUpdateSteps();
+        }
+
+        function erChooseType(type) {
+            erType = type;
+            document.getElementById('btnTypeCash').classList.toggle('active-type', type === 'cash');
+            document.getElementById('btnTypeUv').classList.toggle('active-type', type === 'uv');
+            document.getElementById('btnTypeWave').classList.toggle('active-type', type === 'wave');
+            erGo(2);
+        }
+
+        function erResetForm() {
+            erStopScan();
+            var sr = document.getElementById('erScanResult');
+            if (sr) { sr.style.display = 'none'; sr.className = 'er-scan-result'; }
+            var sw = document.getElementById('erScanWrap');
+            if (sw) sw.style.display = 'none';
+            document.getElementById('agentSel').value = '';
+            document.getElementById('montant').value = '';
+            document.getElementById('recap').style.display = 'none';
+            document.getElementById('msgBox').className = 'er-msg';
+            document.getElementById('msgBox').innerHTML = '';
+            var cash = document.getElementById('btnTypeCash');
+            var uv = document.getElementById('btnTypeUv');
+            var wave = document.getElementById('btnTypeWave');
+            cash.disabled = false;
+            uv.disabled = false;
+            wave.disabled = false;
+            cash.classList.remove('active-type');
+            uv.classList.remove('active-type');
+            wave.classList.remove('active-type');
+            if (erCurrentOp === 'retrait') cash.disabled = true;
+            erRenderRecap();
+        }
+
+        function erSelAgent() { erRenderRecap(); }
+        function erMontantChange() { erRenderRecap(); }
+
+        function erTypeLabel() {
+            if (erType === 'uv') return '📱 UV Touchpoint';
+            if (erType === 'wave') return '💳 UV Wave';
+            return '💰 Argent';
+        }
+
+        function erRenderRecap() {
+            if (!erCurrentOp) return;
+            var agentSel = document.getElementById('agentSel');
+            var montant = document.getElementById('montant');
+            var agent = agentSel.options[agentSel.selectedIndex];
+            var recap = document.getElementById('recap');
+            document.getElementById('r-op').textContent = erCurrentOp === 'envoi' ? '📤 Envoi' : '📥 Retrait';
+            document.getElementById('r-agent').textContent = agent && agentSel.value ? agent.textContent : '—';
+            document.getElementById('r-type').textContent = erType ? erTypeLabel() : '—';
+            document.getElementById('r-montant').textContent = montant.value ? parseFloat(montant.value).toLocaleString('fr-FR') + ' FCFA' : '—';
+            var lines = erMovementsHtml();
+            document.getElementById('r-agent-lines').innerHTML = lines;
+            recap.style.display = montant.value ? 'block' : 'none';
+        }
+
+        function erMovementsHtml() {
+            var montant = document.getElementById('montant').value;
+            var lines = '';
+            if (montant) {
+                var m = parseFloat(montant).toLocaleString('fr-FR') + ' FCFA';
+                if (erCurrentOp === 'envoi') {
+                    lines = '<div class="er-row"><span>Source (Caisse admin)</span><b class="er-down">-' + m + '</b></div>';
+                    lines += '<div class="er-row"><span>Destination (Agent)</span><b class="er-up">+' + m + '</b></div>';
+                } else {
+                    lines = '<div class="er-row"><span>Source (Agent)</span><b class="er-down">-' + m + '</b></div>';
+                    lines += '<div class="er-row"><span>Destination (Caisse admin)</span><b class="er-up">+' + m + '</b></div>';
+                }
+            }
+            return lines;
+        }
+
+        function erFillRecap3() {
+            document.getElementById('r3-op').textContent = erCurrentOp === 'envoi' ? '📤 Envoi' : '📥 Retrait';
+            var agentSel = document.getElementById('agentSel');
+            document.getElementById('r3-agent').textContent = agentSel.options[agentSel.selectedIndex].textContent;
+            document.getElementById('r3-type').textContent = erTypeLabel();
+            var montant = document.getElementById('montant');
+            document.getElementById('r3-montant').textContent = parseFloat(montant.value).toLocaleString('fr-FR') + ' FCFA';
+            document.getElementById('r3-lines').innerHTML = erMovementsHtml();
+        }
+
+        function erShowMsg(text, isError) {
+            var msg = document.getElementById('msgBox');
+            msg.className = 'er-msg show ' + (isError ? 'error' : 'success');
+            msg.innerHTML = (isError ? '⚠ ' : '✓ ') + text;
+        }
+
+        function erNext() {
+            if (erStep === 1) {
+                if (!erType) {
+                    erShowMsg('Veuillez choisir un type : Argent, UV Touchpoint ou UV Wave.', true);
+                    return;
+                }
+                erGo(2);
+                return;
+            }
+            if (erStep === 2) {
+                var agentSel = document.getElementById('agentSel');
+                var montant = document.getElementById('montant');
+                if (!agentSel.value || !montant.value) {
+                    erShowMsg('Veuillez choisir un agent et saisir un montant.', true);
+                    return;
+                }
+                if (parseFloat(montant.value) < 1000) {
+                    erShowMsg('Le montant minimum est de 1 000 FCFA.', true);
+                    return;
+                }
+                erFillRecap3();
+                erGo(3);
+                return;
+            }
+            if (erStep === 3) { erSubmitOperation(); }
+        }
+
+        function erPrev() { if (erStep > 1) erGo(erStep - 1); }
+
+        function erSubmitOperation() {
+            if (!erCurrentOp) return;
+            var agentSel = document.getElementById('agentSel');
+            var montant = document.getElementById('montant');
+            var statut = document.querySelector('input[name="statut"]:checked');
+
+            var data = new URLSearchParams();
+            data.append('csrfmiddlewaretoken', getCSRFToken());
+            data.append('type_operation', erCurrentOp);
+            data.append('type_approvisionnement', erType);
+            data.append('agent_id', agentSel.value);
+            data.append('montant', montant.value);
+            data.append('statut', statut ? statut.value : 'entente');
+
+            var loading = document.getElementById('loading');
+            if (loading) loading.style.display = 'flex';
+
+            fetch('/api/envoi-retrait/', {
+                method: 'POST',
+                body: data,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (loading) loading.style.display = 'none';
+                if (data.success) {
+                    var id = String(data.id == null ? '' : data.id);
+                    var msg = erEsc(data.message || 'Opération enregistrée.');
+                    erShowMsg(msg + ' <button type="button" class="er-mini mb-print" data-opid="' + erEsc(id) + '">🖨️ Imprimer</button>', false);
+                    var printBtn = document.querySelector('#msgBox button[data-opid]');
+                    if (printBtn) printBtn.addEventListener('click', function () { printReceipt(id, this); });
+                    setTimeout(function () { location.reload(); }, 2000);
+                } else {
+                    erShowMsg(erEsc(data.error) || "Impossible d'enregistrer l'opération.", true);
+                }
+            })
+            .catch(function () {
+                if (loading) loading.style.display = 'none';
+                erShowMsg('Erreur réseau. Réessayez.', true);
+            });
+        }
+
+        document.getElementById('agentSel').addEventListener('change', erSelAgent);
+        document.getElementById('montant').addEventListener('input', erMontantChange);
+        document.addEventListener('click', function (e) {
+            if (e.target === document.getElementById('erModal')) { erStopScan(); closeModal('erModal'); }
+        });
+
+        /* ================= RECU QZ + WHATSAPP ================= */
+        function erPrintFrame() {
+            try { window.frames['qzFrame'].focus(); window.frames['qzFrame'].print(); } catch (e) {}
+        }
+
+        function erGetSignature(operationId) {
+            return fetch('/recu-envoi-retrait/' + operationId + '/?format=json', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function (r) { return r.json(); })
+            .catch(function () { return null; });
+        }
+
+        function printReceipt(operationId, btn) {
+            if (window.QZ && window.QZ.tray) {
+                var loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'flex';
+                erGetSignature(operationId).then(function (data) {
+                    if (loading) loading.style.display = 'none';
+                    if (!data) return;
+                    window.QZ.tray.print(data.zpl).catch(function (err) { console.log(err); });
+                });
+            } else {
+                var f = document.createElement('iframe');
+                f.id = 'qzFrame';
+                f.style.position = 'fixed';
+                f.style.right = '0';
+                f.style.bottom = '0';
+                f.style.width = '0';
+                f.style.height = '0';
+                f.src = '/recu-envoi-retrait/' + operationId + '/';
+                f.onload = function () { erPrintFrame(); };
+                document.body.appendChild(f);
+            }
+        }
+
+        function openWhatsApp(operationId, btn) {
+            var item = btn;
+            while (item && !item.dataset.telephone) item = item.parentElement;
+            var phone = item ? item.dataset.telephone : null;
+            erGetSignature(operationId).then(function (data) {
+                if (!data) return;
+                var msg = data.message || 'Votre opération (Réf. ' + data.reference + ') est enregistrée. Montant : ' + data.montant + ' FCFA.';
+                var url = 'https://wa.me/' + (phone || '') + '?text=' + encodeURIComponent(msg);
+                window.open(url, '_blank');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var erParams = new URLSearchParams(window.location.search);
+            var erOuvrir = erParams.get('ouvrir');
+            if (erOuvrir === 'envoi' || erOuvrir === 'retrait') {
+                erOpenModal(erOuvrir);
+            }
+        });
+</script>

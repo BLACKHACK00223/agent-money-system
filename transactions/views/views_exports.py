@@ -811,7 +811,7 @@ def exporter_rapport_complet_agent(request, format_type):
     elif hasattr(request.user, 'assistant_profile'):
         # C'est un assistant
         assistant = request.user.assistant_profile
-        caisse = assistant.admin.user.caisse
+        caisse = assistant.get_caisse
         user_type = "Assistant"
         user_name = assistant.nom
         

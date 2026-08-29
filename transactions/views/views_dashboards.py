@@ -476,8 +476,8 @@ def dashboard_assistant(request):
         messages.error(request, 'Vous n\'êtes pas configuré comme assistant.')
         return redirect('login')
     
-    # L'assistant partage la caisse de son admin
-    caisse = assistant.admin.user.caisse
+    # L'assistant partage la caisse de son admin (ou celle de son agent)
+    caisse = assistant.get_caisse
     
     today = datetime.now().date()
     
