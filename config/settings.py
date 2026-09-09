@@ -24,10 +24,11 @@ def _load_dotenv():
 _load_dotenv()
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('x49fxca*gyo5=osr6-p9lf*w2phph(md^)3+(*o-!8xec*t$(9')
+# ``SECRET_KEY`` is accepted as a fallback for common hosting configurations.
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY') or os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+DEBUG = (os.environ.get('DJANGO_DEBUG') or os.environ.get('DEBUG', 'False')).lower() == 'true'
 
 if not SECRET_KEY:
     if DEBUG:
@@ -37,7 +38,11 @@ if not SECRET_KEY:
             "DJANGO_SECRET_KEY doit être définie (variable d'environnement ou fichier .env) quand DEBUG est désactivé."
         )
 
-ALLOWED_HOSTS = [h for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',') if h]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in (os.environ.get('DJANGO_ALLOWED_HOSTS') or os.environ.get('ALLOWED_HOSTS', '')).split(',')
+    if host.strip()
+]
 if not ALLOWED_HOSTS:
     if DEBUG:
         ALLOWED_HOSTS = ['*']
