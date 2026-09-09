@@ -22,7 +22,7 @@ def _load_dotenv():
 _load_dotenv()
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+SECRET_KEY = os.environ.get('x49fxca*gyo5=osr6-p9lf*w2phph(md^)3+(*o-!8xec*t$(9')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
