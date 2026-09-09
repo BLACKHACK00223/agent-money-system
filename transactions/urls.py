@@ -1,7 +1,7 @@
 # transactions/urls.py
 from django.urls import path
 from . import views
-from django.urls import reverse
+
 urlpatterns = [
     # ==================== REDIRECTION ====================
     path('', views.dashboard_redirect, name='dashboard_redirect'),
@@ -15,17 +15,16 @@ urlpatterns = [
     path('transaction/<str:operateur>/<str:type_transaction>/', views.transaction_user, name='transaction_user'),
     path('impression-recu/<str:transaction_id>/', views.impression_recu, name='impression_recu'),
     
-    # ==================== DEMANDES D'APPROVISIONNEMENT ====================
-    path('demander-approvisionnement/', views.demander_approvisionnement, name='demander_approvisionnement'),
-    path('api/demander-approvisionnement/', views.demander_approvisionnement_api, name='demander_approvisionnement_api'),
-    path('valider-demande/<int:demande_id>/', views.valider_demande, name='valider_demande'),
+    # ==================== ENVOIS & RETRAITS ====================
+    path('envois-retraits/', views.envois_retraits, name='envois_retraits'),
+    path('api/envoi-retrait/', views.creer_envoi_retrait, name='creer_envoi_retrait'),
+    path('api/agent-soldes/<int:agent_id>/', views.api_agent_soldes, name='api_agent_soldes'),
+    path('envoi-retrait/<int:operation_id>/promouvoir/', views.promouvoir_entente, name='promouvoir_entente'),
+    path('recu-envoi-retrait/<int:operation_id>/', views.recu_envoi_retrait, name='recu_envoi_retrait'),
 
-    
     # ==================== HISTORIQUES ====================
     path('historique/', views.historique_admin, name='historique_admin'),
     path('mes-transactions/', views.historique_agent, name='historique_agent'),
-    path('mes-demandes/', views.historique_demandes_agent, name='historique_demandes_agent'),
-    path('traiter-demande-assistant/<int:demande_id>/', views.traiter_demande_assistant, name='traiter_demande_assistant'),
     
     # ==================== GESTION DES AGENTS ====================
     path('gestion-agents/', views.gestion_agents, name='gestion_agents'),
@@ -51,7 +50,6 @@ urlpatterns = [
     
     # ==================== API FACTURES ====================
     path('api/factures/', views.api_factures, name='api_factures'),
-    #path('api/factures/<int:facture_id>/', views.api_facture_detail, name='api_facture_detail'),
     
     # ==================== GESTION FACTURES (nouveau préfixe 'gestion/') ====================
     path('api/rechercher-client/', views.rechercher_client_api, name='rechercher_client_api'),
@@ -73,8 +71,6 @@ urlpatterns = [
     path('gestion/ajouter-dette/', views.ajouter_dette, name='ajouter_dette'),
     path('gestion/modifier-dette/<int:dette_id>/', views.modifier_dette, name='modifier_dette'),
     path('gestion/supprimer-dette/<int:dette_id>/', views.supprimer_dette, name='supprimer_dette'),
-    path('api/debiteurs/chercher/', views.api_chercher_debiteurs, name='api_chercher_debiteurs'),
-    path('recu/<int:remboursement_id>/download/', views.download_recu, name='download_recu'),
     path('gestion/enregistrer-remboursement/<int:dette_id>/', views.enregistrer_remboursement_dette, name='enregistrer_remboursement_dette'),
     
     # ==================== API COMPTES ÉPARGNE ====================
@@ -85,7 +81,6 @@ urlpatterns = [
     path('api/totaux-operations/', views.api_totaux_operations, name='api_totaux_operations'),
     
     path('ajouter_assistant/', views.ajouter_assistant, name='ajouter_assistant'),
-    path('detail_assistant/<int:assistant_id>/', views.detail_assistant, name='detail_assistant'),
     path('modifier-mot-de-passe-assistant/<int:assistant_id>/', views.modifier_mot_de_passe_assistant, name='modifier_mot_de_passe_assistant'),
     # ==================== API ANALYSE ====================
     path('api/analyse-stats/', views.api_analyse_stats, name='api_analyse_stats'),
@@ -94,7 +89,6 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('modifier-mot-de-passe-agent/<int:user_id>/', views.modifier_mot_de_passe_agent, name='modifier_mot_de_passe_agent'),
     path('api/assistant/<int:assistant_id>/infos/', views.api_assistant_infos, name='api_assistant_infos'),
-    path('api/analyse-stats/', views.api_analyse_stats, name='api_analyse_stats'),
     path('api/user-password/<int:user_id>/', views.api_user_password, name='api_user_password'),
 
     path('historique-operations/', views.historique_operations, name='historique_operations'),
@@ -102,10 +96,9 @@ urlpatterns = [
     path('operation-agent/', views.operation_agent, name='operation_agent'),
     path('api/historique-agent/', views.api_historique_agent, name='api_historique_agent'),
     path('api/factures/<int:facture_id>/supprimer/', views.supprimer_facture, name='supprimer_facture'),
-    path('api/analyse-stats/', views.api_analyse_stats, name='api_analyse_stats'),
 
-    path('api/demandes-attente/count/', views.api_demandes_attente_count, name='api_demandes_count'),
-    path('api/demandes-attente/list/', views.api_demandes_attente_list, name='api_demandes_list'),
+    path('api/ententes/count/', views.api_ententes_count, name='api_ententes_count'),
+    path('api/ententes/list/', views.api_ententes_list, name='api_ententes_list'),
     
     # ==================== ANNULATION ====================
     path('api/annuler-transaction/', views.api_annuler_transaction, name='api_annuler_transaction'),

@@ -1,0 +1,34 @@
+<!-- templates/transactions/recu_envoi_retrait.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Reçu {{ data.reference }}</title>
+    <style>
+        body { font-family: 'Courier New', monospace; width: 300px; margin: 20px auto; text-align: center; }
+        .line { border-top: 1px dashed #000; margin: 8px 0; }
+        .big { font-size: 16px; font-weight: bold; }
+        .row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 13px; }
+        .row b { text-align: right; }
+        .center { text-align: center; }
+        .print-btn { margin-top: 20px; padding: 10px 24px; font-family: inherit; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="big">KONE SERVICES</div>
+    <div>Envois &amp; Retraits</div>
+    <div class="line"></div>
+    <div class="row"><span>Référence</span><b>{{ data.reference }}</b></div>
+    <div class="row"><span>Date</span><b>{{ data.date }} {{ data.heure }}</b></div>
+    <div class="row"><span>Opération</span><b>{{ data.operation }}</b></div>
+    <div class="row"><span>Type</span><b>{{ data.type }}</b></div>
+    <div class="row"><span>Agent</span><b>{{ data.agent }}</b></div>
+    <div class="line"></div>
+    <div class="big">MONTANT : {{ data.montant }} FCFA</div>
+    <div class="line"></div>
+    <div class="row"><span>Statut</span><b>{{ data.statut }}</b></div>
+    <div class="line"></div>
+    <div>MERCI POUR VOTRE CONFIANCE</div>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+</body>
+</html>

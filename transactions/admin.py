@@ -332,12 +332,15 @@ class DemandeApprovisionnementAdmin(admin.ModelAdmin):
 
 @admin.register(ApprovisionnementDirect)
 class ApprovisionnementDirectAdmin(admin.ModelAdmin):
-    list_display = ('id', 'source_affichage', 'agent_destinataire', 'type_approvisionnement', 'montant', 'date')
-    list_filter = ('source_type', 'type_approvisionnement', 'date')
+    list_display = ('id', 'type_operation', 'source_affichage', 'agent_destinataire', 'type_approvisionnement', 'montant', 'statut', 'date')
+    list_filter = ('type_operation', 'source_type', 'type_approvisionnement', 'statut', 'date')
     search_fields = ('admin_source__nom', 'assistant_source__nom', 'agent_destinataire__nom', 'notes')
     readonly_fields = ('date',)
     
     fieldsets = (
+        ('Opération', {
+            'fields': ('type_operation', 'statut')
+        }),
         ('Source', {
             'fields': ('source_type', 'admin_source', 'assistant_source')
         }),
@@ -346,6 +349,10 @@ class ApprovisionnementDirectAdmin(admin.ModelAdmin):
         }),
         ('Approvisionnement', {
             'fields': ('type_approvisionnement', 'montant', 'notes')
+        }),
+        ('Validation', {
+            'fields': ('date_validation',),
+            'classes': ('collapse',)
         }),
         ('Date', {
             'fields': ('date',),

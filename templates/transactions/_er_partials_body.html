@@ -1,0 +1,404 @@
+{% load humanize %}
+{% load static %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">
+                {% if message.tags == 'success' %}✓{% elif message.tags == 'error' %}⚠{% elif message.tags == 'warning' %}⚠{% else %}ℹ{% endif %}
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <section class="er-page-intro" aria-labelledby="er-page-title">
+        <div class="er-intro-copy">
+            <div class="er-breadcrumb">
+                <a href="{% url 'dashboard_redirect' %}">Tableau de bord</a>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+                <span>Gestion des flux</span>
+            </div>
+            <p class="er-eyebrow">GESTION DES FLUX</p>
+            <h2 id="er-page-title">Envois et retraits</h2>
+            <p>Centralisez les mouvements entre la caisse administrative et vos agents dans un registre unique et contrôlable.</p>
+        </div>
+        <div class="er-primary-actions">
+            <button type="button" class="er-primary-action is-envoi" onclick="erOpenModal('envoi')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 15-7-4 14-4-6-7-1Z"/><path d="m11 13 3-3"/></svg>
+                Envoi
+            </button>
+            <button type="button" class="er-primary-action is-retrait" onclick="erOpenModal('retrait')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m20 12-15 7 4-14 4 6 7 1Z"/><path d="m13 11-3 3"/></svg>
+                Retrait
+            </button>
+        </div>
+    </section>
+
+    <section class="er-balance-strip" aria-label="Soldes de la caisse administrative">
+        <article class="er-balance-card">
+            <span class="er-balance-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.2c-.4-.8-1.3-1.3-2.8-1.3-1.6 0-2.8.7-2.8 2 0 3.2 5.8 1.6 5.8 4.5 0 1.3-1.2 2.1-3 2.1-1.5 0-2.6-.5-3.2-1.4M12 6.5v11"/></svg></span>
+            <div class="er-balance-info"><span>Espèces</span><strong>{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }} <small>FCFA</small></strong></div>
+        </article>
+        <article class="er-balance-card er-balance-uv">
+            <span class="er-balance-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6.5" y="3" width="11" height="18" rx="2"/><path d="M10 6h4M10.5 17h3"/></svg></span>
+            <div class="er-balance-info"><span>UV Touchpoint</span><strong>{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }} <small>FCFA</small></strong></div>
+        </article>
+        <article class="er-balance-card er-balance-wave">
+            <span class="er-balance-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 13.5c3.1 0 3.1-5 6.2-5s3.1 7 6.2 7S18.5 11 21 11"/><path d="M3 18h18"/></svg></span>
+            <div class="er-balance-info"><span>UV Wave</span><strong>{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }} <small>FCFA</small></strong></div>
+        </article>
+    </section>
+
+    <section class="er-kpi-grid" aria-label="Indicateurs d'opérations">
+        <article class="er-kpi-card er-kpi-pending">
+            <div class="er-kpi-top"><span class="er-kpi-label">Ententes en attente</span><span class="er-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10 21h4"/></svg></span></div>
+            <strong class="er-kpi-value">{{ stats.ententes_count|intcomma }}</strong>
+            <span class="er-kpi-sub"><b>{{ stats.ententes_montant|floatformat:0|intcomma }}</b> FCFA à valider</span>
+        </article>
+        <article class="er-kpi-card er-kpi-valid">
+            <div class="er-kpi-top"><span class="er-kpi-label">Opérations validées</span><span class="er-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 4.5 4.5L19 7"/></svg></span></div>
+            <strong class="er-kpi-value">{{ stats.valides_count|intcomma }}</strong>
+            <span class="er-kpi-sub"><b>{{ stats.valides_montant|floatformat:0|intcomma }}</b> FCFA validés</span>
+        </article>
+        <article class="er-kpi-card">
+            <div class="er-kpi-top"><span class="er-kpi-label">Envois effectués</span><span class="er-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 12 15-7-4 14-4-6-7-1Z"/><path d="m11 13 3-3"/></svg></span></div>
+            <strong class="er-kpi-value">{{ stats.envois_count|intcomma }}</strong>
+            <span class="er-kpi-sub"><b>{{ stats.envois_montant|floatformat:0|intcomma }}</b> FCFA envoyés</span>
+        </article>
+        <article class="er-kpi-card er-kpi-withdraw">
+            <div class="er-kpi-top"><span class="er-kpi-label">Retraits effectués</span><span class="er-kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m20 12-15 7 4-14 4 6 7 1Z"/><path d="m13 11-3 3"/></svg></span></div>
+            <strong class="er-kpi-value">{{ stats.retraits_count|intcomma }}</strong>
+            <span class="er-kpi-sub"><b>{{ stats.retraits_montant|floatformat:0|intcomma }}</b> FCFA retirés</span>
+        </article>
+    </section>
+
+    <section class="er-operations-panel" aria-labelledby="er-operations-title">
+        <header class="er-operations-heading">
+            <div>
+                <h3 id="er-operations-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Registre des opérations</h3>
+                <p><strong>{{ operations_count|intcomma }}</strong> opération{{ operations_count|pluralize }} trouvée{{ operations_count|pluralize }} avec les filtres actuels.</p>
+            </div>
+            <div class="er-heading-actions">
+                <a class="er-export" href="{% url 'exporter_rapport_complet_agent_pdf' %}{% if filter_query %}?{{ filter_query }}{% endif %}" title="Exporter le registre en PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 21h12M6 3v8a6 6 0 0 0 12 0V3"/><path d="M9 2h6"/>... PDF</a>
+                <a class="er-export is-excel" href="{% url 'exporter_rapport_complet_agent_excel' %}{% if filter_query %}?{{ filter_query }}{% endif %}" title="Exporter le registre en Excel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5V7Z"/><path d="M14 3v4h4M9 12l6 6M15 12l-6 6"/></svg>Excel</a>
+                <div class="er-pending-summary"><span>{{ stats.ententes_count }}</span> en attente</div>
+            </div>
+        </header>
+
+        <form method="get" class="er-filters">
+            <div class="er-filter-field er-filter-search">
+                <label for="erSearch">Recherche</label>
+                <div class="er-filter-control">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+                    <input id="erSearch" name="q" type="search" value="{{ filters.q }}" placeholder="Agent, téléphone ou référence">
+                </div>
+            </div>
+            <div class="er-filter-field er-filter-agent">
+                <label for="erAgent">Agent</label>
+                <select id="erAgent" name="agent">
+                    <option value="">Tous les agents</option>
+                    {% for filter_agent in filter_agents %}
+                    <option value="{{ filter_agent.id }}"{% if filters.agent == filter_agent.id %} selected{% endif %}>{{ filter_agent.nom }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="er-filter-field">
+                <label for="erStatut">Statut</label>
+                <select id="erStatut" name="statut">
+                    <option value="">Tous les statuts</option>
+                    <option value="entente"{% if filters.statut == 'entente' %} selected{% endif %}>En attente</option>
+                    <option value="valide"{% if filters.statut == 'valide' %} selected{% endif %}>Validé</option>
+                </select>
+            </div>
+            <div class="er-filter-field">
+                <label for="erOperation">Opération</label>
+                <select id="erOperation" name="operation">
+                    <option value="">Envoi et retrait</option>
+                    <option value="envoi"{% if filters.operation == 'envoi' %} selected{% endif %}>Envoi</option>
+                    <option value="retrait"{% if filters.operation == 'retrait' %} selected{% endif %}>Retrait</option>
+                </select>
+            </div>
+            <div class="er-filter-field er-filter-type">
+                <label for="erType">Type</label>
+                <select id="erType" name="type">
+                    <option value="">Tous les types</option>
+                    <option value="cash"{% if filters.type == 'cash' %} selected{% endif %}>Argent</option>
+                    <option value="uv"{% if filters.type == 'uv' %} selected{% endif %}>UV Touchpoint</option>
+                    <option value="wave"{% if filters.type == 'wave' %} selected{% endif %}>UV Wave</option>
+                </select>
+            </div>
+            <div class="er-filter-field">
+                <label for="erDateDebut">Du</label>
+                <input id="erDateDebut" name="date_debut" type="date" value="{{ filters.date_debut }}">
+            </div>
+            <div class="er-filter-field">
+                <label for="erDateFin">Au</label>
+                <input id="erDateFin" name="date_fin" type="date" value="{{ filters.date_fin }}">
+            </div>
+            <div class="er-filter-actions">
+                <button type="submit" class="er-filter-submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Filtrer</button>
+                <a class="er-filter-reset" href="{% url 'envois_retraits' %}">Réinitialiser</a>
+            </div>
+        </form>
+
+        <div class="er-table-scroll">
+            <table class="er-data-table">
+                <caption class="visually-hidden">Liste des opérations d'envoi et de retrait</caption>
+                <thead>
+                    <tr>
+                        <th>Référence et date</th>
+                        <th>Opération</th>
+                        <th>Agent</th>
+                        <th>Source</th>
+                        <th>Type</th>
+                        <th class="er-align-right">Montant</th>
+                        <th class="er-align-right">Statut</th>
+                        <th class="er-align-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for op in operations %}
+                    {% cycle 'c1' 'c2' 'c3' 'c4' 'c5' 'c6' as avatar_cls silent %}
+                    <tr class="er-operation-row" data-telephone="{{ op.agent_destinataire.telephone }}">
+                        <td class="er-cell-reference">
+                            <div class="er-reference">ER-{{ op.id|stringformat:"06d" }}</div>
+                            <span class="er-date">{{ op.date|date:"d/m/Y" }} <span>{{ op.date|date:"H:i" }}</span></span>
+                        </td>
+                        <td class="er-cell-operation">
+                            <span class="er-operation-badge {% if op.type_operation == 'envoi' %}is-envoi{% else %}is-retrait{% endif %}"><span class="er-flow-dot"></span>{{ op.get_type_operation_display }}</span>
+                        </td>
+                        <td class="er-cell-agent">
+                            <div class="er-agent"><span class="er-agent-avatar {{ avatar_cls }}">{{ op.agent_destinataire.nom|slice:":1"|upper }}</span><div><strong>{{ op.agent_destinataire.nom }}</strong><small>{{ op.agent_destinataire.telephone|default:"Sans téléphone" }}</small></div></div>
+                        </td>
+                        <td class="er-cell-source">
+                            <span class="er-source {% if op.source_type == 'admin' %}is-admin{% else %}is-assistant{% endif %}"><span class="er-source-dot"></span>{{ op.source_nom }}</span>
+                        </td>
+                        <td class="er-cell-asset"><span class="er-asset er-asset-{{ op.type_approvisionnement }}">{{ op.get_type_approvisionnement_display }}</span></td>
+                        <td class="er-cell-amount"><strong class="er-amount-value">{{ op.montant|floatformat:0|intcomma }}</strong><small>FCFA</small></td>
+                        <td class="er-cell-status"><span class="er-status {% if op.statut == 'entente' %}is-entente{% else %}is-valide{% endif %}">{% if op.statut == 'entente' %}En attente{% else %}Validé{% endif %}</span></td>
+                        <td class="er-cell-actions">
+                            <div class="er-table-actions">
+                                {% if op.statut == 'entente' %}
+                                <form method="post" action="{% url 'promouvoir_entente' op.id %}">
+                                    {% csrf_token %}
+                                    <button class="er-table-action er-promote" type="submit" title="Promouvoir en Validé"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4.5 4.5L19 7"/></svg><span>Valider</span></button>
+                                </form>
+                                {% endif %}
+                                <button type="button" class="er-table-action er-square" onclick="printReceipt({{ op.id }}, this)" title="Imprimer le reçu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V3h12v6M6 17H4V9h16v8h-2"/><path d="M7 14h10v7H7z"/></svg></button>
+                                <button type="button" class="er-table-action er-square er-whatsapp" onclick="openWhatsApp({{ op.id }}, this)" title="Envoyer par WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11.5a8 8 0 0 1-11.7 7.1L4 20l1.4-4.1A8 8 0 1 1 20 11.5Z"/><path d="M8.8 9.4c.3 1.8 1.4 3 3.2 3.5"/></svg></button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="er-empty-row">
+                        <td colspan="8">
+                            <div class="er-empty-state">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4M8.5 11h5"/></svg>
+                                <h4>Aucune opération trouvée</h4>
+                                <p>Modifiez vos filtres ou créez une nouvelle opération.</p>
+                                {% if filter_query %}<a href="{% url 'envois_retraits' %}">Effacer les filtres</a>{% else %}<a href="#" onclick="erOpenModal(); return false;">Créer une opération</a>{% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <footer class="er-table-footer">
+            <p><strong>{{ operations_count|intcomma }}</strong> résultat{{ operations_count|pluralize }} au total</p>
+            {% if page_obj.paginator.num_pages > 1 %}
+            <nav class="er-pagination" aria-label="Pagination des opérations">
+                {% if page_obj.has_previous %}
+                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Précédent</a>
+                {% endif %}
+                <span class="er-page-current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                <a href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Suivant</a>
+                {% endif %}
+            </nav>
+            {% endif %}
+        </footer>
+    </section>
+
+    {% comment %}
+    <!-- ========== MOBILE : PORTEFEUILLE ========== -->
+    <div class="wallet-mobile" id="wallet-mobile">
+        <div class="wallet-card"><div class="wallet-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="24" height="24"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M6 12h12"/></svg></div><div class="wallet-info"><div class="wallet-label">Espèces</div><div class="wallet-balance">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }}<small> FCFA</small></div></div></div>
+        <div class="wallet-card"><div class="wallet-icon"><img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpiont" style="width:28px;height:28px;"></div><div class="wallet-info"><div class="wallet-label">UV Touchpiont</div><div class="wallet-balance">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }}</div></div></div>
+        <div class="wallet-card"><div class="wallet-icon"><img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave" style="width:28px;height:28px;"></div><div class="wallet-info"><div class="wallet-label">UV Wave</div><div class="wallet-balance">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }}</div></div></div>
+    </div>
+
+    <!-- ========== STATISTIQUES ========== -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="icon warning"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+            <div class="info"><div class="value">{{ stats.ententes_count }}</div><div class="label">Ententes en attente</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="icon success"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div class="info"><div class="value">{{ stats.valides_count }}</div><div class="label">Opérations validées</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="icon primary"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>
+            <div class="info"><div class="value">{{ stats.envois_count }}</div><div class="label">Envois effectués</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="icon danger"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 22L11 11M22 22l-7-20-4 9-9 4 20 7z"/></svg></div>
+            <div class="info"><div class="value">{{ stats.retraits_count }}</div><div class="label">Retraits effectués</div></div>
+        </div>
+    </div>
+
+    <!-- ========== COMPTES (DESKTOP) ========== -->
+    <div class="accounts-section"><div class="accounts-header"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18" style="vertical-align:middle;margin-right:8px;"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/></svg>Mon portefeuille</h3></div><div class="accounts-grid">
+        <div class="account-card"><div class="icon"><img src="{% static 'image/inco_cash.webp' %}" alt="Espèces" onerror="this.src='{% static 'image/inco_cash2.webp' %}'"></div><div class="label">Espèces</div><div class="balance">{{ caisse.solde_cash|floatformat:0|default:"0"|intcomma }}<small> F</small></div></div>
+        <div class="account-card"><div class="icon"><img src="{% static 'image/inco_touchpiont.png' %}" alt="UV Touchpiont"></div><div class="label">UV Touchpiont</div><div class="balance">{{ caisse.solde_uv|floatformat:0|default:"0"|intcomma }}<small> F</small></div></div>
+        <div class="account-card"><div class="icon"><img src="{% static 'image/inco_wave1.webp' %}" alt="UV Wave"></div><div class="label">UV Wave</div><div class="balance">{{ caisse.solde_wave|floatformat:0|default:"0"|intcomma }}<small> F</small></div></div>
+    </div></div>
+
+    <!-- ========== NOUVELLE OPERATION ========== -->
+    <div class="table-container">
+        <div class="table-header"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18" style="vertical-align:middle;margin-right:8px;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>Nouvelle opération</h3><button type="button" class="er-add" onclick="erOpenModal()">➕ Créer une opération</button></div>
+        <div class="empty-state" style="padding: 24px; text-align: left;">Cliquez sur <b>➕ Créer une opération</b> pour ouvrir l'assistant :<br>1️⃣ Choix Envoi / Retrait → 2️⃣ Agent &amp; Montant → 3️⃣ Entente / Valide + Envoyer</div>
+    </div>
+
+    <!-- ========== ENTENTES ========== -->
+    <div class="table-container">
+        <div class="table-header"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18" style="vertical-align:middle;margin-right:8px;"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Ententes <span class="badge badge-pending">{{ stats.ententes_count }}</span></h3></div>
+        <div style="padding: 0 20px;">
+            {% for op in ententes %}
+            <div class="er-item" data-telephone="{{ op.agent_destinataire.telephone }}">
+                <div class="er-op">
+                    <div class="er-op-title">{{ op.get_type_operation_display }} · {{ op.get_type_approvisionnement_display }}
+                        {% if op.type_operation == 'envoi' %}<span class="badge badge-credit">Envoi</span>{% else %}<span class="badge badge-retrait">Retrait</span>{% endif %}
+                    </div>
+                    <div class="er-op-meta">{{ op.agent_destinataire.nom }} · {{ op.date|date:"d/m/Y à H:i" }} · Réf. ER-{{ op.id|stringformat:"06d" }}</div>
+                </div>
+                <div class="er-amount">
+                    {{ op.montant|floatformat:0|intcomma }} FCFA
+                    <div class="er-actions">
+                        <form method="post" action="{% url 'promouvoir_entente' op.id %}" style="margin: 0; display: inline;">
+                            {% csrf_token %}
+                            <button class="er-mini mb-promote" type="submit">✔ Promouvoir en Valide</button>
+                        </form>
+                        <button class="er-mini mb-print" onclick="printReceipt({{ op.id }}, this)">🖨️ Imprimer</button>
+                        <button class="er-mini mb-wa" onclick="openWhatsApp({{ op.id }}, this)">💬 WhatsApp</button>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state" style="padding: 32px;">📭 Aucune entente en attente</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ========== VALIDES ========== -->
+    <div class="table-container">
+        <div class="table-header"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="18" height="18" style="vertical-align:middle;margin-right:8px;"><polyline points="20 6 9 17 4 12"/></svg>Validés <span class="badge badge-approved">{{ stats.valides_count }}</span></h3></div>
+        <div style="padding: 0 20px;">
+            {% for op in valides %}
+            <div class="er-item" data-telephone="{{ op.agent_destinataire.telephone }}">
+                <div class="er-op">
+                    <div class="er-op-title">{{ op.get_type_operation_display }} · {{ op.get_type_approvisionnement_display }}
+                        {% if op.type_operation == 'envoi' %}<span class="badge badge-credit">Envoi</span>{% else %}<span class="badge badge-retrait">Retrait</span>{% endif %}
+                    </div>
+                    <div class="er-op-meta">{{ op.agent_destinataire.nom }} · {{ op.date|date:"d/m/Y à H:i" }} · Réf. ER-{{ op.id|stringformat:"06d" }}{% if op.date_validation %} · Validé le {{ op.date_validation|date:"d/m/Y à H:i" }}{% endif %}</div>
+                </div>
+                <div class="er-amount">
+                    {{ op.montant|floatformat:0|intcomma }} FCFA
+                    <div class="er-actions">
+                        <button class="er-mini mb-print" onclick="printReceipt({{ op.id }}, this)">🖨️ Imprimer</button>
+                        <button class="er-mini mb-wa" onclick="openWhatsApp({{ op.id }}, this)">💬 WhatsApp</button>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state" style="padding: 32px;">📭 Aucune opération validée</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% endcomment %}
+
+    <!-- ========== MODAL NOUVELLE OPERATION (ASSISTANT) ========== -->
+    <div id="erModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header"><h3>➕ Nouvelle opération</h3></div>
+            <div class="modal-body">
+                <div class="er-steps">
+                    <div class="er-step active" id="stp1"><span>1</span>Type</div>
+                    <div class="er-step-line"></div>
+                    <div class="er-step" id="stp2"><span>2</span>Agent &amp; Montant</div>
+                    <div class="er-step-line"></div>
+                    <div class="er-step" id="stp3"><span>3</span>Statut &amp; Envoi</div>
+                </div>
+
+                <!-- ETAPE 1 : type d'approvisionnement -->
+                <div id="erStep1">
+                    <div class="er-choice">
+                        <button type="button" class="er-big" id="btnTypeCash" onclick="erChooseType('cash')">💰 ARGENT<small>Espèces</small></button>
+                        <button type="button" class="er-big" id="btnTypeUv" onclick="erChooseType('uv')">📱 UV TOUCHPOINT<small>Portefeuille mobile</small></button>
+                        <button type="button" class="er-big" id="btnTypeWave" onclick="erChooseType('wave')">💳 UV WAVE<small>Portefeuille Wave</small></button>
+                    </div>
+                </div>
+
+                <!-- ETAPE 2 : details -->
+                <div id="erStep2" style="display: none;">
+                    <div class="er-form">
+                        <div class="er-field">
+                            <label>Agent destinataire</label>
+                            <select id="agentSel">
+                                <option value="">— Choisir un agent —</option>
+                                {% for agent in agents %}
+                                <option value="{{ agent.id }}" data-telephone="{{ agent.telephone }}">{{ agent.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="er-field">
+                            <label>Montant (FCFA)</label>
+                            <input type="number" id="montant" min="1000" step="1" placeholder="Minimum 1 000">
+                        </div>
+                    </div>
+                    <div class="er-scan" id="erScanWrap" style="display: none;">
+                        <button type="button" class="er-scan-btn" onclick="erStartScan()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/></svg> Scanner le QR Wave</button>
+                        <div class="er-scan-panel" id="erScanPanel" style="display: none;">
+                            <p class="er-scan-title">Scanner un QR code</p>
+                            <button type="button" class="er-scan-close" onclick="erStopScan()">✕</button>
+                            <div class="er-scan-cam"><video id="erScanVideo" playsinline muted></video><span class="er-scan-frame"></span><span class="er-scan-loader"></span></div>
+                            <p class="er-scan-hint">Placez le QR code Wave devant la caméra…</p>
+                            <button type="button" class="er-scan-stop" onclick="erStopScan()">Arrêter</button>
+                        </div>
+                        <div class="er-scan-result" id="erScanResult" style="display: none;"></div>
+                    </div>
+                    <div class="er-recap" id="recap" style="display: none;">
+                        <h3>Récapitulatif</h3>
+                        <div class="er-row"><span>Opération</span><b id="r-op">—</b></div>
+                        <div class="er-row"><span>Agent</span><b id="r-agent">—</b></div>
+                        <div class="er-row"><span>Type</span><b id="r-type">—</b></div>
+                        <div class="er-row"><span>Montant</span><b id="r-montant">—</b></div>
+                        <div id="r-agent-lines"></div>
+                    </div>
+                </div>
+
+                <!-- ETAPE 3 : statut + envoi -->
+                <div id="erStep3" style="display: none;">
+                    <div class="er-recap" id="recap3">
+                        <h3>Confirmation</h3>
+                        <div class="er-row"><span>Opération</span><b id="r3-op">—</b></div>
+                        <div class="er-row"><span>Agent</span><b id="r3-agent">—</b></div>
+                        <div class="er-row"><span>Type</span><b id="r3-type">—</b></div>
+                        <div class="er-row"><span>Montant</span><b id="r3-montant">—</b></div>
+                        <div id="r3-lines"></div>
+                    </div>
+                    <div class="er-checks">
+                        <label class="er-check"><input type="radio" name="statut" value="entente" checked><span>🤝 Entente</span></label>
+                        <label class="er-check"><input type="radio" name="statut" value="valide"><span>✅ Valide</span></label>
+                    </div>
+                    <div class="er-msg" id="msgBox"></div>
+                </div>
+
+                <div class="er-nav">
+                    <button type="button" id="erPrev" class="er-prev" onclick="erPrev()" style="display: none;">← Précédent</button>
+                    <button type="button" id="erNext" class="er-send" onclick="erNext()">Suivant →</button>
+                </div>
+            </div>
+        </div>
+    </div>

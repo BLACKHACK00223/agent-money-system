@@ -1,0 +1,17 @@
+{% extends "transactions/dashboard_admin.html" %}
+{% load humanize %}
+{% load static %}
+{% block extra_css %}
+{{ block.super }}
+{% include "transactions/_er_partials_css.html" %}
+{% endblock %}
+
+{% block content %}
+{% include "transactions/_er_partials_body.html" %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="/static/js/qz-tray.js"></script>
+{% include "transactions/_er_partials_js.html" %}
+{% endblock %}
