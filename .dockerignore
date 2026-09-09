@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+.vscode
+venv
+__pycache__
+*.py[cod]
+*.log
+db.sqlite3
+logs
+media
+staticfiles
+certs
+*.pem
+*.key
