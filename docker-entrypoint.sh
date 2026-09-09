@@ -1,8 +1,9 @@
 #!/bin/sh
 set -eu
 
-# Migrations run after Coolify injects runtime environment variables, rather
-# than while the Docker image is being built.
+# These commands run after Coolify injects runtime environment variables,
+# rather than while the Docker image is being built.
+python manage.py collectstatic --noinput
 python manage.py migrate --noinput
 
 exec gunicorn config.wsgi:application \
