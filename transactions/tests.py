@@ -409,3 +409,53 @@ class SecuriteTransactionsTests(TestCase):
         self.assertFalse(response.json()['success'])
         self.assertIn('UV Touchpoint de l\'agent insuffisant', response.json()['error'])
         self.assertEqual(Caisse.objects.get(user=self.agent.user).solde_uv, solde_uv_agent)
+
+
+class WaveQrTransactionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='wave-agent', password='password')
+        Agent.objects.create(
+            user=self.user,
+            nom='Agent Wave',
+            telephone='70000000',
+        )
+        self.caisse = self.user.caisse
+        self.caisse.solde_cash = Decimal('10000')
+        self.caisse.solde_wave = Decimal('10000')
+        self.caisse.save()
+        self.client.force_login(self.user)
+
+    def _post_wave_depot(self, wave_qr_url):
+        return self.client.post(
+            reverse('transaction_user', kwargs={'operateur': 'wave', 'type_transaction': 'depot'}),
+            {
+                'numero_client': '',
+                'wave_qr_url': wave_qr_url,
+                'montant': '1000',
+                'type_transaction': 'depot',
+                'operateur': 'wave',
+            },
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+    def test_wave_qr_cree_une_transaction_et_met_a_jour_la_caisse(self):
+        qr_url = 'https://qr.wave.com/transaction-token'
+
+        response = self._post_wave_depot(qr_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        transaction = Transaction.objects.get()
+        self.assertEqual(transaction.numero_client, '')
+        self.assertEqual(transaction.wave_qr_url, qr_url)
+        self.caisse.refresh_from_db()
+        self.assertEqual(self.caisse.solde_cash, Decimal('11000'))
+        self.assertEqual(self.caisse.solde_wave, Decimal('9000'))
+
+    def test_wave_qr_hors_domaine_wave_est_refuse(self):
+        response = self._post_wave_depot('https://example.com/transaction-token')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['success'])
+        self.assertIn('QR scanné', response.json()['error'])
+        self.assertEqual(Transaction.objects.count(), 0)

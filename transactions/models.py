@@ -225,8 +225,9 @@ class Transaction(models.Model):
     type_transaction = models.CharField(max_length=10, choices=TYPE_CHOICES)
     
     # Client
-    numero_client = models.CharField(max_length=20, db_index=True)
+    numero_client = models.CharField(max_length=20, blank=True, db_index=True)
     nom_client = models.CharField(max_length=100, blank=True, null=True)
+    wave_qr_url = models.CharField(max_length=500, blank=True)
     
     # Montants
     montant = models.DecimalField(max_digits=12, decimal_places=2)

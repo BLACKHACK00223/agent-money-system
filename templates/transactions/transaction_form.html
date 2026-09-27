@@ -29,10 +29,10 @@
                     {% csrf_token %}
 
                     <div class="form-group">
-                        <label>Numéro client <span class="required">*</span></label>
+                        <label>Numéro client{% if operateur != 'wave' %} <span class="required">*</span>{% endif %}</label>
                         <input type="tel" name="numero_client" id="id_numero_client"
                                class="form-control" placeholder="70 00 00 00"
-                               maxlength="15" required>
+                               maxlength="15"{% if operateur != 'wave' %} required{% endif %}>
                         <div class="input-hint">8 à 12 chiffres</div>
                         <div id="phoneError" class="error-message">
                             Le numéro doit contenir entre 8 et 12 chiffres
@@ -42,17 +42,27 @@
                         </div>
                         {% if operateur == 'wave' %}
                         <button type="button" id="btnScanQr" class="btn-scan-qr" onclick="startScan()">📷 Scanner le QR Wave</button>
+                        <div id="waveQrStatus" class="client-info-card" hidden>QR Wave scanné. Saisissez le montant.</div>
                         <div id="scanPanel" class="scan-panel">
                             <p class="scan-title">Scanner un QR code</p>
                             <button type="button" class="scan-close" onclick="stopScan()">✕</button>
                             <div class="scan-cam"><video id="scanVideo" playsinline muted></video><span class="scan-frame"></span><span class="scan-loader"></span></div>
                             <p class="scan-hint">Placez le QR code Wave devant la caméra…</p>
+                            <div class="scan-error" id="scanError" hidden>
+                                <p class="scan-error-text" id="scanErrorText"></p>
+                                <div class="scan-error-actions">
+                                    <button type="button" id="btnScanRetry" onclick="startScan()">↻ Réessayer</button>
+                                    <button type="button" id="btnScanOpenTab" onclick="openScanInNewTab()" hidden>Ouvrir dans un nouvel onglet</button>
+                                </div>
+                            </div>
+                            <button type="button" class="scan-photo" id="btnScanPhoto" onclick="pickQrPhoto()">🖼️ Scanner depuis une photo</button>
                             <button type="button" class="scan-stop" onclick="stopScan()">Arrêter</button>
+                            <input type="file" id="scanQrFile" accept="image/*" hidden>
                         </div>
                         {% endif %}
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group" id="amountGroup"{% if operateur == 'wave' %} hidden{% endif %}>
                         <label>Montant <span class="required">*</span></label>
                         <input type="text" id="id_montant"
                                name="montant"
@@ -90,6 +100,9 @@
                     <input type="hidden" name="operateur" value="{{ operateur }}">
                     <input type="hidden" name="nom_client" id="id_nom_client" value="">
                     <input type="hidden" name="notes" id="id_notes" value="">
+                    {% if operateur == 'wave' %}
+                    <input type="hidden" name="wave_qr_url" id="id_wave_qr_url" value="">
+                    {% endif %}
 
                     <button type="button" class="btn-primary" id="continueBtn" disabled>
                         Continuer
@@ -209,6 +222,9 @@
         const continueBtn = document.getElementById('continueBtn');
         const phoneError = document.getElementById('phoneError');
         const montantError = document.getElementById('montantError');
+        const waveQrInput = document.getElementById('id_wave_qr_url');
+        const waveQrStatus = document.getElementById('waveQrStatus');
+        const amountGroup = document.getElementById('amountGroup');
 
         let lastReference = '';
         let qzReady = false;
@@ -267,6 +283,24 @@
             return phone.length >= 8 && phone.length <= 12 && /^\d+$/.test(phone);
         }
 
+        function isWaveQrScanned() {
+            return operateur === 'wave' && waveQrInput && waveQrInput.value !== '';
+        }
+
+        function isWaveQrUrl(value) {
+            try {
+                const url = new URL(value);
+                return url.protocol === 'https:' && url.hostname === 'qr.wave.com' && url.port === '' &&
+                    url.username === '' && url.password === '' && url.pathname !== '/';
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function hasValidClientReference() {
+            return isPhoneValid() || isWaveQrScanned();
+        }
+
         function getRawMontant() {
             return parseInt(montantInput.value.replace(/\s/g, '')) || 0;
         }
@@ -293,7 +327,12 @@
             const phoneValid = isPhoneValid();
             const montantValid = isMontantValid();
 
-            if (numeroInput.value.length > 0 && !phoneValid) {
+            if (operateur === 'wave') amountGroup.hidden = !(phoneValid || isWaveQrScanned());
+
+            if (isWaveQrScanned()) {
+                phoneError.classList.remove('show');
+                numeroInput.classList.remove('invalid', 'valid');
+            } else if (numeroInput.value.length > 0 && !phoneValid) {
                 phoneError.classList.add('show');
                 numeroInput.classList.add('invalid');
                 numeroInput.classList.remove('valid');
@@ -319,7 +358,7 @@
                 montantInput.classList.remove('invalid', 'valid');
             }
 
-            continueBtn.disabled = !(phoneValid && montantValid);
+            continueBtn.disabled = !(hasValidClientReference() && montantValid);
         }
 
         function formatPhoneNumber(value) {
@@ -349,30 +388,94 @@
         montantInput.addEventListener('change', onMontantInput);
 
         function applyScan(text) {
-            const digits = (text.match(/\d{7,14}/g) || []).sort(function (a, b) { return b.length - a.length; })[0] || '';
-            if (digits) {
-                numeroInput.value = formatPhoneNumber(digits);
-                updateValidationUI();
-                rechercherClient();
-                numeroInput.focus();
-            } else {
-                alert('QR lu mais aucun numéro de téléphone trouvé.');
+            const qrUrl = text.trim();
+            if (!isWaveQrUrl(qrUrl)) {
+                alert("Le code scanné n'est pas un QR Wave valide.");
+                return;
             }
+
+            waveQrInput.value = qrUrl;
+            stopScan();
+            waveQrStatus.hidden = false;
+            waveQrStatus.classList.add('show');
+            amountGroup.hidden = false;
+            updateValidationUI();
+            montantInput.focus();
         }
 
         var scanStream = null;
         var scanRaf = null;
 
+        function isEmbeddedFrame() {
+            try { return window.self !== window.top; } catch (e) { return true; }
+        }
+
+        function cameraBlockedByPolicy() {
+            try { return !!(document.featurePolicy && !document.featurePolicy.allowsFeature('camera')); } catch (e) { return false; }
+        }
+
+        function setScanError(message) {
+            const el = document.getElementById('scanError');
+            const text = document.getElementById('scanErrorText');
+            if (!el || !text) return;
+            text.textContent = message || '';
+            el.hidden = !message;
+            const retry = document.getElementById('btnScanRetry');
+            if (retry) retry.hidden = !message;
+            const openTab = document.getElementById('btnScanOpenTab');
+            if (openTab) openTab.hidden = !(message && isEmbeddedFrame());
+        }
+
+        function openScanInNewTab() {
+            window.open(window.location.href, '_blank', 'noopener');
+        }
+
+        function showQrCameraError(err) {
+            const panel = document.getElementById('scanPanel');
+            if (panel) panel.classList.add('no-camera');
+            let message = "Impossible d'ouvrir la caméra.";
+            const name = err && err.name;
+            if ((name === 'NotAllowedError' || name === 'SecurityError') && isEmbeddedFrame()) {
+                message = "La caméra est bloquée car l'application est affichée dans une fenêtre intégrée. Ouvrez-la dans un nouvel onglet, ou scannez depuis une photo.";
+            } else if ((name === 'NotAllowedError' || name === 'SecurityError') && cameraBlockedByPolicy()) {
+                message = "La caméra est désactivée par la configuration de sécurité de la page. Scannez depuis une photo, ou signalez ce blocage à l'administrateur.";
+            } else if (name === 'NotAllowedError' || name === 'SecurityError') {
+                message = "Accès à la caméra refusé pour ce site. Touchez l'icône du cadenas (ou de réglages) à côté de l'adresse, autorisez la caméra, puis touchez « Réessayer ». Vous pouvez aussi scanner depuis une photo.";
+            } else if (name === 'NotFoundError') {
+                message = "Aucune caméra détectée sur cet appareil. Utilisez « Scanner depuis une photo ».";
+            } else if (name === 'NotReadableError') {
+                message = "La caméra est déjà utilisée par une autre application. Fermez-la puis réessayez, ou scannez depuis une photo.";
+            } else if (err && err.message) {
+                message = "Impossible d'ouvrir la caméra (" + err.message + "). Utilisez « Scanner depuis une photo ».";
+            }
+            setScanError(message);
+        }
+
         function startScan() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                alert('Caméra non disponible sur cet appareil.');
+            const panel = document.getElementById('scanPanel');
+            if (panel) {
+                document.body.appendChild(panel);
+                panel.classList.remove('no-camera');
+                panel.style.display = 'block';
+            }
+            setScanError('');
+            stopScanStream();
+
+            if (typeof window.isSecureContext !== 'undefined' && !window.isSecureContext) {
+                if (panel) panel.classList.add('no-camera');
+                setScanError("La caméra en direct n'est disponible qu'en HTTPS. Utilisez « Scanner depuis une photo » : l'appareil photo du téléphone prendra le QR en photo et il sera lu automatiquement.");
                 return;
             }
-            stopScan();
-            const panel = document.getElementById('scanPanel');
-            if (panel) document.body.appendChild(panel);
-            document.getElementById('scanPanel').style.display = 'block';
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                if (panel) panel.classList.add('no-camera');
+                setScanError("Ce navigateur ne permet pas la caméra en direct. Utilisez « Scanner depuis une photo ».");
+                return;
+            }
+            openQrCamera({ video: { facingMode: { ideal: 'environment' } }, audio: false }, true);
+        }
+
+        function openQrCamera(constraints, allowRetry) {
+            navigator.mediaDevices.getUserMedia(constraints)
                 .then(function (stream) {
                     scanStream = stream;
                     const v = document.getElementById('scanVideo');
@@ -380,10 +483,52 @@
                     v.play().catch(function () {});
                     scanTick();
                 })
-                .catch(function () {
-                    stopScan();
-                    alert('Impossible d\'accéder à la caméra. Autorisez l\'accès dans le navigateur.');
+                .catch(function (err) {
+                    if (allowRetry && err && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError' || err.name === 'TypeError')) {
+                        openQrCamera({ video: true, audio: false }, false);
+                        return;
+                    }
+                    showQrCameraError(err);
                 });
+        }
+
+        function pickQrPhoto() {
+            const fileInput = document.getElementById('scanQrFile');
+            if (fileInput) fileInput.click();
+        }
+
+        function decodeQrFromImage(file) {
+            const objectUrl = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = function () {
+                URL.revokeObjectURL(objectUrl);
+                const c = document.createElement('canvas');
+                c.width = img.naturalWidth;
+                c.height = img.naturalHeight;
+                const ctx = c.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(img, 0, 0);
+                let code = null;
+                try { code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height); } catch (e) {}
+                if (code && code.data) {
+                    applyScan(code.data);
+                } else {
+                    setScanError("Aucun QR code lisible sur cette photo. Reprenez-la en cadrant bien le QR Wave, puis réessayez.");
+                }
+            };
+            img.onerror = function () {
+                URL.revokeObjectURL(objectUrl);
+                setScanError("Impossible de lire cette image. Réessayez avec une autre photo.");
+            };
+            img.src = objectUrl;
+        }
+
+        const scanQrFileInput = document.getElementById('scanQrFile');
+        if (scanQrFileInput) {
+            scanQrFileInput.addEventListener('change', function () {
+                const file = scanQrFileInput.files && scanQrFileInput.files[0];
+                scanQrFileInput.value = '';
+                if (file) decodeQrFromImage(file);
+            });
         }
 
         function scanTick() {
@@ -403,11 +548,16 @@
             scanRaf = requestAnimationFrame(scanTick);
         }
 
-        function stopScan() {
+        function stopScanStream() {
             if (scanStream) { scanStream.getTracks().forEach(function (t) { t.stop(); }); scanStream = null; }
             if (scanRaf) { cancelAnimationFrame(scanRaf); scanRaf = null; }
             const v = document.getElementById('scanVideo');
             if (v) v.srcObject = null;
+        }
+
+        function stopScan() {
+            stopScanStream();
+            setScanError('');
             const p = document.getElementById('scanPanel');
             if (p) p.style.display = 'none';
         }
@@ -458,8 +608,8 @@
 
         function openModal() {
             const client = numeroInput.value.trim();
-            if (!client || !isPhoneValid()) {
-                alert('Veuillez saisir un numéro valide (8 à 12 chiffres)');
+            if (!hasValidClientReference()) {
+                alert(operateur === 'wave' ? 'Scannez un QR Wave valide ou saisissez un numéro client valide.' : 'Veuillez saisir un numéro valide (8 à 12 chiffres).');
                 return;
             }
 
@@ -478,7 +628,7 @@
                 typeText = 'Crédit';
             }
 
-            document.getElementById('recapClient').textContent = client;
+            document.getElementById('recapClient').textContent = isWaveQrScanned() ? 'QR Wave scanné' : client;
             document.getElementById('recapMontant').textContent = `${formatNumber(montant)} FCFA`;
             document.getElementById('recapType').textContent = typeText;
 
@@ -650,8 +800,8 @@
             const cleanNumber = getRawPhoneNumber();
             const montant = getRawMontant();
 
-            if (!cleanNumber || cleanNumber.length < 8 || cleanNumber.length > 12) {
-                alert('Numéro client invalide (8 à 12 chiffres requis)');
+            if (!hasValidClientReference()) {
+                alert(operateur === 'wave' ? 'Scannez un QR Wave valide ou saisissez un numéro client valide.' : 'Veuillez saisir un numéro valide (8 à 12 chiffres).');
                 return;
             }
 
@@ -662,6 +812,7 @@
 
             const formData = new URLSearchParams();
             formData.append('numero_client', cleanNumber);
+            if (isWaveQrScanned()) formData.append('wave_qr_url', waveQrInput.value);
             formData.append('montant', String(montant));
             formData.append('type_transaction', typeTransaction);
             formData.append('operateur', operateur);
