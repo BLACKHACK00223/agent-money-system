@@ -1,5 +1,8 @@
 # transactions/forms.py
+from urllib.parse import urlparse
+
 from django import forms
+
 from .models import Agent, Transaction, DemandeApprovisionnement
 
 
@@ -9,7 +12,7 @@ class TransactionForm(forms.ModelForm):
     """
     class Meta:
         model = Transaction
-        fields = ['type_transaction', 'operateur', 'numero_client', 'nom_client', 'montant', 'notes']
+        fields = ['type_transaction', 'operateur', 'numero_client', 'nom_client', 'wave_qr_url', 'montant', 'notes']
         widgets = {
             'type_transaction': forms.HiddenInput(),
             'operateur': forms.HiddenInput(),
@@ -22,6 +25,7 @@ class TransactionForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Nom du client (optionnel)'
             }),
+            'wave_qr_url': forms.HiddenInput(),
             'montant': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Montant en FCFA',
@@ -35,6 +39,10 @@ class TransactionForm(forms.ModelForm):
                 'placeholder': 'Notes (optionnel)'
             })
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['numero_client'].required = True
     
     def clean_montant(self):
         montant = self.cleaned_data.get('montant')
@@ -47,7 +55,6 @@ class TransactionForm(forms.ModelForm):
     def clean_numero_client(self):
         numero = self.cleaned_data.get('numero_client')
         if numero:
-            # Nettoyer le numéro
             numero = ''.join(filter(str.isdigit, numero))
             if len(numero) < 8:
                 raise forms.ValidationError("Numéro client invalide (minimum 8 chiffres)")
@@ -72,6 +79,35 @@ class WaveTransactionForm(TransactionForm):
         super().__init__(*args, **kwargs)
         self.fields['operateur'].initial = 'wave'
         self.fields['type_transaction'].widget = forms.HiddenInput()
+        self.fields['numero_client'].required = False
+
+    def clean_wave_qr_url(self):
+        qr_url = self.cleaned_data.get('wave_qr_url', '').strip()
+        if not qr_url:
+            return ''
+
+        try:
+            parsed = urlparse(qr_url)
+            is_valid = (
+                parsed.scheme == 'https'
+                and parsed.hostname == 'qr.wave.com'
+                and parsed.port is None
+                and not parsed.username
+                and not parsed.password
+                and parsed.path not in ('', '/')
+            )
+        except ValueError:
+            is_valid = False
+
+        if not is_valid:
+            raise forms.ValidationError("Le QR scanné n'est pas un lien Wave valide.")
+        return qr_url
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not cleaned_data.get('numero_client') and not cleaned_data.get('wave_qr_url'):
+            raise forms.ValidationError("Scannez un QR Wave ou saisissez un numéro client.")
+        return cleaned_data
 
 
 class MalitelTransactionForm(TransactionForm):
