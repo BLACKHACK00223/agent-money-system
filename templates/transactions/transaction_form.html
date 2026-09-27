@@ -48,7 +48,16 @@
                             <button type="button" class="scan-close" onclick="stopScan()">✕</button>
                             <div class="scan-cam"><video id="scanVideo" playsinline muted></video><span class="scan-frame"></span><span class="scan-loader"></span></div>
                             <p class="scan-hint">Placez le QR code Wave devant la caméra…</p>
+                            <div class="scan-error" id="scanError" hidden>
+                                <p class="scan-error-text" id="scanErrorText"></p>
+                                <div class="scan-error-actions">
+                                    <button type="button" id="btnScanRetry" onclick="startScan()">↻ Réessayer</button>
+                                    <button type="button" id="btnScanOpenTab" onclick="openScanInNewTab()" hidden>Ouvrir dans un nouvel onglet</button>
+                                </div>
+                            </div>
+                            <button type="button" class="scan-photo" id="btnScanPhoto" onclick="pickQrPhoto()">🖼️ Scanner depuis une photo</button>
                             <button type="button" class="scan-stop" onclick="stopScan()">Arrêter</button>
+                            <input type="file" id="scanQrFile" accept="image/*" hidden>
                         </div>
                         {% endif %}
                     </div>
@@ -397,16 +406,76 @@
         var scanStream = null;
         var scanRaf = null;
 
+        function isEmbeddedFrame() {
+            try { return window.self !== window.top; } catch (e) { return true; }
+        }
+
+        function cameraBlockedByPolicy() {
+            try { return !!(document.featurePolicy && !document.featurePolicy.allowsFeature('camera')); } catch (e) { return false; }
+        }
+
+        function setScanError(message) {
+            const el = document.getElementById('scanError');
+            const text = document.getElementById('scanErrorText');
+            if (!el || !text) return;
+            text.textContent = message || '';
+            el.hidden = !message;
+            const retry = document.getElementById('btnScanRetry');
+            if (retry) retry.hidden = !message;
+            const openTab = document.getElementById('btnScanOpenTab');
+            if (openTab) openTab.hidden = !(message && isEmbeddedFrame());
+        }
+
+        function openScanInNewTab() {
+            window.open(window.location.href, '_blank', 'noopener');
+        }
+
+        function showQrCameraError(err) {
+            const panel = document.getElementById('scanPanel');
+            if (panel) panel.classList.add('no-camera');
+            let message = "Impossible d'ouvrir la caméra.";
+            const name = err && err.name;
+            if ((name === 'NotAllowedError' || name === 'SecurityError') && isEmbeddedFrame()) {
+                message = "La caméra est bloquée car l'application est affichée dans une fenêtre intégrée. Ouvrez-la dans un nouvel onglet, ou scannez depuis une photo.";
+            } else if ((name === 'NotAllowedError' || name === 'SecurityError') && cameraBlockedByPolicy()) {
+                message = "La caméra est désactivée par la configuration de sécurité de la page. Scannez depuis une photo, ou signalez ce blocage à l'administrateur.";
+            } else if (name === 'NotAllowedError' || name === 'SecurityError') {
+                message = "Accès à la caméra refusé pour ce site. Touchez l'icône du cadenas (ou de réglages) à côté de l'adresse, autorisez la caméra, puis touchez « Réessayer ». Vous pouvez aussi scanner depuis une photo.";
+            } else if (name === 'NotFoundError') {
+                message = "Aucune caméra détectée sur cet appareil. Utilisez « Scanner depuis une photo ».";
+            } else if (name === 'NotReadableError') {
+                message = "La caméra est déjà utilisée par une autre application. Fermez-la puis réessayez, ou scannez depuis une photo.";
+            } else if (err && err.message) {
+                message = "Impossible d'ouvrir la caméra (" + err.message + "). Utilisez « Scanner depuis une photo ».";
+            }
+            setScanError(message);
+        }
+
         function startScan() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                alert('Caméra non disponible sur cet appareil.');
+            const panel = document.getElementById('scanPanel');
+            if (panel) {
+                document.body.appendChild(panel);
+                panel.classList.remove('no-camera');
+                panel.style.display = 'block';
+            }
+            setScanError('');
+            stopScanStream();
+
+            if (typeof window.isSecureContext !== 'undefined' && !window.isSecureContext) {
+                if (panel) panel.classList.add('no-camera');
+                setScanError("La caméra en direct n'est disponible qu'en HTTPS. Utilisez « Scanner depuis une photo » : l'appareil photo du téléphone prendra le QR en photo et il sera lu automatiquement.");
                 return;
             }
-            stopScan();
-            const panel = document.getElementById('scanPanel');
-            if (panel) document.body.appendChild(panel);
-            document.getElementById('scanPanel').style.display = 'block';
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                if (panel) panel.classList.add('no-camera');
+                setScanError("Ce navigateur ne permet pas la caméra en direct. Utilisez « Scanner depuis une photo ».");
+                return;
+            }
+            openQrCamera({ video: { facingMode: { ideal: 'environment' } }, audio: false }, true);
+        }
+
+        function openQrCamera(constraints, allowRetry) {
+            navigator.mediaDevices.getUserMedia(constraints)
                 .then(function (stream) {
                     scanStream = stream;
                     const v = document.getElementById('scanVideo');
@@ -414,10 +483,52 @@
                     v.play().catch(function () {});
                     scanTick();
                 })
-                .catch(function () {
-                    stopScan();
-                    alert('Impossible d\'accéder à la caméra. Autorisez l\'accès dans le navigateur.');
+                .catch(function (err) {
+                    if (allowRetry && err && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError' || err.name === 'TypeError')) {
+                        openQrCamera({ video: true, audio: false }, false);
+                        return;
+                    }
+                    showQrCameraError(err);
                 });
+        }
+
+        function pickQrPhoto() {
+            const fileInput = document.getElementById('scanQrFile');
+            if (fileInput) fileInput.click();
+        }
+
+        function decodeQrFromImage(file) {
+            const objectUrl = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = function () {
+                URL.revokeObjectURL(objectUrl);
+                const c = document.createElement('canvas');
+                c.width = img.naturalWidth;
+                c.height = img.naturalHeight;
+                const ctx = c.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(img, 0, 0);
+                let code = null;
+                try { code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height); } catch (e) {}
+                if (code && code.data) {
+                    applyScan(code.data);
+                } else {
+                    setScanError("Aucun QR code lisible sur cette photo. Reprenez-la en cadrant bien le QR Wave, puis réessayez.");
+                }
+            };
+            img.onerror = function () {
+                URL.revokeObjectURL(objectUrl);
+                setScanError("Impossible de lire cette image. Réessayez avec une autre photo.");
+            };
+            img.src = objectUrl;
+        }
+
+        const scanQrFileInput = document.getElementById('scanQrFile');
+        if (scanQrFileInput) {
+            scanQrFileInput.addEventListener('change', function () {
+                const file = scanQrFileInput.files && scanQrFileInput.files[0];
+                scanQrFileInput.value = '';
+                if (file) decodeQrFromImage(file);
+            });
         }
 
         function scanTick() {
@@ -437,11 +548,16 @@
             scanRaf = requestAnimationFrame(scanTick);
         }
 
-        function stopScan() {
+        function stopScanStream() {
             if (scanStream) { scanStream.getTracks().forEach(function (t) { t.stop(); }); scanStream = null; }
             if (scanRaf) { cancelAnimationFrame(scanRaf); scanRaf = null; }
             const v = document.getElementById('scanVideo');
             if (v) v.srcObject = null;
+        }
+
+        function stopScan() {
+            stopScanStream();
+            setScanError('');
             const p = document.getElementById('scanPanel');
             if (p) p.style.display = 'none';
         }
